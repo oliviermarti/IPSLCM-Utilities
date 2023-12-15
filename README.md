@@ -5,31 +5,29 @@ Author : olivier.marti@lsce.ipsl.fr
 
 git : https://github.com/oliviermarti/IPSLCM-Utilities
 
-## ORCA_Gallery.ipynb 
+## ORCA\_Gallery.ipynb 
 
-## libIGCM_sys.py 
+## libIGCM\_sys.py 
 Defines libIGCM directories, depending of the computer
 
-## libIGCM_date.py
-Handles date calculs and convertions in different calendars.
-
-Mostly conversion of IGCM_date.ksh to python.
+## libIGCM\_date.py
+Handles date calculs and convertions in different calendars. Mostly conversion of IGCM_date.ksh to python.
 
 Dates  format
  - Human format     : [yy]yy-mm-dd
  - Gregorian format : yymmdd
  - Julian format    : yyddd
 
-  Types of calendars are possible :
+  Types of calendars possible :
 
-  - leap|gregorian|standard (other name leap) :
+  - leap | gregorian |standard (other name leap) :
       The normal calendar. The time origin for the
       julian day in this case is 24 Nov -4713.
-  - noleap|365_day :
+  - noleap | 365_day :
       A 365 day year without leap years.
-  - all_leap|366_day :
+  - all\_leap | 366_day :
       A 366 day year with only leap years.
-  - 360d|360_day :
+  - 360d | 360\_day :
       Year of 360 days with month of equal length.
 
   Warning, to install, configure, run, use any of included software or
