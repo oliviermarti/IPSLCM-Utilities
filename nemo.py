@@ -1432,6 +1432,8 @@ def clo_lon (lon, lon0=0., rad=False, deg=True) :
     '''Choose closest to lon0 longitude, adding/substacting 360°
     if needed
     '''
+    if rad and deg :
+        raise 
     mmath = __mmath__ (lon, np)
     if rad :
         lon_range = 2.*np.pi
@@ -1439,13 +1441,13 @@ def clo_lon (lon, lon0=0., rad=False, deg=True) :
         lon_range = 360.
     c_lon = lon
     c_lon = mmath.where (c_lon > lon0 + lon_range*0.5,
-                             c_lon-lon_range, clo_lon)
+                             c_lon-lon_range, c_lon)
     c_lon = mmath.where (c_lon < lon0 - lon_range*0.5,
-                             c_lon+lon_range, clo_lon)
+                             c_lon+lon_range, c_lon)
     c_lon = mmath.where (c_lon > lon0 + lon_range*0.5,
-                             c_lon-lon_range, clo_lon)
+                             c_lon-lon_range, c_lon)
     c_lon = mmath.where (c_lon < lon0 - lon_range*0.5,
-                             c_lon+lon_range, clo_lon)
+                             c_lon+lon_range, c_lon)
     if c_lon.shape == () :
         c_lon = c_lon.item ()
     if mmath == xr :
@@ -1474,7 +1476,7 @@ def depth2index (pz, gdept_0) :
     '''
     jpk  = gdept_0.shape[0]
     if   isinstance (pz, xr.core.dataarray.DataArray ) :
-        zz   = xr.DataArray (pz.values, dims=('zz',))
+        zz   = xr.DataArray (pz.values , dims=('zz',))
     elif isinstance (pz,  np.ndarray) :
         zz   = xr.DataArray (pz.ravel(), dims=('zz',))
     else :
@@ -2541,7 +2543,7 @@ def rho ( pdep, ptemp, psal ) :
          + (((EOS420*zs   + EOS320)*zs + EOS220)*zs + EOS120)*zs + EOS020)*zt
          + ((((EOS510*zs  + EOS410)*zs + EOS310)*zs + EOS210)*zs + EOS110)*zs + EOS010)*zt
          + (((((EOS600*zs + EOS500)*zs + EOS400)*zs + EOS300)*zs +
-                                       EOS200)*zs + EOS100)*zs + EOS000 )
+                                         EOS200)*zs + EOS100)*zs + EOS000 )
     #
     prho  = ( ( zn3 * zh + zn2 ) * zh + zn1 ) * zh + zn0
     #
