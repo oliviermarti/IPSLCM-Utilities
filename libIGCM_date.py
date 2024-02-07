@@ -192,6 +192,7 @@ def DateFormat ( date ) :
       [yy]yymmdd   is Gregorian
       [yy]yy-mm-dd is Human
     '''
+    print ( f'{type(date)}' )
     if isinstance (date, str) :
         if '-' in date :
             zdate_format = 'Human'
@@ -322,7 +323,7 @@ def CorrectYearMonthDay (ye, mo, da, CalendarType=DefaultCalendarType) :
 
     return ye_new, mo_new, da_new
 
-def DateAddMonth ( date, month_inc=1, CalendarType=DefaultCalendarType ) :
+def DateAddMonth ( date, month_inc=1, CalendarType=DefaultCalendarType, verbose=False ) :
     '''
     Add on year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
@@ -342,10 +343,14 @@ def DateAddMonth ( date, month_inc=1, CalendarType=DefaultCalendarType ) :
         ye_inc = month_inc // 12
 
     ye_new = ye + ye_inc
-    mo_new = mo + month_inc# - ye_inc*12
+    mo_new = mo + month_inc # - ye_inc*12
     ye_new, mo_new = CorrectYearMonth (ye_new, mo_new)
-    lday = DaysInMonth ( ye_new, mo_new, CalendarType=DefaultCalendarType )
-    da_new = np.minimum ( da, lday)
+    lday1 = DaysInMonth ( ye    , mo    , CalendarType=CalendarType )
+    lday2 = DaysInMonth ( ye_new, mo_new, CalendarType=CalendarType )
+    if da == lday1 : da_new = lday2
+    da_new = np.minimum ( da_new, lday2)
+
+    if verbose : print ( f'{ye=} {mo=} {da=} {ye_new=} {mo_new=} {lday1=} {lday2=} {da_new=}' )
        
     return PrintDate ( ye_new, mo_new, da_new, zformat)
 

@@ -68,37 +68,37 @@ REPSI = np.finfo (1.0).eps
 
 NPERIO_VALID_RANGE = [0, 1, 4, 4.2, 5, 6, 6.2]
 
-RAAMO    =      12          # Number of months in one year
-RJJHH    =      24          # Number of hours in one day
-RHHMM    =      60          # Number of minutes in one hour
-RMMSS    =      60          # Number of seconds in one minute
-RA       = 6371229.0        # Earth radius                                  [m]
-GRAV     =       9.80665    # Gravity                                       [m/s2]
-RT0      =     273.15       # Freezing point of fresh water                 [Kelvin]
-RAU0     =    1026.0        # Volumic mass of sea water                     [kg/m3]
-SICE     =       6.0        # Salinity of ice (for pisces)                  [psu]
-SOCE     =      34.7        # Salinity of sea (for pisces and isf)          [psu]
-RLEVAP   =       2.5e+6     # Latent heat of evaporation (water)            [J/K]
-VKARMN   =       0.4        # Von Karman constant
-STEFAN   =       5.67e-8    # Stefan-Boltzmann constant                     [W/m2/K4]
-RHOS     =     330.         # Volumic mass of snow                          [kg/m3]
-RHOI     =     917.         # Volumic mass of sea ice                       [kg/m3]
-RHOW     =    1000.         # Volumic mass of freshwater in melt ponds      [kg/m3]
-RCND_I   =       2.034396   # Thermal conductivity of fresh ice             [W/m/K]
-RCPI     =    2067.0        # Specific heat of fresh ice                    [J/kg/K]
-RLSUB    =       2.834e+6   # Pure ice latent heat of sublimation           [J/kg]
-RLFUS    =       0.334e+6   # Latent heat of fusion of fresh ice            [J/kg]
-RTMLT    =       0.054      # Decrease of seawater meltpoint with salinity
+RAAMO  = xr.DataArray (12)        ; RAAMO.attrs.update  ({'units':"mth"    , 'long_name':"Number of months in one year" })
+RJJHH  = xr.DataArray (24)        ; RJJHH.attrs.update  ({'units':"h"      , 'long_name':"Number of hours in one day"} )
+RHHMM  = xr.DataArray (60)        ; RHHMM.attrs.update  ({'units':"min"    , 'long_name':"Number of minutes in one hour"} )
+RMMSS  = xr.DataArray (60)        ; RMMSS.attrs.update  ({'units':"s"      , 'long_name':"Number of seconds in one minute"} )
+RA     = xr.DataArray (6371229.0) ; RA.attrs.update     ({'units':"m"      , 'long_name':"Earth radius"} )
+GRAV   = xr.DataArray (9.80665)   ; GRAV.attrs.update   ({'units':"m/s2"   , 'long_name':"Gravity"} )
+RT0    = xr.DataArray (273.15)    ; RT0.attrs.update    ({'units':"K"      , 'long_name':"Freezing point of fresh water"} )
+RAU0   = xr.DataArray (1026.0)    ; RAU0.attrs.update   ({'units':"kg/m3"  , 'long_name':"Volumic mass of sea water"} )
+SICE   = xr.DataArray (6.0)       ; SICE.attrs.update   ({'units':"psu"    , 'long_name':"Salinity of ice (for pisces)"} )
+SOCE   = xr.DataArray (34.7)      ; SOCE.attrs.update   ({'units':"psu"    , 'long_name':"Salinity of sea (for pisces and isf)"} )
+RLEVAP = xr.DataArray (2.5e+6)    ; RLEVAP.attrs.update ({'units':"J/K"    , 'long_name':"Latent heat of evaporation (water)"} )
+VKARMN = xr.DataArray (0.4)       ; VKARMN.attrs.update ({'units':"-"      , 'long_name':"Von Karman constant"} )
+STEFAN = xr.DataArray (5.67e-8)   ; STEFAN.attrs.update ({'units':"w/m2/K4", 'long_name':"Stefan-Boltzmann constant"} )
+RHOS   = xr.DataArray (330.)      ; RHOS.attrs.update   ({'units':"kg/m3"  , 'long_name':"Volumic mass of snow"} )
+RHOI   = xr.DataArray (917.)      ; RHOI.attrs.update   ({'units':"kg/m3"  , 'long_name':"Volumic mass of sea ice"} )
+RHOW   = xr.DataArray (1000.)     ; RHOW.attrs.update   ({'units':"kg/m3"  , 'long_name':"Volumic mass of freshwater in melt ponds"} )
+RCND_I = xr.DataArray (2.034396)  ; RCND_I.attrs.update ({'units':"W/m/J"  , 'long_name':"Thermal conductivity of fresh ice"} )
+RCPI   = xr.DataArray (2067.0)    ; RCPI.attrs.update   ({'units':"J/kg/K" , 'long_name':"Specific heat of fresh ice"} )
+RLSUB  = xr.DataArray (2.834e+6)  ; RLSUB.attrs.update  ({'units':"J/kg"   , 'long_name':"Pure ice latent heat of sublimation"} )
+RLFUS  = xr.DataArray (0.334e+6)  ; RLFUS.attrs.update  ({'units':"J/kg"   , 'long_name':"Latent heat of fusion of fresh ice"} )
+RTMLT  = xr.DataArray (0.054)     ; RTMLT.attrs.update  ({'units':"-"      , 'long_name':"Decrease of seawater meltpoint with salinity"} )
 
-RDAY     = RJJHH * RHHMM * RMMSS                # Day length               [s]
-RSIYEA   = 365.25 * RDAY * 2. * RPI / 6.283076  # Sideral year length      [s]
-RSIDAY   = RDAY / (1. + RDAY / RSIYEA)          # Sideral day length       [s]
-OMEGA    = 2. * RPI / RSIDAY                    # Earth rotation parameter [s-1]
+RDAY     = RJJHH * RHHMM * RMMSS                ; RDAY.attrs.update   ({'units':"s"      , 'long_name':"Day length"} )
+RSIYEA   = 365.25 * RDAY * 2. * RPI / 6.283076  ; RSIYEA.attrs.update ({'units':"s"      , 'long_name':"Sideral year length"} )
+RSIDAY   = RDAY / (1. + RDAY / RSIYEA)          ; RSIDAY.attrs.update ({'units':"s"      , 'long_name':"Sideral day length"} )
+ROMEGA   = 2. * RPI / RSIDAY                    ; ROMEGA.attrs.update ({'units':"s-1"    , 'long_name':"Earth rotation parameter"} )
 
 ## Default names of dimensions
-UDIMS = {'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter'}
+UDIMS = {'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter' }
 
-## All possibles name of dimensions in Nemo files
+## All possibles names of dimensions in Nemo files
 XNAME = [ 'x', 'X', 'X1', 'xx', 'XX',
               'x_grid_T', 'x_grid_U', 'x_grid_V', 'x_grid_F', 'x_grid_W',
               'lon', 'nav_lon', 'longitude', 'X1', 'x_c', 'x_f', ]
@@ -110,7 +110,7 @@ ZNAME = [ 'z', 'Z', 'Z1', 'zz', 'ZZ', 'depth', 'tdepth', 'udepth',
               'depthv', 'depthw', 'depthf', 'olevel', 'z_c', 'z_f', ]
 TNAME = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', ]
 
-## All possibles name of units of dimensions in Nemo files
+## All possibles name of units of dimensions in NEMO files
 XUNIT = [ 'degrees_east', ]
 YUNIT = [ 'degrees_north', ]
 ZUNIT = [ 'm', 'meter', ]
@@ -120,6 +120,16 @@ TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 XLENGTH = [ 180, 182, 360, 362, 1440 ]
 YLENGTH = [ 148, 149, 331, 332 ]
 ZLENGTH = [ 31, 75]
+
+## T, S array to plot TS diagrams
+Ttab = np.linspace ( -2, 40, 100)
+Stab = np.linspace ( 0, 40, 100)
+
+Ttab = xr.DataArray ( Ttab, dims=('Temperature',), coords=(Ttab,) )
+Stab = xr.DataArray ( Stab, dims=('Salinity'   ,), coords=(Stab,) )
+
+Ttab.attrs.update ( {'unit':'degrees_celcius', 'long_name':'Temperature'} )
+Stab.attrs.update ( {'unit':'PSU',             'long_name':'Salinity'} )
 
 ## ===========================================================================
 def __mmath__ (ptab, default=None) :
@@ -392,7 +402,7 @@ def bounds_clolon ( pbounds_lon, plon, rad=False, deg=True) :
                           b_clolon )
     return b_clolon
 
-def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', verbose=False ) :
+def unify_dims ( dd, x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'], verbose=False ) :
     '''Rename dimensions to unify them between NEMO versions
     '''
     for xx in XNAME :
@@ -1259,20 +1269,20 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
 
     return jy, ix
 
-def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, out=None) :
+def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, drop_duplicates=False, out=None) :
     '''
     Description: seeks J,I indices of the grid point which is the closest
        of a given point
 
-    Usage: go FindJI  <data latitude> <data longitude> <grid latitudes> <grid longitudes> [mask]
+    Usage: go find_ji  <data latitude> <data longitude> <grid latitudes> <grid longitudes> [mask]
     <grid latitudes><grid longitudes> are 2D fields on J/I (Y/X) dimensions
     mask : if given, seek only non masked grid points (i.e with mask=1)
 
-    Example : findIJ (40, -20, nav_lat, nav_lon, mask=1.0)
+    Example : find_ji (40., -20., nav_lat, nav_lon, mask=1.0)
 
     Note : all longitudes and latitudes in degrees
 
-    Note : may work with 1D lon/lat (?)
+    Note : may work with 1D lon_data/lat_data (?)
     '''
     # Get grid dimensions
     if len (lon_grid.shape) == 2 :
@@ -1282,49 +1292,86 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, ou
 
     #mmath = __mmath__ (lat_grid)
 
+    if verbose :
+        print ( f'{lat_data=}' )
+        print ( f'{lon_data=}' )
+
     # Compute distance from the point to all grid points (in RADian)
     arg      = ( np.sin (RAD*lat_data) * np.sin (RAD*lat_grid)
                + np.cos (RAD*lat_data) * np.cos (RAD*lat_grid) *
                  np.cos(RAD*(lon_data-lon_grid)) )
+
+    if verbose :
+        print ( f'{type(arg)=} {arg.shape=}' )
+    
     # Send masked points to 'infinite'
     distance = np.arccos (arg) + 4.0*RPI*(1.0-mask)
 
-    # Truncates to alleviate some precision problem with some grids
+    if verbose :
+        print ( f'{type(distance)=} {distance.shape=}' )
+
+    # Truncates to alleviate precision problem encountered with some grids
     prec = int (1E7)
     distance = (distance*prec).astype(int) / prec
-
-    # Compute minimum of distance, and index of minimum
-    #
-    #distance_min = distance.min    ()
-    jimin        = int (distance.argmin ())
+    if verbose :
+        print ( f'{type(distance)=} {distance.shape=}' )
+        
+    # Compute index minimum of distance
+    try :
+        nn = len (lat_data)
+    except : 
+        nn = 0
+        jimin = distance.argmin ().astype(int)
+    else : 
+        jimin   = np.empty (nn, dtype=int )
+        for ji in np.arange (nn) :
+            jimin[ji] = distance[ji].argmin()
+    finally : 
+        if verbose :
+            print ( f'{type(jimin)=} {jimin.shape}' )
+            print ( f'{jimin=}' )
 
     # Compute 2D indices (Python/C flavor : starting at 0)
     jmin = jimin // jpi
     imin = jimin - jmin*jpi
 
-    # Result
     if verbose :
+        print ( f'{jmin=}' )
+        print ( f'{imin=}' )
+        
+    # mindist = distance [:, jmin, imin]
+    #if verbose :
+    #    print ( f'{mindist=}' )
+    # Result
+    #if verbose :
         # Compute distance achieved
         #mindist = distance [jmin, imin]
 
         # Compute azimuth
-        dlon = lon_data-lon_grid[jmin,imin]
-        arg  = np.sin (RAD*dlon) / (
-                  np.cos(RAD*lat_data)*np.tan(RAD*lat_grid[jmin,imin])
-                - np.sin(RAD*lat_data)*np.cos(RAD*dlon))
-        azimuth = DAR*np.arctan (arg)
-        print ( f'I={imin:d} J={jmin:d} - Data:{lat_data:5.1f}°N {lon_data:5.1f}°E' \
-            +   f'- Grid:{lat_grid[jmin,imin]:4.1f}°N '   \
-            +   f'{lon_grid[jmin,imin]:4.1f}°E - Dist: {RA*distance[jmin,imin]:6.1f}km' \
-            +   f' {DAR*distance[jmin,imin]:5.2f}° ' \
-            +   f'- Azimuth: {RAD*azimuth:3.2f}RAD - {azimuth:5.1f}°' )
+        #dlon = lon_data-lon_grid[jmin,imin]
+        #arg  = np.sin (RAD*dlon) / (
+        #          np.cos(RAD*lat_data)*np.tan(RAD*lat_grid[jmin,imin])
+        #        - np.sin(RAD*lat_data)*np.cos(RAD*dlon))
+        #azimuth = DAR*np.arctan (arg)
+        #print ( f'I={imin:d} J={jmin:d} - Data:{lat_data:5.1f}°N {lon_data:5.1f}°E' \
+        #    +   f'- Grid:{lat_grid[jmin,imin]:4.1f}°N '   \
+        #    +   f'{lon_grid[jmin,imin]:4.1f}°E - Dist: {RA*distance[jmin,imin]:6.1f}km' \
+        #    +   f' {DAR*distance[jmin,imin]:5.2f}° ' \
+        #    +   f'- Azimuth: {RAD*azimuth:3.2f}RAD - {azimuth:5.1f}°' )
 
+    if drop_duplicates :
+        zz = np.vstack ( (np.array (jmin), np.array (imin)) )
+        zz = np.swapaxes (zz , 0, 1)
+        zz = np.unique ( zz, axis=0)
+        jmin = zz[:,-2]
+        imin = zz[:,-1]
+        
     if   out=='dict'                     :
-        return {'x':imin, 'y':jmin}
+        return {UDIMS['y']:jmin, UDIMS['x']:imin}
     elif out in ['array', 'numpy', 'np'] :
-        return np.array ( [jmin, imin] )
+       return np.array (jmin), np.array (imin)
     elif out in ['xarray', 'xr']         :
-        return xr.DataArray ( [jmin, imin] )
+        return xr.DataArray (jmin, dims=('Num',)), xr.DataArray (imin, dims=('Num',))
     elif out=='list'                     :
         return [jmin, imin]
     elif out=='tuple'                    :
