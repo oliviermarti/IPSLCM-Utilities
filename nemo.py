@@ -287,24 +287,29 @@ def lbc_diag (nperio) :
         lperio, aperio = 6, True
     return lperio, aperio
 
-def __find_axis__ (ptab, axis='z', back=True) :
+def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
     '''Returns name and name of the requested axis'''
     mmath = __mmath__ (ptab)
     ax, ix = None, None
 
     if axis in XNAME :
         ax_name, unit_list, length = XNAME, XUNIT, XLENGTH
+        if verbose : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in YNAME :
         ax_name, unit_list, length = YNAME, YUNIT, YLENGTH
+        if verbose : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in ZNAME :
         ax_name, unit_list, length = ZNAME, ZUNIT, ZLENGTH
+        if verbose : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in TNAME :
         ax_name, unit_list, length = TNAME, TUNIT, None
+        if verbose : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
 
     if mmath == xr :
         # Try by name
         for dim in ax_name :
             if dim in ptab.dims :
+                if verbose : print ( f'Rule 2 : {name=} axis found by unit : {axis=} : {XNAME=}' )
                 ix, ax = ptab.dims.index (dim), dim
 
         # If not found, try by axis attributes
@@ -312,13 +317,18 @@ def __find_axis__ (ptab, axis='z', back=True) :
             for i, dim in enumerate (ptab.dims) :
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
-                    if axis in ax_name and l_axis == 'X' :
+                    if verbose : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
+                    if l_axis in ax_name and l_axis == 'X' :
+                        if verbose : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
-                    if axis in ax_name and l_axis == 'Y' :
+                    if l_axis in ax_name and l_axis == 'Y' :
+                        if verbose : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
-                    if axis in ax_name and l_axis == 'Z' :
+                    if l_axis in ax_name and l_axis == 'Z' :
+                        if verbose : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
-                    if axis in ax_name and l_axis == 'T' :
+                    if l_axis in ax_name and l_axis == 'T' :
+                        if verbose : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
 
         # If not found, try by units
@@ -327,6 +337,7 @@ def __find_axis__ (ptab, axis='z', back=True) :
                 if 'units' in ptab.coords[dim].attrs.keys() :
                     for name in unit_list :
                         if name in ptab.coords[dim].attrs['units'] :
+                            if verbose : print ( f'Rule 4 : {name=} found by unit : {axis=} : {unit_list=} {i=} {dim=}' )
                             ix, ax = i, dim
 
     # If numpy array or dimension not found, try by length
@@ -335,6 +346,7 @@ def __find_axis__ (ptab, axis='z', back=True) :
             l_shape = ptab.shape
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
+                    if verbose : print ( f'Rule 5 : {name=} axis found by length : {axis=} : {XNAME=} {i=} {dim=}' )
                     ix = nn
 
     if ix and back :
@@ -342,9 +354,9 @@ def __find_axis__ (ptab, axis='z', back=True) :
 
     return ax, ix
 
-def find_axis ( ptab, axis='z', back=True ) :
+def find_axis ( ptab, axis='z', back=True, verbose=False ) :
     '''Version of find_axis with no __'''
-    ix, xx = __find_axis__ (ptab, axis, back)
+    ix, xx = __find_axis__ (ptab, axis, back, verbose)
     return xx, ix
 
 def fixed_lon (plon, center_lon=0.0) :

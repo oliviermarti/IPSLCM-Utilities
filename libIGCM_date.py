@@ -47,13 +47,13 @@ mth_length = np.array ( [31, 28, 31,  30,  31,  30,  31,  31,  30,  31,  30,  31
 mth_start  = np.array ( [ 0, 31, 59,  90, 120, 151, 181, 212, 243, 273, 304, 334] )
 mth_end    = mth_start + mth_length + 1  # A cause des bornes superieures de Python
 
-# Other caalendars
+# Other calendars
 mth_length365 = np.array ( [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] )
 mth_length366 = np.array ( [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] )
 mth_length360 = np.array ( [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30] )
 
 # List of possible names for calendar types
-Calendar_gregorian = [ 'leap', 'LEAP', 'Leap', 'gregorian', 'Gregorian', 'GREGORIAN' ]
+Calendar_gregorian = [ 'Gregorian', 'GREGORIAN', 'leap', 'LEAP', 'Leap', 'gregorian',  ]
 Calendar_360d      = [ '360d', '360_day', '360d', '360_days', '360D', '360_DAY', '360D', '360_DAYS' ]
 Calendar_noleap    = [ 'noleap', '365_day', '365_days', 'NOLEAP', '365_DAY', '365_DAYS',  ]
 Calendar_allleap   = [ 'all_leap', '366_day', 'allleap', '366_days', '336d', 'ALL_LEAP', '366_DAY', 'ALLLEAP', '366_DAYS', '336D',  ]
@@ -71,20 +71,12 @@ def GetMonthsLengths ( year, CalendarType=DefaultCalendarType ) :
     '''
     Returns the month lengths for a given year and calendar type
     '''
-    if CalendarType in Calendar_360d :
-        zlengths = mth_length360
-        
-    if  CalendarType in Calendar_noleap :
-        zlengths = mth_length365
-        
-    if  CalendarType in Calendar_noleap :
-        zlengths = mth_length366
-
+    if CalendarType in Calendar_360d   : zlengths = mth_length360
+    if CalendarType in Calendar_noleap : zlengths = mth_length365
+    if CalendarType in Calendar_noleap : zlengths = mth_length366
     if CalendarType in Calendar_gregorian :
-        if IsLeapYear ( year, CalendarType) :
-           zlengths = mth_length366
-        else :
-           zlengths = mth_length365
+        if IsLeapYear (year, CalendarType) : zlengths = mth_length366
+        else                               : zlengths = mth_length365
 
     return zlengths
 
@@ -95,10 +87,8 @@ def DaysInMonth ( yy, mm=None, CalendarType=DefaultCalendarType) :
     Usage:  DaysInMonth ( yyyy    , mm, [CalendarType] )
          or DaysInMonth ( yyyymmdd, [CalendarType] )
          '''
-    if mm :
-        year = int(yy) ; month = int(mm)
-    else :
-        year, month = GetYearMonth (yy)
+    if mm : year = int(yy) ; month = int(mm)
+    else  : year, month = GetYearMonth (yy)
         
     length = GetMonthsLengths ( year, CalendarType=CalendarType )[ np.mod(month-1, 12) ]
     return length
@@ -112,36 +102,24 @@ def DaysSinceJC ( date, CalendarType=DefaultCalendarType ) :
     yy, mo, da = GetYearMonthDay (date)
     if yy < 500 :
         date0 = '0101-01-01'
-        if CalendarType in Calendar_360d :
-            aux = -360
-        if CalendarType in Calendar_noleap :
-            aux = -365           
-        if CalendarType in Calendar_allleap :
-            aux = -366
-        if CalendarType in Calendar_gregorian :
-            aux = -366
+        if CalendarType in Calendar_360d      : aux = -360
+        if CalendarType in Calendar_noleap    : aux = -365           
+        if CalendarType in Calendar_allleap   : aux = -366
+        if CalendarType in Calendar_gregorian : aux = -366
             
     elif yy < 1500 :
         date0 = '1001-01-01'
-        if CalendarType in Calendar_360d :
-           aux = 359640
-        if CalendarType in Calendar_noleap :
-            aux = 364635           
-        if CalendarType in Calendar_allleap :
-            aux = 365634
-        if CalendarType in Calendar_gregorian :
-            aux = 364877
+        if CalendarType in Calendar_360d      : aux = 359640
+        if CalendarType in Calendar_noleap    : aux = 364635           
+        if CalendarType in Calendar_allleap   : aux = 365634
+        if CalendarType in Calendar_gregorian : aux = 364877
             
     else :
         date0 = '1901-01-01'
-        if CalendarType in Calendar_360d :
-           aux = 683640
-        if CalendarType in Calendar_noleap :
-            aux = 693135           
-        if CalendarType in Calendar_allleap :
-            aux = 695034
-        if CalendarType in Calendar_gregorian :
-            aux = 693595
+        if CalendarType in Calendar_360d      : aux = 683640
+        if CalendarType in Calendar_noleap    : aux = 693135           
+        if CalendarType in Calendar_allleap   : aux = 695034
+        if CalendarType in Calendar_gregorian : aux = 693595
             
     ndays = DaysBetweenDate ( date, date0 ) + aux
      
@@ -155,14 +133,9 @@ def IsLeapYear ( year, CalendarType=DefaultCalendarType ) :
     zis_leap_year = None
 
     # What is the CalendarType :
-    if CalendarType in Calendar_360d :
-        zis_leap_year = False
-    if CalendarType in Calendar_noleap :
-        zis_leap_year = False
-
-    if CalendarType in Calendar_allleap :
-        zis_leap_year = True
-        
+    if CalendarType in Calendar_360d      : zis_leap_year = False
+    if CalendarType in Calendar_noleap    : zis_leap_year = False
+    if CalendarType in Calendar_allleap   : zis_leap_year = True
     if CalendarType in Calendar_gregorian :
         # A year is a leap year if it is even divisible by 4
         # but not evenly divisible by 100
@@ -192,12 +165,11 @@ def DateFormat ( date ) :
       [yy]yymmdd   is Gregorian
       [yy]yy-mm-dd is Human
     '''
-    print ( f'{type(date)}' )
+    #print ( f'{type(date)}' )
+    zdate_format = None
     if isinstance (date, str) :
-        if '-' in date :
-            zdate_format = 'Human'
-        else :
-            zdate_format = 'Gregorian'
+        if '-' in date : zdate_format = 'Human'
+        else           : zdate_format = 'Gregorian'
     if isinstance (date, int) : zdate_format = 'Gregorian'
     return zdate_format
 
@@ -260,7 +232,7 @@ def GetYearMonthDay  ( date ) :
 
 def GetYearMonth ( date ) :
     '''
-    Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm, dd
+    Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm
     '''
     ye, mo, da = GetYearMonthDay (date)
     return ye, mo
@@ -274,7 +246,7 @@ def DateAddYear ( date, year_inc='1Y' ) :
 
     if isinstance ( year_inc, str) :
         PeriodType, PeriodLength = AnaPeriod ( year_inc )
-        print ( f"DateAddYear {PeriodType=} {PeriodLength=}" )
+        #print ( f"DateAddYear {PeriodType=} {PeriodLength=}" )
         if PeriodType == YE_name[0] :
             year_inc = PeriodLength
         else :
@@ -337,10 +309,8 @@ def DateAddMonth ( date, month_inc=1, CalendarType=DefaultCalendarType, verbose=
         else :
             raise AttributeError ( f'Parameter {month} is not a month period' )
 
-    if month_inc < 0 :
-        ye_inc = -( -month_inc // 12)
-    else : 
-        ye_inc = month_inc // 12
+    if month_inc < 0 : ye_inc = -( -month_inc // 12)
+    else             : ye_inc = month_inc // 12
 
     ye_new = ye + ye_inc
     mo_new = mo + month_inc # - ye_inc*12
@@ -360,7 +330,6 @@ def DateAddPeriod ( date, period='1YE', CalendarType=DefaultCalendarType ) :
     '''
     zformat = DateFormat ( date )
    
-
     PeriodType, PeriodLength = AnaPeriod ( period )
 
     if PeriodType == YE_name[0] :
@@ -369,13 +338,13 @@ def DateAddPeriod ( date, period='1YE', CalendarType=DefaultCalendarType ) :
         new_date = DateAddMonth ( date, month_inc=period, CalendarType=DefaultCalendarType )
     if PeriodType == DA_name[0] :
         new_date = AddDaysToDate ( date, ndays=period, CalendarType=DefaultCalendarType )
-    if PeriodType == 'Unknow' :
+    if PeriodType == 'Unknown' :
         raise AttributeError ( f"DateAddPeriod : period syntax {period=} not understood" )
 
     ye, mo, da = GetYearMonthDay ( new_date )
     return PrintDate ( ye, mo, da, zformat )
     
-def SubOneDayToDate ( date, CalendarType=DefaultCalendarType) :
+def SubOneDayToDate (date, CalendarType=DefaultCalendarType) :
     '''
     Substracts one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
@@ -471,9 +440,9 @@ def DaysInYear (year, CalendarType=DefaultCalendarType ) :
 
     if CalendarType in Calendar_gregorian :
         if IsLeapYear ( year, CalendarType ) :
-          ndays = 366
+            ndays = 366
         else :
-          ndays = 365
+            ndays = 365
 
     return ndays
 
@@ -490,7 +459,7 @@ def DaysBetweenDate ( pdate1, pdate2, CalendarType=DefaultCalendarType ) :
   if pdate1 > pdate2 :
     date1=pdate1 ; date2=pdate2
     
-  if pdate1 == pdate2 :
+  if pdate1 == pdate2 : 
     res = 0
   else :
     res = 0
@@ -629,5 +598,5 @@ def getDigits ( s ) :
     return ''.join (i for i in s if i.isdigit())
 
 def rmDigits ( s ) :
-    '''Removes digits from aa string'''
+    '''Removes digits from a string'''
     return ''.join (i for i in s if not i.isdigit())

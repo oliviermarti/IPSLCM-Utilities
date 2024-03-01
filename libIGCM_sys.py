@@ -55,6 +55,7 @@ def Mach (long=False) :
 
     if SysName == 'Darwin' and 'lsce5138' in NodeName : zmach = 'Spip'
     if 'obelix'    in NodeName : zmach = 'Obelix'
+    if 'jupyter'   in NodeName and "/home/users/" in os.path.abspath("")  : zmach = 'Obelix'
     if 'forge'     in NodeName : zmach = 'Forge'
     if 'ciclad'    in NodeName : zmach = 'Ciclad'
     if 'climserv'  in NodeName : zmach = 'SpiritX'
@@ -125,6 +126,8 @@ class config :
         '''
         
         if not Host : Host = Mach (long=False)
+
+        if not Host : Host = 'Unknown'
             
         LocalUser = os.environ ['USER']
             
@@ -160,7 +163,7 @@ class config :
                 
             if not ThreddsPrefix :
                 ThreddsPrefix = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds'
-                
+               
             if not ARCHIVE : ARCHIVE = f'{ThreddsPrefix}/store/{TGCC_User}'
             if not R_FIG   : R_FIG   = f'{ThreddsPrefix}/work/{TGCC_User}'
             if not R_IN    : R_IN    = f'{ThreddsPrefix}/work/igcmg/IGCM'
@@ -183,19 +186,34 @@ class config :
         ## Machine dependant part
         
         # ===========================================================================================
-        if Host == 'Spip' :
+        if Host == 'Obelix' :
             if not User : User = LocalUser
-            IGCM_OUT_name = 'IGCM_OUT'
-            if not ARCHIVE    : ARCHIVE     = os.path.join ( Path.home (), 'Data' )
-            if not SCRATCHDIR : SCRATCHDIR  = os.path.join ( Path.home (), 'Scratch' )
-            if not R_BUF      : R_BUF       = os.path.join ( Path.home (), 'Scratch' )
-            if not R_FIG      : R_FIG       = os.path.join ( Path.home (), 'Data'    )
+            if not Source : IGCM_OUT_name = 'IGCM_OUT'
+            if not ARCHIVE    : ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data' )
+            if not SCRATCHDIR : SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+            if not R_BUF      : R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+            if not R_FIG      : R_FIG       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
                 
             if not STORAGE    : STORAGE     = ARCHIVE
-            if not R_IN       : R_IN        = os.path.join ( '/', 'Users', 'marti', 'Data', 'IGCM' )
-            if not R_GRAF     : R_GRAF      = os.path.join ( '/', 'Users', 'marti', 'GRAF', 'DATA' )
-            if not DB         : DB          = os.path.join ( '/', 'Users', 'marti', 'GRAF', 'DB'   )
-            if not TmpDir     : TmpDir      = os.path.join ( Path.home (), 'Scratch' )
+            if not R_IN       : R_IN        = os.path.join ( os.path.expanduser ('~marti'), 'Data', 'IGCM' )
+            if not R_GRAF     : R_GRAF      = os.path.join ( os.path.expanduser ('~marti'), 'GRAF', 'DATA' )
+            if not DB         : DB          = os.path.join ( os.path.expanduser ('~marti'), 'GRAF', 'DB'   )
+            if not TmpDir     : TmpDir      = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+                
+        # ===========================================================================================
+        if Host == 'Spip' :
+            if not User : User = LocalUser
+            if not Source : IGCM_OUT_name = 'IGCM_OUT'
+            if not ARCHIVE    : ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data' )
+            if not SCRATCHDIR : SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+            if not R_BUF      : R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+            if not R_FIG      : R_FIG       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+                
+            if not STORAGE    : STORAGE     = ARCHIVE
+            if not R_IN       : R_IN        = os.path.join ( os.path.expanduser ('~'), 'Data', 'IGCM' )
+            if not R_GRAF     : R_GRAF      = os.path.join ( os.path.expanduser ('~'), 'GRAF', 'DATA' )
+            if not DB         : DB          = os.path.join ( os.path.expanduser ('~'), 'marti', 'GRAF', 'DB' )
+            if not TmpDir     : TmpDir      = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
                 
         # ===========================================================================================
         if ( 'Irene' in Host ) or ( 'Rome' in Host ) :
@@ -210,7 +228,7 @@ class config :
                 if TGCC_Group : Group = TGCC_Group
                 else          : Group = LocalGroup
                     
-            IGCM_OUT_name = 'IGCM_OUT'
+            if not Source : IGCM_OUT_name = 'IGCM_OUT'
             
             if not R_IN        :
                 R_IN       = os.path.join ( subprocess.getoutput (
@@ -284,9 +302,11 @@ class config :
         # ===========================================================================================
         if Host == 'Jean-Zay' :
             if not User  : User  = os.environ ['USER']
-            LocalGroup = os.path.basename ( os.path.dirname ( Path.home () ))
+            LocalGroup = os.path.basename ( os.path.dirname ( os.path.expanduser ('~') ))
             if not Group : Group = LocalGroup
-                
+
+            if not Source : IGCM_OUT_name = 'IGCM_OUT'
+
             if not ARCHIVE    :
                 ARCHIVE    = os.path.join ( '/', 'gpfsstore'  , 'rech', Group, User )
             if not STORAGE    :
@@ -307,7 +327,7 @@ class config :
                 rebuild = os.path.join ( '/', 'gpfswork', 'rech', 'psl', 'commun', 'Tools',
                                             'rebuild', 'modipsl_IOIPSL_PLUS_v2_2_4', 'bin', 'rebuild' )
             if not TmpDir : TmpDir = os.path.join ( '/', 'gpfsscratch', 'rech',
-                                os.path.basename ( os.path.dirname ( Path.home () )), LocalUser )
+                                os.path.basename ( os.path.dirname ( os.path.expanduser ('~') )), LocalUser )
                 
         ### ===========================================================================================
         ### The construction of the following variables is not machine dependant
