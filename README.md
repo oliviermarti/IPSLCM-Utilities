@@ -5,13 +5,17 @@ Author : olivier.marti@lsce.ipsl.fr
 
 git : https://github.com/oliviermarti/IPSLCM-Utilities
 
-## ORCA\_Gallery.ipynb 
+## ORCA\_Gallery.ipynb
+An eclectic demo of various plots with ORCA outputs
+
+## LMDZ\_Gallery.ipynb 
+A demo of plots with LMDZ outputs
 
 ## libIGCM\_sys.py 
 Defines libIGCM directories, depending of the computer
 
 ## libIGCM\_date.py
-Handles date calculs and convertions in different calendars. Mostly conversion of IGCM_date.ksh to python.
+Handles date computations and convertions in different calendars. Mostly conversion of IGCM_date.ksh to python.
 
 Dates format
  - Human format     : [yy]yy-mm-dd
