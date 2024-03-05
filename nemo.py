@@ -169,7 +169,7 @@ def __guess_config__ (jpj, jpi, nperio=None, config=None, out='nperio') :
     jpi    : number of longitudes
     nperio : periodicity parameter
     '''
-    print ( jpi, jpj)
+    print (jpi, jpj)
     if nperio is None :
         ## Values for NEMO version < 4.2
         if ( (jpj == 149 and jpi == 182) or (jpj is None and jpi == 182) or
@@ -379,20 +379,14 @@ def fixed_lon (plon, center_lon=0.0) :
         f_lon [..., i, start+1:] += 360.
 
     # Special case for eORCA025
-    if f_lon.shape [-1] == 1442 :
-        f_lon [..., -2, :] = f_lon [..., -3, :]
-    if f_lon.shape [-1] == 1440 :
-        f_lon [..., -1, :] = f_lon [..., -2, :]
+    if f_lon.shape [-1] == 1442 : f_lon [..., -2, :] = f_lon [..., -3, :]
+    if f_lon.shape [-1] == 1440 : f_lon [..., -1, :] = f_lon [..., -2, :]
 
-    if f_lon.min () > center_lon :
-        f_lon += -360.0
-    if f_lon.max () < center_lon :
-        f_lon +=  360.0
+    if f_lon.min () > center_lon       : f_lon += -360.0
+    if f_lon.max () < center_lon       : f_lon +=  360.0
 
-    if f_lon.min () < center_lon-360.0 :
-        f_lon +=  360.0
-    if f_lon.max () > center_lon+360.0 :
-        f_lon += -360.0
+    if f_lon.min () < center_lon-360.0 : f_lon +=  360.0
+    if f_lon.max () > center_lon+360.0 : f_lon += -360.0
 
     return f_lon
 
@@ -400,10 +394,8 @@ def bounds_clolon ( pbounds_lon, plon, rad=False, deg=True) :
     '''Choose closest to lon0 longitude, adding/substacting 360° if needed
     '''
 
-    if rad :
-        lon_range = 2.0*np.pi
-    if deg :
-        lon_range = 360.0
+    if rad : lon_range = 2.0*np.pi
+    if deg : lon_range = 360.0
     b_clolon = pbounds_lon.copy ()
 
     b_clolon = xr.where ( b_clolon < plon-lon_range/2.,
@@ -419,26 +411,22 @@ def unify_dims ( dd, x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'], ver
     '''
     for xx in XNAME :
         if xx in dd.dims and xx != x :
-            if verbose :
-                print ( f"{xx} renamed to {x}" )
+            if verbose : print ( f"{xx} renamed to {x}" )
             dd = dd.rename ( {xx:x})
 
     for yy in YNAME :
         if yy in dd.dims and yy != y  :
-            if verbose :
-                print ( f"{yy} renamed to {y}" )
+            if verbose : print ( f"{yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
 
     for zz in ZNAME :
         if zz in dd.dims and zz != z :
-            if verbose :
-                print ( f"{zz} renamed to {z}" )
+            if verbose : print ( f"{zz} renamed to {z}" )
             dd = dd.rename ( {zz:z} )
 
     for tt in TNAME  :
         if tt in dd.dims and tt != t :
-            if verbose :
-                print ( f"{tt} renamed to {t}" )
+            if verbose : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
     return dd
@@ -710,13 +698,10 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
         tabex = ptab
 
     else :
-        if jpi is None :
-            jpi = ptab.shape[-1]
+        if not jpi : jpi = ptab.shape[-1]
 
-        if blon :
-            xplus = -360.0
-        else   :
-            xplus =    0.0
+        if blon : xplus = -360.0
+        else    : xplus =    0.0
 
         if ptab.shape[-1] > jpi :
             tabex = ptab
@@ -800,10 +785,8 @@ def lbc_init (ptab, nperio=None) :
     jpi, jpj = None, None
     ax, ix = __find_axis__ (ptab, 'x')
     ay, jy = __find_axis__ (ptab, 'y')
-    if ax :
-        jpi = ptab.shape[ix]
-    if ay :
-        jpj = ptab.shape[jy]
+    if ax : jpi = ptab.shape[ix]
+    if ay : jpj = ptab.shape[jy]
 
     if nperio is None :
         nperio = __guess_nperio__ (jpj, jpi, nperio)
@@ -829,10 +812,8 @@ def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
     psgn   = ptab.dtype.type (psgn)
     mmath  = __mmath__ (ptab)
 
-    if mmath == xr :
-        ztab = ptab.values.copy ()
-    else           :
-        ztab = ptab.copy ()
+    if mmath == xr : ztab = ptab.values.copy ()
+    else           : ztab = ptab.copy ()
 
     if ax :
         #
@@ -1206,8 +1187,7 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
     ix = ii + 1
 
     mmath = __mmath__ (jj)
-    if mmath is None :
-        mmath=np
+    if not mmath : mmath=np
 
     #
     #> East-West boundary conditions
@@ -1271,13 +1251,10 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
             jy, ix = mod_ij (np.logical_and (jy==jpj-1, ix>=jpi//2+1), jy   , jpi-ix  )
 
     ## Restore convention to Python/C : indexes start at 0
-    jy += -1
-    ix += -1
+    jy += -1 ; ix += -1
 
-    if isinstance (jj, int) :
-        jy = jy.item ()
-    if isinstance (ii, int) :
-        ix = ix.item ()
+    if isinstance (jj, int) : jy = jy.item ()
+    if isinstance (ii, int) : ix = ix.item ()
 
     return jy, ix
 
@@ -1297,10 +1274,8 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
     Note : may work with 1D lon_data/lat_data (?)
     '''
     # Get grid dimensions
-    if len (lon_grid.shape) == 2 :
-        jpi = lon_grid.shape[-1]
-    else                         :
-        jpi = len(lon_grid)
+    if len (lon_grid.shape) == 2 : jpi = lon_grid.shape[-1]
+    else                         : jpi = len(lon_grid)
 
     #mmath = __mmath__ (lat_grid)
 
@@ -1388,7 +1363,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
         return [jmin, imin]
     elif out=='tuple'                    :
         return jmin, imin
-    else                                 :
+    else                                 : 
         return jmin, imin
 
 def curl (tx, ty, e1f, e2f, nperio=None) :
@@ -1507,11 +1482,9 @@ def clo_lon (lon, lon0=0., rad=False, deg=True) :
                              c_lon-lon_range, c_lon)
     c_lon = mmath.where (c_lon < lon0 - lon_range*0.5,
                              c_lon+lon_range, c_lon)
-    if c_lon.shape == () :
-        c_lon = c_lon.item ()
+    if c_lon.shape == () : c_lon = c_lon.item ()
     if mmath == xr :
-        if lon.attrs :
-            c_lon.attrs.update ( lon.attrs )
+        if lon.attrs : c_lon.attrs.update ( lon.attrs )
     return c_lon
 
 def index2depth (pk, gdept_0) :
@@ -1608,10 +1581,8 @@ def depth2comp (pz, depth0, fact ) :
         zz   = pz
     gz = np.where ( zz>depth0, (zz-depth0)*fact+depth0, zz)
     #print ( f'depth2comp : {gz=}' )
-    if type (pz) in [int, float] :
-        return gz.item()
-    else :
-        return gz
+    if type (pz) in [int, float] : return gz.item()
+    else                         : return gz
 
 def comp2depth (pz, depth0, fact ) :
     '''Form compressed depth, get depth, with bottom part compressed

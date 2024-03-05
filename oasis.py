@@ -27,14 +27,10 @@ import sys, numpy as np, inspect
 try    : import xarray as xr
 except ImportError : pass
     
-try    : import numba
-except ImportError : pass
-    
 import time
 
 rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
 
-@numba.jit(forceobj=True)
 def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links):
     src_grid_target     = np.zeros ((src_grid_size,), dtype=int)
     src_grid_weight     = np.zeros ((src_grid_size,))
@@ -49,8 +45,6 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
         dst_grid_weight[dst_address[link]] += remap_matrix [link]
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
-    
-@numba.jit(forceobj=True)
 def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
     '''
     Remap a field using OASIS rmpfile
@@ -70,7 +64,7 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
     num_links      = d_rmp.dims ['num_links']
     src_grid_size  = d_rmp.dims ['src_grid_size']
     dst_grid_size  = d_rmp.dims ['dst_grid_size']
-    # address in rmp file are in Fortran convention : starting a 1
+    # Address in rmp file are in Fortran convention : starting a 1
     # Here we shift to python/C convention : starting at 0
     src_address    = d_rmp ['src_address'].values - 1
     dst_address    = d_rmp ['dst_address'].values - 1
@@ -139,14 +133,12 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
     if verbose : print ("End of " + __name__ + ".rmp_remap")   
     return dst_field_2D
 
-@numba.jit(forceobj=True)
 def progress (percent=0, width=30) :
         left  = (width * percent) // 100
         right = width - left
         #print ('\r[', '#' * left, ' ' * right, ']', f' {percent:.0f}%',  sep='', end='', flush=True)
         print ( '\r[', '#' * left, ' ' * right, '] {:4d}%'.format(percent),  sep='', end='', flush=True)
 
-@numba.jit(forceobj=True)
 def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan, verbose = True ) :
     '''
     Remap a field using interpolation weights and addresses
@@ -201,7 +193,6 @@ def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst
 
     return dst_field
 
-@numba.jit(forceobj=True)
 def geo2en (pxx, pyy, pzz, glam, gphi) : 
     '''
     Change vector from geocentric to east/north
@@ -220,7 +211,6 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
 
     return pte, ptn
 
-@numba.jit(forceobj=True)
 def en2geo (pte, ptn, glam, gphi) :
     '''
     Change vector from east/north to geocentric
@@ -241,7 +231,6 @@ def en2geo (pte, ptn, glam, gphi) :
     return pxx, pyy, pzz
 
 ## Sommes des poids à l'arrivée
-@numba.jit(forceobj=True)
 def sum_matrix (rmp) :
     '''
     Computes sum of weights on souce and destination points
