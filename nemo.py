@@ -98,13 +98,19 @@ ROMEGA   = 2. * RPI / RSIDAY                    ; ROMEGA.attrs.update ({'units':
 ## Default names of dimensions
 UDIMS = {'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter' }
 
+## All possible names of lon/lat variables in Nelo files
+LONNAME=['nav_lon', 'nav_lon_T', 'nav_lon_U', 'nav_lon_V', 'nav_lon_F', 'nav_lon_W',
+             'nav_lon_grid_T', 'nav_lon_grid_U', 'nav_lon_grid_V', 'nav_lon_grid_F', 'nav_lon_grid_W']
+LATNAME=['nav_lat', 'nav_lat_T', 'nav_lat_U', 'nav_lat_V', 'nav_lat_F', 'nav_lat_W',
+             'nav_lat_grid_T', 'nav_lat_grid_U', 'nav_lat_grid_V', 'nav_lat_grid_F', 'nav_lat_grid_W']
+
 ## All possibles names of dimensions in Nemo files
 XNAME = [ 'x', 'X', 'X1', 'xx', 'XX',
               'x_grid_T', 'x_grid_U', 'x_grid_V', 'x_grid_F', 'x_grid_W',
-              'lon', 'nav_lon', 'longitude', 'X1', 'x_c', 'x_f', ]
+              'lon', 'nav_lon', 'longitude', 'X1', 'x_c', 'x_f']
 YNAME = [ 'y', 'Y', 'Y1', 'yy', 'YY',
               'y_grid_T', 'y_grid_U', 'y_grid_V', 'y_grid_F', 'y_grid_W',
-              'lat', 'nav_lat', 'latitude' , 'Y1', 'y_c', 'y_f', ]
+              'lat', 'nav_lat', 'latitude' , 'Y1', 'y_c', 'y_f']
 ZNAME = [ 'z', 'Z', 'Z1', 'zz', 'ZZ', 'depth', 'tdepth', 'udepth',
               'vdepth', 'wdepth', 'fdepth', 'deptht', 'depthu',
               'depthv', 'depthw', 'depthf', 'olevel', 'z_c', 'z_f', ]
@@ -138,6 +144,8 @@ def __mmath__ (ptab, default=None) :
     Returns type
     '''
     mmath = default
+    if isinstance (ptab, xr.core.dataset.Dataset) :
+        mmath = 'dataset'
     if isinstance (ptab, xr.core.dataarray.DataArray) :
         mmath = xr
     if isinstance (ptab, np.ndarray) :
@@ -305,16 +313,22 @@ def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
         ax_name, unit_list, length = TNAME, TUNIT, None
         if verbose : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
 
-    if mmath == xr :
+    if verbose :
+        print ( f'{ax_name=} {unit_list=} {length=}' )
+            
+    if mmath in [xr, 'dataset' ]: 
         # Try by name
-        for dim in ax_name :
-            if dim in ptab.dims :
-                if verbose : print ( f'Rule 2 : {name=} axis found by unit : {axis=} : {XNAME=}' )
-                ix, ax = ptab.dims.index (dim), dim
+        for i, dim in enumerate (ptab.dims) :
+            if verbose : print ( f'{i=} {dim=}' )
+            if dim in ax_name :
+                if verbose : print ( f'Rule 2 : {dim=} axis found by name : {XNAME=}' )
+                ix, ax = i, dim
 
         # If not found, try by axis attributes
         if not ix :
+            if verbose : print ( 'ix not found - 1' )
             for i, dim in enumerate (ptab.dims) :
+                if verbose : print ( f'{i=} {dim=}' )
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
                     if verbose : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
@@ -341,20 +355,27 @@ def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
                             ix, ax = i, dim
 
     # If numpy array or dimension not found, try by length
-    if mmath != xr or not ix :
+    
+    if mmath not in [xr, 'dataset'] or not ix :
         if length :
-            l_shape = ptab.shape
+            if mmath in [xr, 'dataset'] :
+                l_shape =[ len (x) for x in ptab.dims ]
+            else :
+                l_shape = ptab.shape
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
-                    if verbose : print ( f'Rule 5 : {name=} axis found by length : {axis=} : {XNAME=} {i=} {dim=}' )
-                    ix = nn
+                    ix = nn ; ax = None
+                    if verbose : print ( f'Rule 5 : {ax_name=} axis found by length : {axis=} : {XNAME=} {ix=} {ax=}' )
 
     if ix and back :
-        ix -= len(ptab.shape)
-
+        if mmath in [xr, 'dataset'] :
+            ix -= len (ptab.dims)
+        else :
+            ix -= len (ptab.shape)
+            
     return ax, ix
 
-def find_axis ( ptab, axis='z', back=True, verbose=False ) :
+def find_axis (ptab, axis='z', back=True, verbose=False ) :
     '''Version of find_axis with no __'''
     ix, xx = __find_axis__ (ptab, axis, back, verbose)
     return xx, ix
@@ -473,7 +494,33 @@ else :
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
         print ( f'{ptab.shape=} {sval=} {transpose=}' )
-  
+
+def fill_latlon (plat, plon, sval=-1) :
+    '''Fill latitude/longitude values
+
+    Useful when NEMO has run with no wet points options :
+    some parts of the domain, with no ocean points, have no
+    lon/lat values
+    '''
+    from sklearn.impute import SimpleImputer
+    mmath = __mmath__ (plon)
+
+    imp = SimpleImputer (missing_values=sval, strategy='mean')
+    imp.fit (plon)
+    zlon = imp.transform (plon)
+    imp.fit (plat.T)
+    zlat = imp.transform (plat.T).T
+
+    if mmath == xr :
+        zlon = xr.DataArray (zlon, dims=plon.dims, coords=plon.coords)
+        zlat = xr.DataArray (zlat, dims=plat.dims, coords=plat.coords)
+        zlon.attrs.update (plon.attrs)
+        zlat.attrs.update (plat.attrs)
+
+    zlon = fixed_lon (zlon)
+
+    return zlat, zlon
+
 def fill_lonlat (plon, plat, sval=-1) :
     '''Fill longitude/latitude values
 
@@ -734,8 +781,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
                      axis=-1)
     return tabex
 
-def orca2reg (dd, lat_name='nav_lat', lon_name='nav_lon',
-                  y_name='y', x_name='x') :
+def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
     '''Assign an ORCA dataset on a regular grid.
 
     For use in the tropical region.
@@ -746,10 +792,24 @@ def orca2reg (dd, lat_name='nav_lat', lon_name='nav_lon',
 
       Returns : xarray dataset with rectangular grid. Incorrect above 20°N
     '''
-    # Compute 1D longitude and latitude
-    (zlat, zlon) = latlon1d ( dd[lat_name], dd[lon_name])
+    if not x_name : x_name, ix = __find_axis__ (dd, axis='x')
+    if not y_name : y_name, jy = __find_axis__ (dd, axis='y')
 
+    if not lon_name :
+        for xn in LONNAME :
+            if xn in dd.variables : lon_name = xn
+    if not lat_name :
+        for yn in LATNAME :
+            if yn in dd.variables : lat_name = yn
+
+    print ( f'{dd.dims=}'   )
+    print ( f'{x_name=} {y_name=}' )
+    
+    # Compute 1D longitude and latitude
+    ylat, xlon = fill_latlon (dd[lat_name], dd[lon_name], sval=-1)
+    (zlat, zlon) = latlon1d (ylat, xlon)
     zdd = dd
+    
     # Assign lon and lat as dimensions of the dataset
     if y_name in zdd.dims :
         zlat = xr.DataArray (zlat, coords=[zlat,], dims=['lat',])
@@ -759,9 +819,9 @@ def orca2reg (dd, lat_name='nav_lat', lon_name='nav_lon',
         zdd  = zdd.rename_dims ({x_name: "lon",}).assign_coords (lon=zlon)
     # Force dimensions to be in the right order
     coord_order = ['lat', 'lon']
-    for dim in [ 'depthw', 'depthv', 'depthu', 'deptht', 'depth', 'z',
+    for dim in [ 'olevel', 'depthw', 'depthv', 'depthu', 'deptht', 'depth', 'z',
                  'time_counter', 'time', 'tbnds',
-                 'bnds', 'axis_nbounds', 'two2', 'two1', 'two', 'four',] :
+                 'bnds', 'axis_nbounds', 'nvertex', 'two2', 'two1', 'two', 'four',] :
         if dim in zdd.dims :
             coord_order.insert (0, dim)
 
@@ -1469,22 +1529,16 @@ def clo_lon (lon, lon0=0., rad=False, deg=True) :
     if rad and deg :
         raise 
     mmath = __mmath__ (lon, np)
-    if rad :
-        lon_range = 2.*np.pi
-    if deg :
-        lon_range = 360.
+    if rad : lon_range = 2.*np.pi
+    if deg : lon_range = 360.
     c_lon = lon
-    c_lon = mmath.where (c_lon > lon0 + lon_range*0.5,
-                             c_lon-lon_range, c_lon)
-    c_lon = mmath.where (c_lon < lon0 - lon_range*0.5,
-                             c_lon+lon_range, c_lon)
-    c_lon = mmath.where (c_lon > lon0 + lon_range*0.5,
-                             c_lon-lon_range, c_lon)
-    c_lon = mmath.where (c_lon < lon0 - lon_range*0.5,
-                             c_lon+lon_range, c_lon)
+    c_lon = mmath.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = mmath.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    c_lon = mmath.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = mmath.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
     if c_lon.shape == () : c_lon = c_lon.item ()
     if mmath == xr :
-        if lon.attrs : c_lon.attrs.update ( lon.attrs )
+        if lon.attrs : c_lon.attrs.update (lon.attrs)
     return c_lon
 
 def index2depth (pk, gdept_0) :

@@ -487,24 +487,27 @@ def add_cyclic (data, x, y, axis=-1, verbose=False, cyclic=360, precision=0.0001
     Same as cartopy.util.add_cyclic, but returns xarray instead of numy arrays.
 
     Use cartopy.util.add_cyclic
-
     '''
     if verbose : print ( f'--add_cyclic-- {tab.shape=} {lon.shape=} {lat.shape=}' )
 
-    #xx1, yy1 = np.meshgrid (x, y)
-    yy1, xx1 = xr.broadcast (y, x)
-    ztab, xx, yy = cutil.add_cyclic ( data=data, x=xx1, y=yy1, axis=axis, cyclic=360, precision=0.0001)
-    xx = xr.DataArray ( xx, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
-    yy = xr.DataArray ( yy, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
+    #yy1, xx1 = xr.broadcast (y, x)
+    xx1=x
+    yy1=y
+    ztab, xx, yy = cutil.add_cyclic (data=data, x=xx1, y=yy1, axis=axis, cyclic=360, precision=0.0001)
+    #xx = xr.DataArray (xx, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
+    #yy = xr.DataArray (yy, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
+    xx = xr.DataArray (xx, dims=(x.dims[0],), coords=(xx.squeeze(),) )
+    yy = xr.DataArray (yy, dims=(y.dims[0],), coords=(yy.squeeze(),) )
 
     new_coords = []
     for i, dim in enumerate (data.dims) :
         if dim == data.dims[axis] :
-            new_coords.append ( xx[0,:].squeeze().values )
+            #new_coords.append ( xx[0,:].squeeze().values )
+            new_coords.append (xx)
         else :
             new_coords.append ( data.coords[dim].values )
 
-    ztab = xr.DataArray ( ztab, dims=data.dims, coords=new_coords)
+    ztab = xr.DataArray (ztab, dims=data.dims, coords=new_coords)
 
     return ztab, xx, yy
 
