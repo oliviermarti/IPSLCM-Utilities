@@ -12,6 +12,7 @@ Details for exact computation : https://www.imcce.fr/en/grandpublic/systeme/prom
 '''
 
 import numpy as np, xarray as xr
+import cftime
 
 deg2rad = np.deg2rad (1.0)
 rad2deg = np.rad2deg (1.0)
@@ -57,15 +58,17 @@ SOLAR = 1365.0          # Solar constant (W/m^2)
 def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
     '''
     Convert a cftime time variable in to Year before present values
-    unit : year or month
+    unit  : year or month
     year0 : year corresponding to 0k BP
-    month0, day0 : month and day corresponding to 0 ka BP
+    month0, day0, hour0 : month, day, hour corresponding to 0 ka BP
+
+    Approximate calculation for plots
     '''
-    try : ty = isinstance (time, xr.core.dataarray.DataArray)
-    except : ty = None
-    if ty : ztime = time.values
-    else : ztime = time
-    result = np.empty ( [len(time),] )
+    try    : ty    = isinstance (time, xr.core.dataarray.DataArray)
+    except : ty    = None
+    if ty  : ztime = time.values
+    else   : ztime = time
+    result = np.empty_like (time)
     for ii, tt in enumerate (ztime) :
         (year, month, day, hour, mn, sec, ms) = cftime.to_tuple (tt)
         result [ii] = (year0-year) - (month-month0)/12 - (day-day0)/365.25 - (hour-hour0)/(365.25*24) - mn/(365.25*24*60) - sec/(365.25*24*60+60)
@@ -75,9 +78,9 @@ def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
     if ty : 
         result = xr.DataArray (result, dims=('YearBP',), coords=(result,))
         if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
-            result.attrs.update ({'unit':'Month BP'})
+            result.attrs.update ({'unit':'Month BP', 'Comment':'Month before 1950'})
         else : 
-            result.attrs.update ({'unit':'Year BP'})
+            result.attrs.update ({'unit':'Year BP' , 'Comment':'Year before 1950' })
     return result
 
 def mthday2day (month, day) :

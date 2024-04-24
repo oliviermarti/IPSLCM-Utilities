@@ -144,14 +144,10 @@ def __mmath__ (ptab, default=None) :
     Returns type
     '''
     mmath = default
-    if isinstance (ptab, xr.core.dataset.Dataset) :
-        mmath = 'dataset'
-    if isinstance (ptab, xr.core.dataarray.DataArray) :
-        mmath = xr
-    if isinstance (ptab, np.ndarray) :
-        mmath = np
-    if isinstance (ptab, np.ma.MaskType) :
-        mmath = np.ma
+    if isinstance (ptab, xr.core.dataset.Dataset)     : mmath = 'dataset'
+    if isinstance (ptab, xr.core.dataarray.DataArray) : mmath = xr
+    if isinstance (ptab, np.ndarray)                  : mmath = np
+    if isinstance (ptab, np.ma.MaskType)              : mmath = np.ma
 
     return mmath
 
@@ -211,14 +207,10 @@ def __guess_config__ (jpj, jpi, nperio=None, config=None, out='nperio') :
             raise ValueError ( f'nperio set as {nperio} (deduced from {jpi=} and {jpj=}) : \n'+
                                 'nemo.py is not ready for this value' )
 
-    if out == 'nperio' :
-        return nperio
-    if out == 'config' :
-        return config
-    if out == 'perio'  :
-        return iperio, jperio, nfold, nftype
-    if out in ['full', 'all'] :
-        return {'nperio':nperio, 'iperio':iperio, 'jperio':jperio, 'nfold':nfold, 'nftype':nftype}
+    if out == 'nperio'        : return nperio
+    if out == 'config'        : return config
+    if out == 'perio'         : return iperio, jperio, nfold, nftype
+    if out in ['full', 'all'] : return {'nperio':nperio, 'iperio':iperio, 'jperio':jperio, 'nfold':nfold, 'nftype':nftype}
 
 def __guess_point__ (ptab) :
     '''Tries to guess the grid point (periodicity parameter.
@@ -235,29 +227,15 @@ def __guess_point__ (ptab) :
     gp = None
     mmath = __mmath__ (ptab)
     if mmath == xr :
-        if ('x_c' in ptab.dims and 'y_c' in ptab.dims ) :
-            gp = 'T'
-        if ('x_f' in ptab.dims and 'y_c' in ptab.dims ) :
-            gp = 'U'
-        if ('x_c' in ptab.dims and 'y_f' in ptab.dims ) :
-            gp = 'V'
-        if ('x_f' in ptab.dims and 'y_f' in ptab.dims ) :
-            gp = 'F'
-        if ('x_c' in ptab.dims and 'y_c' in ptab.dims
-              and 'z_c' in ptab.dims )                :
-            gp = 'T'
-        if ('x_c' in ptab.dims and 'y_c' in ptab.dims
-                and 'z_f' in ptab.dims )                :
-            gp = 'W'
-        if ('x_f' in ptab.dims and 'y_c' in ptab.dims
-                and 'z_f' in ptab.dims )                :
-            gp = 'U'
-        if ('x_c' in ptab.dims and 'y_f' in ptab.dims
-                and 'z_f' in ptab.dims ) :
-            gp = 'V'
-        if ('x_f' in ptab.dims and 'y_f' in ptab.dims
-                and 'z_f' in ptab.dims ) :
-            gp = 'F'
+        if ('x_c' in ptab.dims and 'y_c' in ptab.dims )                        : gp = 'T'
+        if ('x_f' in ptab.dims and 'y_c' in ptab.dims )                        : gp = 'U'
+        if ('x_c' in ptab.dims and 'y_f' in ptab.dims )                        : gp = 'V'
+        if ('x_f' in ptab.dims and 'y_f' in ptab.dims )                        : gp = 'F'
+        if ('x_c' in ptab.dims and 'y_c' in ptab.dims and 'z_c' in ptab.dims ) : gp = 'T'
+        if ('x_c' in ptab.dims and 'y_c' in ptab.dims and 'z_f' in ptab.dims ) : gp = 'W'
+        if ('x_f' in ptab.dims and 'y_c' in ptab.dims and 'z_f' in ptab.dims ) : gp = 'U'
+        if ('x_c' in ptab.dims and 'y_f' in ptab.dims and 'z_f' in ptab.dims ) : gp = 'V'
+        if ('x_f' in ptab.dims and 'y_f' in ptab.dims and 'z_f' in ptab.dims ) : gp = 'F'
 
         if gp is None :
             raise AttributeError ('in nemo module : cd_type not found, and cannot by guessed')
@@ -276,23 +254,17 @@ def get_shape ( ptab ) :
     '''
 
     g_shape = ''
-    if __find_axis__ (ptab, 'x')[0] :
-        g_shape = 'X'
-    if __find_axis__ (ptab, 'y')[0] :
-        g_shape = 'Y' + g_shape
-    if __find_axis__ (ptab, 'z')[0] :
-        g_shape = 'Z' + g_shape
-    if __find_axis__ (ptab, 't')[0] :
-        g_shape = 'T' + g_shape
+    if __find_axis__ (ptab, 'x')[0] : g_shape = 'X'
+    if __find_axis__ (ptab, 'y')[0] : g_shape = 'Y' + g_shape
+    if __find_axis__ (ptab, 'z')[0] : g_shape = 'Z' + g_shape
+    if __find_axis__ (ptab, 't')[0] : g_shape = 'T' + g_shape
     return g_shape
 
 def lbc_diag (nperio) :
     '''Useful to switch between field with and without halo'''
     lperio, aperio = nperio, False
-    if nperio == 4.2 :
-        lperio, aperio = 4, True
-    if nperio == 6.2 :
-        lperio, aperio = 6, True
+    if nperio == 4.2 : lperio, aperio = 4, True
+    if nperio == 6.2 : lperio, aperio = 6, True
     return lperio, aperio
 
 def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
@@ -556,8 +528,8 @@ def fill_bounds_lonlat (pbounds_lon, pbounds_lat, sval=-1) :
     '''
     mmath = __mmath__ (pbounds_lon)
 
-    z_bounds_lon = np.empty ( pbounds_lon.shape )
-    z_bounds_lat = np.empty ( pbounds_lat.shape )
+    z_bounds_lon = np.empty_like (pbounds_lon)
+    z_bounds_lat = np.empty_like (pbounds_lat)
 
     imp = SimpleImputer (missing_values=sval, strategy='mean')
 
@@ -585,11 +557,8 @@ def jeq (plat) :
     mmath = __mmath__ (plat)
     jy = __find_axis__ (plat, 'y')[-1]
 
-    if mmath == xr :
-        jj = int ( np.mean ( np.argmin (np.abs (np.float64 (plat)),
-                                                axis=jy) ) )
-    else :
-        jj = np.argmin (np.abs (np.float64 (plat[...,:, 0])))
+    if mmath == xr : jj = int ( np.mean ( np.argmin (np.abs (np.float64 (plat)), axis=jy) ) )
+    else           : jj = np.argmin (np.abs (np.float64 (plat[...,:, 0])))
 
     return jj
 
@@ -661,13 +630,10 @@ def lat1d (plat) :
     lat_ave = np.mean (plat, axis=-1)
 
     if np.abs (lat_eq) < dy/100. : # T, U or W grid
-        if jpj-1 > jreg :
-            dys = (90.-lat_reg) / (jpj-jreg-1)*0.5
-        else            :
-            dys = (90.-lat_reg) / 2.0
+        if jpj-1 > jreg : dys = (90.-lat_reg) / (jpj-jreg-1)*0.5
+        else            : dys = (90.-lat_reg) / 2.0
         yrange = 90.-dys-lat_reg
-    else                           :  # V or F grid
-        yrange = 90.-lat_reg
+    else :  yrange = 90.-lat_reg # V or F grid
 
     if jpj-1 > jreg :
         lat_1d = mmath.where (lat_ave<lat_reg,
@@ -715,9 +681,9 @@ def mask_lonlat (ptab, x0, x1, y0, y1, lon, lat, sval=np.nan) :
 
     mask = np.logical_and (np.logical_and(lat>y0, lat<y1),
             np.logical_or (np.logical_or (
-                np.logical_and(lon>x0, lon<x1),
-                np.logical_and(lon+360>x0, lon+360<x1)),
-                np.logical_and(lon-360>x0, lon-360<x1)))
+                np.logical_and (lon>x0, lon<x1),
+                np.logical_and (lon+360>x0, lon+360<x1)),
+                np.logical_and (lon-360>x0, lon-360<x1)))
     tab = mmath.where (mask, ptab, sval)
 
     return tab
@@ -741,8 +707,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
     '''
     mmath = __mmath__ (ptab)
 
-    if ptab.shape[-1] == 1 :
-        tabex = ptab
+    if ptab.shape[-1] == 1 : tabex = ptab
 
     else :
         if not jpi : jpi = ptab.shape[-1]
@@ -753,10 +718,8 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
         if ptab.shape[-1] > jpi :
             tabex = ptab
         else :
-            if nperio in [ 0, 4.2 ] :
-                istart, le, la = 0, jpi+1, 0
-            if nperio == 1 :
-                istart, le, la = 0, jpi+1, 0
+            if nperio in [ 0, 4.2 ] : istart, le, la = 0, jpi+1, 0
+            if nperio == 1          : istart, le, la = 0, jpi+1, 0
             if nperio in [4, 6] : # OPA case with two halo points for periodicity
                 # Perfect, except at the pole that should be masked by lbc_plot
                 istart, le, la = 1, jpi-2, 1
@@ -768,10 +731,8 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
                 lon    = ptab.dims[-1]
                 new_coords = []
                 for coord in ptab.dims :
-                    if coord == lon :
-                        new_coords.append ( np.arange( tabex.shape[-1]))
-                    else            :
-                        new_coords.append ( ptab.coords[coord].values)
+                    if coord == lon : new_coords.append ( np.arange( tabex.shape[-1]))
+                    else            : new_coords.append ( ptab.coords[coord].values)
                 tabex = xr.DataArray ( tabex, dims=ptab.dims,
                                            coords=new_coords )
             else :
@@ -822,8 +783,7 @@ def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
     for dim in [ 'olevel', 'depthw', 'depthv', 'depthu', 'deptht', 'depth', 'z',
                  'time_counter', 'time', 'tbnds',
                  'bnds', 'axis_nbounds', 'nvertex', 'two2', 'two1', 'two', 'four',] :
-        if dim in zdd.dims :
-            coord_order.insert (0, dim)
+        if dim in zdd.dims : coord_order.insert (0, dim)
 
     zdd = zdd.transpose (*coord_order)
     return zdd
@@ -848,8 +808,7 @@ def lbc_init (ptab, nperio=None) :
     if ax : jpi = ptab.shape[ix]
     if ay : jpj = ptab.shape[jy]
 
-    if nperio is None :
-        nperio = __guess_nperio__ (jpj, jpi, nperio)
+    if nperio is None : nperio = __guess_nperio__ (jpj, jpi, nperio)
 
     if nperio not in NPERIO_VALID_RANGE :
         raise AttributeError ( f'{nperio=} is not in the valid range {NPERIO_VALID_RANGE}' )
@@ -867,8 +826,8 @@ def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
     See NEMO documentation for further details
     '''
     jpi, nperio = lbc_init (ptab, nperio)[1:]
-    ax = __find_axis__ (ptab, 'x')[0]
-    ay = __find_axis__ (ptab, 'y')[0]
+    ax     = __find_axis__ (ptab, 'x')[0]
+    ay     = __find_axis__ (ptab, 'y')[0]
     psgn   = ptab.dtype.type (psgn)
     mmath  = __mmath__ (ptab)
 
@@ -919,15 +878,9 @@ def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
             if nperio in [4.2] :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
                     ztab [..., -1, jpi//2:  ] = psgn * ztab [..., -1, jpi//2:0:-1  ]
-
-                if cd_type == 'U' :
-                    ztab [..., -1, jpi//2-1:-1] = psgn * ztab [..., -1, jpi//2:0:-1]
-
-                if cd_type == 'V' :
-                    ztab [..., -1, 1:       ] = psgn * ztab [..., -2, jpi-1:0:-1   ]
-
-                if cd_type == 'F' :
-                    ztab [..., -1, 0:-1     ] = psgn * ztab [..., -2, -1:0:-1      ]
+                if cd_type == 'U' : ztab [..., -1, jpi//2-1:-1] = psgn * ztab [..., -1, jpi//2:0:-1]
+                if cd_type == 'V' : ztab [..., -1, 1:       ] = psgn * ztab [..., -2, jpi-1:0:-1   ]
+                if cd_type == 'F' : ztab [..., -1, 0:-1     ] = psgn * ztab [..., -2, -1:0:-1      ]
 
             if nperio in [5, 6] :            #  North fold F-point pivot
                 if cd_type in ['T', 'W']  :
@@ -987,8 +940,7 @@ def lbc_mask (ptab, nperio=None, cd_type='T', sval=np.nan) :
             #
             #> South (in which nperio cases ?)
             # --------------------------------
-            if nperio in [1, 3, 4, 5, 6] :
-                ztab [..., 0, :] = sval
+            if nperio in [1, 3, 4, 5, 6] : ztab [..., 0, :] = sval
 
             #
             #> North-South boundary conditions
@@ -1013,15 +965,9 @@ def lbc_mask (ptab, nperio=None, cd_type='T', sval=np.nan) :
             if nperio in [4.2] :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
                     ztab [..., -1, jpi//2  :  ] = sval
-
-                if cd_type == 'U' :
-                    ztab [..., -1, jpi//2-1:-1] = sval
-
-                if cd_type == 'V' :
-                    ztab [..., -1, 1:       ] = sval
-
-                if cd_type == 'F' :
-                    ztab [..., -1, 0:-1     ] = sval
+                if cd_type == 'U' : ztab [..., -1, jpi//2-1:-1] = sval
+                if cd_type == 'V' : ztab [..., -1, 1:         ] = sval
+                if cd_type == 'F' : ztab [..., -1, 0:-1       ] = sval
 
             if nperio in [5, 6] :            #  North fold F-point pivot
                 if cd_type in ['T', 'W']  :
@@ -1073,8 +1019,7 @@ def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
         if ay :
             #> Masks south
             # ------------
-            if nperio in [4, 6] :
-                ztab [..., 0, : ] = sval
+            if nperio in [4, 6] : ztab [..., 0, : ] = sval
 
             #
             #> North-South boundary conditions
@@ -1098,15 +1043,9 @@ def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
             if nperio in [4.2] :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
                     ztab [..., -1, jpi//2:  ] = sval
-
-                if cd_type == 'U' :
-                    ztab [..., -1, jpi//2-1:-1] = sval
-
-                if cd_type == 'V' :
-                    ztab [..., -1, 1:       ] = sval
-
-                if cd_type == 'F' :
-                    ztab [..., -1, 0:-1     ] = sval
+                if cd_type == 'U' : ztab [..., -1, jpi//2-1:-1] = sval
+                if cd_type == 'V' : ztab [..., -1, 1:       ] = sval
+                if cd_type == 'F' : ztab [..., -1, 0:-1     ] = sval
 
             if nperio in [5, 6] :            #  North fold F-point pivot
                 if cd_type in ['T', 'W']  :
@@ -1158,19 +1097,15 @@ def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
             if 'X' in lshape and 'Y' in lshape :
                 ptab_ext.values[..., :-1, 1:-1] = ptab.values.copy ()
             else :
-                if 'X' in lshape     :
-                    ptab_ext.values[...,      1:-1] = ptab.values.copy ()
-                if 'Y' in lshape     :
-                    ptab_ext.values[..., :-1      ] = ptab.values.copy ()
+                if 'X' in lshape : ptab_ext.values[...,      1:-1] = ptab.values.copy ()
+                if 'Y' in lshape : ptab_ext.values[..., :-1      ] = ptab.values.copy ()
         else           :
             ptab_ext =               np.zeros (ext_shape)
             if 'X' in lshape and 'Y' in lshape :
                 ptab_ext       [..., :-1, 1:-1] = ptab.copy ()
             else :
-                if 'X' in lshape     :
-                    ptab_ext       [...,      1:-1] = ptab.copy ()
-                if 'Y' in lshape     :
-                    ptab_ext       [..., :-1      ] = ptab.copy ()
+                if 'X' in lshape : ptab_ext [...,      1:-1] = ptab.copy ()
+                if 'Y' in lshape : ptab_ext [..., :-1      ] = ptab.copy ()
 
         if nperio == 4.2 :
             ptab_ext = lbc (ptab_ext, nperio=4, cd_type=cd_type, psgn=psgn)
@@ -1181,10 +1116,8 @@ def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
             ptab_ext.attrs = ptab.attrs
             az = __find_axis__ (ptab, 'z')[0]
             at = __find_axis__ (ptab, 't')[0]
-            if az :
-                ptab_ext = ptab_ext.assign_coords ( {az:ptab.coords[az]} )
-            if at :
-                ptab_ext = ptab_ext.assign_coords ( {at:ptab.coords[at]} )
+            if az : ptab_ext = ptab_ext.assign_coords ( {az:ptab.coords[az]} )
+            if at : ptab_ext = ptab_ext.assign_coords ( {at:ptab.coords[at]} )
 
     else : ptab_ext = lbc (ptab, nperio=nperio, cd_type=cd_type, psgn=psgn)
 
@@ -1209,20 +1142,12 @@ def lbc_del (ptab, nperio=None, cd_type='T', psgn=1) :
 
     if nperio in [4.2, 6.2] :
         if ax or ay :
-            if ax and ay :
-                ztab = lbc (ptab[..., :-1, 1:-1],
-                            nperio=nperio, cd_type=cd_type, psgn=psgn)
+            if ax and ay : ztab = lbc (ptab[..., :-1, 1:-1], nperio=nperio, cd_type=cd_type, psgn=psgn)
             else :
-                if ax :
-                    ztab = lbc (ptab[...,      1:-1],
-                                nperio=nperio, cd_type=cd_type, psgn=psgn)
-                if ay :
-                    ztab = lbc (ptab[..., -1],
-                                nperio=nperio, cd_type=cd_type, psgn=psgn)
-        else :
-            ztab = ptab
-    else :
-        ztab = ptab
+                if ax    : ztab = lbc (ptab[...,      1:-1], nperio=nperio, cd_type=cd_type, psgn=psgn)
+                if ay    : ztab = lbc (ptab[..., -1]       , nperio=nperio, cd_type=cd_type, psgn=psgn)
+        else : ztab = ptab
+    else : ztab = ptab
 
     return ztab
 
@@ -1348,20 +1273,17 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
                + np.cos (RAD*lat_data) * np.cos (RAD*lat_grid) *
                  np.cos(RAD*(lon_data-lon_grid)) )
 
-    if verbose :
-        print ( f'{type(arg)=} {arg.shape=}' )
+    if verbose : print ( f'{type(arg)=} {arg.shape=}' )
     
     # Send masked points to 'infinite'
     distance = np.arccos (arg) + 4.0*RPI*(1.0-mask)
 
-    if verbose :
-        print ( f'{type(distance)=} {distance.shape=}' )
+    if verbose : print ( f'{type(distance)=} {distance.shape=}' )
 
     # Truncates to alleviate precision problem encountered with some grids
     prec = int (1E7)
     distance = (distance*prec).astype(int) / prec
-    if verbose :
-        print ( f'{type(distance)=} {distance.shape=}' )
+    if verbose : print ( f'{type(distance)=} {distance.shape=}' )
         
     # Compute index minimum of distance
     try :
@@ -1413,18 +1335,12 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
         jmin = zz[:,-2]
         imin = zz[:,-1]
         
-    if   out=='dict'                     :
-        return {UDIMS['y']:jmin, UDIMS['x']:imin}
-    elif out in ['array', 'numpy', 'np'] :
-       return np.array (jmin), np.array (imin)
-    elif out in ['xarray', 'xr']         :
-        return xr.DataArray (jmin, dims=('Num',)), xr.DataArray (imin, dims=('Num',))
-    elif out=='list'                     :
-        return [jmin, imin]
-    elif out=='tuple'                    :
-        return jmin, imin
-    else                                 : 
-        return jmin, imin
+    if   out=='dict'                     : return {UDIMS['y']:jmin, UDIMS['x']:imin}
+    elif out in ['array', 'numpy', 'np'] : return np.array (jmin), np.array (imin)
+    elif out in ['xarray', 'xr']         : return xr.DataArray (jmin, dims=('Num',)), xr.DataArray (imin, dims=('Num',))
+    elif out=='list'                     : return [jmin, imin]
+    elif out=='tuple'                    : return jmin, imin
+    else                                 : return jmin, imin
 
 def curl (tx, ty, e1f, e2f, nperio=None) :
     '''Returns curl of a vector field
@@ -1661,12 +1577,12 @@ def index2lon (pi, plon_1d) :
     Needed to use transforms in Matplotlib
     '''
     jpi = plon_1d.shape[0]
-    ii = xr.DataArray (pi)
-    i =  np.maximum (0, np.minimum (jpi-1, ii    ))
-    i0 = np.floor (i).astype (int)
-    i1 = np.maximum (0, np.minimum (jpi-1,  i0+1))
-    xx = i - i0
-    gx = (1.0-xx)*plon_1d[i0]+ xx*plon_1d[i1]
+    ii  = xr.DataArray (pi)
+    i   =  np.maximum (0, np.minimum (jpi-1, ii    ))
+    i0  = np.floor (i).astype (int)
+    i1  = np.maximum (0, np.minimum (jpi-1,  i0+1))
+    xx  = i - i0
+    gx  = (1.0-xx)*plon_1d[i0]+ xx*plon_1d[i1]
     return gx.values
 
 def lon2index (px, plon_1d) :

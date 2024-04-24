@@ -136,22 +136,22 @@ cmap.shading_r =  create_colormap (cmap.colors_shading, reverse=False, name='sha
 # Qualitative
 cmap.colors_qualitative = [[0, 0, 0], [112, 160, 205], [196, 121, 0], [178, 178, 178], [0, 52, 102], [0, 79, 0]]
 cmap.qualitative_2   = create_colormap (cmap.colors_qualitative[0:2], reverse=False, name='qualitative_2'  )
-cmap.qualitative_2_r = create_colormap (cmap.colors_qualitative[0:2], reverse=False, name='qualitative_2_r')
+cmap.qualitative_2_r = create_colormap (cmap.colors_qualitative[0:2], reverse=True , name='qualitative_2_r')
 
 cmap.qualitative_3   = create_colormap (cmap.colors_qualitative[0:3], reverse=False, name='qualitative_3'  )
-cmap.qualitative_3_r = create_colormap (cmap.colors_qualitative[0:3], reverse=False, name='qualitative_3_r')
+cmap.qualitative_3_r = create_colormap (cmap.colors_qualitative[0:3], reverse=True , name='qualitative_3_r')
 
 cmap.qualitative_4   = create_colormap (cmap.colors_qualitative[0:4], reverse=False, name='qualitative_4'  )
-cmap.qualitative_4_r = create_colormap (cmap.colors_qualitative[0:4], reverse=False, name='qualitative_4_r')
+cmap.qualitative_4_r = create_colormap (cmap.colors_qualitative[0:4], reverse=True , name='qualitative_4_r')
 
 cmap.qualitative_5   = create_colormap (cmap.colors_qualitative[0:5], reverse=False, name='qualitative_5'  )
-cmap.qualitative_5_r = create_colormap (cmap.colors_qualitative[0:5], reverse=False, name='qualitative_5_r')
+cmap.qualitative_5_r = create_colormap (cmap.colors_qualitative[0:5], reverse=True , name='qualitative_5_r')
 
 cmap.qualitative_6   = create_colormap (cmap.colors_qualitative[0:6], reverse=False, name='qualitative_6'  )
-cmap.qualitative_6_r = create_colormap (cmap.colors_qualitative[0:6], reverse=False, name='qualitative_6_r')
+cmap.qualitative_6_r = create_colormap (cmap.colors_qualitative[0:6], reverse=True , name='qualitative_6_r')
 
 cmap.qualitative     = create_colormap (cmap.colors_qualitative, reverse=False, name='qualitative'  )
-cmap.qualitative_r   = create_colormap (cmap.colors_qualitative, reverse=False, name='qualitative_r')
+cmap.qualitative_r   = create_colormap (cmap.colors_qualitative, reverse=True , name='qualitative_r')
 
 # Precip 5 cmap.colors
 cmap.colors_precip_5 = [[166, 97, 26], [223, 194, 125], [245, 245, 245], [128, 205, 193], [1, 133, 113]]
@@ -210,7 +210,7 @@ cmap.temp_6_r = create_colormap (cmap.colors_temp_6, reverse=True , name='temp_6
 # Temp 7 colors
 cmap.colors_temp_7 = [[33, 102, 172], [103, 169, 207], [209, 229, 240], [247, 247, 247],
                       [253, 219, 199], [239, 138,  98], [178,  24,  43]]
-cmap.temp_7   = create_colormap (cmap.colors_temp_7, reverse=False, name='temp_7' )
+cmap.temp_7   = create_colormap (cmap.colors_temp_7, reverse=False, name='temp_7'  )
 cmap.temp_7_r = create_colormap (cmap.colors_temp_7, reverse=True , name='temp_7_r')
 
 # Temp 8 colors

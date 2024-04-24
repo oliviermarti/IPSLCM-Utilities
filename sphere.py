@@ -39,7 +39,7 @@ RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
 REPSI = np.finfo (1.0).eps
 
-def distance ( lat1, lon1, lat2, lon2, radius=1 ) :
+def distance ( lat1, lon1, lat2, lon2, radius=1.0 ) :
     '''
     Compute distance on the sphere
     '''
@@ -56,9 +56,9 @@ def aire_triangle ( lat0, lon0, lat1, lon1, lat2, lon2 ) :
     Aire of a triangle on the sphere
     Girard's formula
     '''
-    a = distance ( lat0 , lon0, lat1 , lon1 )
-    b = distance ( lat1 , lon1, lat2 , lon2 )
-    c = distance ( lat2 , lon2, lat0 , lon0 )
+    a = distance (lat0 , lon0, lat1 , lon1)
+    b = distance (lat1 , lon1, lat2 , lon2)
+    c = distance (lat2 , lon2, lat0 , lon0)
 
     arg_alpha = (np.cos(a) - np.cos(b)*np.cos(c)) / ( np.sin(b)*np.sin(c) ) 
     arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / ( np.sin(a)*np.sin(c) ) 
@@ -70,4 +70,10 @@ def aire_triangle ( lat0, lon0, lat1, lon1, lat2, lon2 ) :
 
     S = (alpha + beta + gamma - np.pi )
 
+    return S
+
+def aire_quadri (lat0, lon0, lat1, lon1, lat2, lon2, lat3, lon3) :
+    
+    S = aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2 ) \
+      + aire_triangle (lat2, lon2, lat3, lon3, lat0, lon0)
     return S

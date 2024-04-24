@@ -31,7 +31,7 @@ import time
 
 rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
 
-def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links):
+def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links) :
     src_grid_target     = np.zeros ((src_grid_size,), dtype=int)
     src_grid_weight     = np.zeros ((src_grid_size,))
 

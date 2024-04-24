@@ -69,22 +69,22 @@ UDIMS = { 'x':'lon', 'y':'lat', 'z':'presnivs', 't': 'time_counter' }
 ## All possibles name of dimensions in LMDZ files
 XNAME = [ 'x', 'X', 'lon', ]
 YNAME = [ 'y', 'Y', 'lat', ]
-CNAME = [ 'c', 'cell' ]
+CNAME = [ 'c', 'cell', ]
 ZNAME = [ 'z', 'Z', 'presnivs', ]
 TNAME = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
 
 ## ALL possibles name of units of dimensions in LMDZ files
 XUNIT = [ 'degrees_east', ]
 YUNIT = [ 'degrees_north', ]
-CUNIT = [ 'cell' ]
-ZUNIT = [ 'Pa' ]
+CUNIT = [ 'cell', ]
+ZUNIT = [ 'Pa', ]
 TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
 ## All possibles size of dimensions in LMDZ files
-XLENGTH = [ 96, 144, 180, 360 ]
-YLENGTH = [ 95, 96, 143, 144, 180, 360 ]
+XLENGTH = [ 96, 144, 180, 360, ]
+YLENGTH = [ 95, 96, 143, 144, 180, 360, ]
 CLENGTH = [ 16002, ]
-ZLENGTH = [ 39, 59, 79]
+ZLENGTH = [ 39, 59, 79, ]
 
 def __mmath__ (ptab, default=None) :
     '''
@@ -93,12 +93,9 @@ def __mmath__ (ptab, default=None) :
     Returns type : xr, np or np.ma
     '''
     mmath = default
-    if isinstance (ptab, xr.core.dataarray.DataArray) :
-        mmath = xr
-    if isinstance (ptab, np.ndarray) :
-        mmath = np
-    if isinstance (ptab, np.ma.MaskType) :
-        mmath = np.ma
+    if isinstance (ptab, xr.core.dataarray.DataArray) : mmath = xr
+    if isinstance (ptab, np.ndarray)                  : mmath = np
+    if isinstance (ptab, np.ma.MaskType)              : mmath = np.ma
 
     return mmath
 
@@ -190,16 +187,11 @@ def get_shape ( ptab ) :
     '''
 
     g_shape = ''
-    if __find_axis__ (ptab, 'x')[0] :
-        g_shape = 'X'
-    if __find_axis__ (ptab, 'y')[0] :
-        g_shape = 'Y' + g_shape
-    if __find_axis__ (ptab, 'c')[0] :
-        g_shape = 'C' + g_shape
-    if __find_axis__ (ptab, 'z')[0] :
-        g_shape = 'Z' + g_shape
-    if __find_axis__ (ptab, 't')[0] :
-        g_shape = 'T' + g_shape
+    if __find_axis__ (ptab, 'x')[0] : g_shape = 'X'
+    if __find_axis__ (ptab, 'y')[0] : g_shape = 'Y' + g_shape
+    if __find_axis__ (ptab, 'c')[0] : g_shape = 'C' + g_shape
+    if __find_axis__ (ptab, 'z')[0] : g_shape = 'Z' + g_shape
+    if __find_axis__ (ptab, 't')[0] : g_shape = 'T' + g_shape
     return g_shape
 
 #
@@ -220,13 +212,10 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
         ztab = tab
 
     else :
-        if jpi is None :
-            jpi = tab.shape[-1]
+        if jpi is None : jpi = tab.shape[-1]
 
-        if Lon :
-            xplus =  lonplus
-        else   :
-            xplus =    0.0
+        if Lon : xplus =  lonplus
+        else   : xplus =    0.0
 
         if tab.shape[-1] > jpi :
             ztab = tab
@@ -278,23 +267,19 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='lin
 
     # Define the result array
     in_shape       = np.array (yp.shape)
-    if verbose :
-        print ( f'{in_shape=}' )
+    if verbose : print ( f'{in_shape=}' )
     ou_shape       = np.array (in_shape)
-    if verbose :
-        print ( f'{ou_shape=}' )
+    if verbose : print ( f'{ou_shape=}' )
     ou_shape[axis] = nk_ou
 
     in_dims        = list (yp.dims)
-    if verbose :
-        print ( f'{in_dims=}' )
+    if verbose : print ( f'{in_dims=}' )
     ou_dims        = in_dims
 
     pdim           = x.dims[0]
     ou_dims[axis]  = pdim
 
-    if verbose :
-        print ( f'{pdim=}' )
+    if verbose : print ( f'{pdim=}' )
 
     new_coords = []
     for i, dim in enumerate (yp.dims) :
@@ -356,10 +341,8 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='lin
         if 'linear'  in method :
             result = dx1*y2 + dx2*y1
         if 'log'     in method :
-            if yp_min > 0. :
-                result = np.power(y2, dx1) * np.power(y1, dx2)
-            if yp_max < 0. :
-                result = -np.power(-y2, dx1) * np.power(-y1, dx2)
+            if yp_min > 0. : result = np.power(y2, dx1) * np.power(y1, dx2)
+            if yp_max < 0. : result = -np.power(-y2, dx1) * np.power(-y1, dx2)
         if 'nearest' in method :
             result = xr.where ( dx2>=dx1, y1, y2)
 
@@ -391,18 +374,6 @@ def correct_uv (u, v, lon, lat) :
     Outputs :
        modified eastward/nothward components to have correct polar projections in cartopy
     '''
-    #zrot = -np.pi/2
-    #zuc =   u[...,  0, 0] * np.cos (-RAD*lon[...,  0, :]+zrot) + v[...,  0, 0] * np.sin (-RAD*lon[...,  0, :]+zrot)
-    #zvc =  -u[...,  0, 0] * np.sin (-RAD*lon[...,  0, :]+zrot) + v[...,  0, 0] * np.cos (-RAD*lon[...,  0, :]+zrot)
-    #u[...,  0, :] = zuc
-    #v[...,  0, :] = zvc
-
-    #zrot = -np.pi/2
-    #zuc =   u[..., -1, 0] * np.cos (RAD*lon[..., -1, :]+zrot) - v[..., -1, 0] * np.sin (RAD*lon[...,  -1, :]+zrot)
-    #zvc =  +u[..., -1, 0] * np.sin (RAD*lon[..., -1, :]+zrot) + v[..., -1, 0] * np.cos (RAD*lon[...,  -1, :]+zrot)
-    #u[..., -1, :] = zuc
-    #v[..., -1, :] = zvc
-    
     uv = np.sqrt (u*u + v*v)           # Original modulus
     zu = u
     zv = v * np.cos (RAD*lat)
@@ -439,43 +410,38 @@ def fixed_lon (lon, center_lon=0.0) :
     return zfixed_lon
 
 def nord2sud (p2d) :
-    '''Swap north to south a 2D field
     '''
-    pout = p2d [..., -1::-1, : ]
-
-    return pout
+    Swap north to south a 2D field
+    '''
+    return p2d [..., -1::-1, : ]
 
 def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell', verbose=False ) :
-    '''Rename dimensions to unify them between LMDZ versions
+    '''
+    Rename dimensions to unify them between LMDZ versions
     '''
     for xx in XNAME :
         if xx in dd.dims and xx != x :
-            if verbose :
-                print ( f"{xx} renamed to {x}" )
+            if verbose : print ( f"{xx} renamed to {x}" )
             dd = dd.rename ( {xx:x})
 
     for yy in YNAME :
         if yy in dd.dims and yy != y  :
-            if verbose :
-                print ( f"{yy} renamed to {y}" )
+            if verbose : print ( f"{yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
 
     for cc in CNAME :
         if cc in dd.dims and cc != c  :
-            if verbose :
-                print ( f"{cc} renamed to {c}" )
+            if verbose : print ( f"{cc} renamed to {c}" )
             dd = dd.rename ( {cc:c} )
 
     for zz in ZNAME :
         if zz in dd.dims and zz != z :
-            if verbose :
-                print ( f"{zz} renamed to {z}" )
+            if verbose : print ( f"{zz} renamed to {z}" )
             dd = dd.rename ( {zz:z} )
 
     for tt in TNAME  :
         if tt in dd.dims and tt != t :
-            if verbose :
-                print ( f"{tt} renamed to {t}" )
+            if verbose : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
     return dd
@@ -501,11 +467,8 @@ def add_cyclic (data, x, y, axis=-1, verbose=False, cyclic=360, precision=0.0001
 
     new_coords = []
     for i, dim in enumerate (data.dims) :
-        if dim == data.dims[axis] :
-            #new_coords.append ( xx[0,:].squeeze().values )
-            new_coords.append (xx)
-        else :
-            new_coords.append ( data.coords[dim].values )
+        if dim == data.dims[axis] : new_coords.append (xx)
+        else                      : new_coords.append (data.coords[dim].values)
 
     ztab = xr.DataArray (ztab, dims=data.dims, coords=new_coords)
 
@@ -533,24 +496,22 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
     # Check or compute 2D horizontal dimensions
     if jpi != 0 and jpj != 0 :
         if jpi*(jpj-2) + 2 != jpn :
-            raise ValueError ( f'{jpn=} {jpi=}, {jpj}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]' )
-    if jpi==0 and jpj>0 :
-        jpi = (jpn-2)//(jpj-2)
-    if jpi>0  and jpj == 0 :
-        jpj = (jpn-2)//jpi +2            
+            raise ValueError (f'{jpn=} {jpi=}, {jpj}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]')
+    if jpi==0 and jpj>0    : jpi = (jpn-2)//(jpj-2)
+    if jpi>0  and jpj == 0 : jpj = (jpn-2)//jpi +2            
     if jpi==0 and jpi==0 :
         for [jj, ji] in [ [36,45], [72,96], [95,96], [96,96], [143,144], [144,144], [180,180] ] :
             if ji*(jj-2) + 2 == jpn :
                 jpj = jj ; jpi = ji
         if jpi==0 and jpi==0 :
-            raise ValueError ( f'1D horizontal dimension {jpn=} not known. Cannot not guess horizontal dimensions jpj, jpi' )
+            raise ValueError (f'1D horizontal dimension {jpn=} not known. Cannot not guess horizontal dimensions jpj, jpi')
                 
-    form_all = form1 + [jpj  , jpi]
+    form_all   = form1 + [jpj  , jpi]
     form_shape = form1 + [jpj-2, jpi]
 
-    p2d   = np.empty ( form_all )
+    p2d = np.empty (form_all)
     p2d [..., 1:-1, :] = np.reshape (np.float64 (p1d [..., 1:-1]), form_shape )
-    if verbose : print ( f'{math=} {jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}' )
+    if verbose : print (f'{math=} {jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}')
 
     if share_pole :
         p2d [...,  0 , :].flat = p1d [...,  0] / float (jpi)
@@ -565,8 +526,8 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
         p2d.attrs.update ( p1d.attrs )
         for idim in np.arange ( len(p1d.shape [0:-1]) ):
             dim = p1d.dims[idim]
-            p2d = p2d.rename        ( {p2d.dims[idim]:p1d.dims[idim]}  )
-            p2d = p2d.assign_coords ( {p2d.dims[idim]:p1d.coords[dim]} )
+            p2d = p2d.rename        ({p2d.dims[idim]:p1d.dims[idim]} )
+            p2d = p2d.assign_coords ({p2d.dims[idim]:p1d.coords[dim]})
   
         if isinstance (lon, str) :
             if not lon_name : lon_name = lon
@@ -600,26 +561,20 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
                         lat.attrs.update ( { aa[0]:aa[1] } )
         if not isinstance (lat, bool) :
             if not lat_name : 
-                if  __mmath__ (lat) == xr :
-                    lat_name = lat.name
-                else :
-                    lat_name = 'lat'
+                if  __mmath__ (lat) == xr : lat_name = lat.name
+                else                      : lat_name = 'lat'
         if not isinstance (lon, bool) :
             if not lon_name :
-                if __mmath__ (lon) == xr : 
-                    lon_name = lon.name
-                else :
-                    lon_name = 'lon'
+                if __mmath__ (lon) == xr : lon_name = lon.name
+                else                     : lon_name = 'lon'
 
         if not lon_name : lon_name = 'x'
         if not lat_name : lat_name = 'y'
 
         if verbose : print ( f'{lon_name=}' )
             
-        if lon_name != p2d.dims[-1] :
-            p2d = p2d.rename ( {p2d.dims[-1]:lon_name} ) 
-        if lat_name != p2d.dims[-2] : 
-            p2d = p2d.rename ( {p2d.dims[-2]:lat_name} )
+        if lon_name != p2d.dims[-1] : p2d = p2d.rename ( {p2d.dims[-1]:lon_name} ) 
+        if lat_name != p2d.dims[-2] : p2d = p2d.rename ( {p2d.dims[-2]:lat_name} )
         if __mmath__ (lon) in [xr, np, np.ma] : 
             p2d = p2d.assign_coords ( {lon_name:lon} )
             if __mmath__ (lon) in [xr, np, np.ma] :
@@ -628,10 +583,8 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
                 p2d[lon_name].attrs.update ( { 'units':'degrees_east' , 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' } )
         if __mmath__ (lat) in [xr, np, np.ma] :  
             p2d = p2d.assign_coords ( {lat_name:lat} )
-            if __mmath__ (lat) == xr :
-                p2d[lon_name].attrs.update ( lat.attrs )
-            else :
-                p2d[lat_name].attrs.update ( { 'units':'degrees_north', 'long_name':'Latitude' , 'standard_name':'latitude' , 'axis':'Y' }  )
+            if __mmath__ (lat) == xr : p2d[lon_name].attrs.update ( lat.attrs )
+            else                     : p2d[lat_name].attrs.update ( { 'units':'degrees_north', 'long_name':'Latitude' , 'standard_name':'latitude' , 'axis':'Y' }  )
 
     return p2d
 
@@ -665,18 +618,15 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
             liste2D = [ [36,jpi], [72,jpi], [95,jpi], [96,jpi], [143,jpi], [144,jpi], [180,jpi] ]
         for jk in [11, 15, 16, 39, 40, 79, 80 ] : 
             for [jj, ji] in liste2D :
-                if jk*(ji*(jj-2) + 2) == jpn :
-                    jpk = jk ; jpj = jj ; jpi = ji
+                if jk*(ji*(jj-2) + 2) == jpn : jpk = jk ; jpj = jj ; jpi = ji
         jpij = jpn / jpk
     else :
         jpij = jpn / jpk
         if jpi*jpj !=0 : 
             if jpk * ( jpi*(jpj-2) + 2 ) != jpn :
                 raise ValueError ( f'{jpn=}, {jpij=} {jpi=}, {jpj}, {jpk=}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]' )
-        if jpi==0 and jpj>0 :
-            jpi = (jij-2)//(jpj-2)
-        if jpi>0  and jpj == 0 :
-            jpj = (jij-2)//jpi +2            
+        if jpi==0 and jpj>0    : jpi = (jij-2)//(jpj-2)
+        if jpi>0  and jpj == 0 : jpj = (jij-2)//jpi +2            
         if jpi==0 and jpi==0 :
             for [jj, ji] in [ [36,45], [72,96], [95,96], [96,96], [143,144], [144,144], [180,180] ] :
                 if ji*(jj-2) + 2 == jpij :
@@ -687,10 +637,8 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
     if verbose :
         print ( f'{jpn=}, {jpij=} {jpi=}, {jpj=}, {jpk=}' )
         print ( f'{form1=}, {form_2D=}' )
-    if math == xr : 
-        p2d = np.reshape ( p1d.values, form_2D )
-    else : 
-        p2d = np.reshape ( p1d, form_2D )
+    if math == xr : p2d = np.reshape ( p1d.values, form_2D )
+    else          : p2d = np.reshape ( p1d, form_2D )
         
     if verbose :
         print ( f'{p2d.shape=}' )
@@ -709,8 +657,7 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
         p3d = p3d.rename ( {p3d.dims[-3]:lev_name} ) 
     if __mmath__ (lev) in [xr, np, np.ma] : 
             p2d = p2d.assign_coords ( {lev_name:lev} )
-            if __mmath__ (lon) in [xr, np, np.ma] :
-                p2d[lon_name].attrs.update ( lon.attrs )
+            if __mmath__ (lon) in [xr, np, np.ma] : p2d[lon_name].attrs.update ( lon.attrs )
             #else : 
             #    p2d[lon_name].attrs.update ( { 'units':'degrees_east' , 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' } )
     return p3d
@@ -729,13 +676,11 @@ def geo2point ( p2d, cumul_poles=False, dim1d='points_physiques' ) :
     form1 = list(p2d.shape [0:-2]) 
     form_2D = form1 + [jpn,]
         
-    p1d = np.empty ( form_2D )
+    p1d = np.empty (form_2D)
     form_1D = form1 + [jpn-2,]
     
-    if math == xr :
-            p1d [..., 1:-1] = np.reshape ( np.float64 (p2d[..., 1:-1, :].values).ravel(), form_1D )
-    else :
-            p1d [..., 1:-1] = np.reshape ( np.float64 (p2d[..., 1:-1, :]       ).ravel(), form_1D )
+    if math == xr : p1d [..., 1:-1] = np.reshape ( np.float64 (p2d[..., 1:-1, :].values).ravel(), form_1D )
+    else          : p1d [..., 1:-1] = np.reshape ( np.float64 (p2d[..., 1:-1, :]       ).ravel(), form_1D )
     if cumul_poles :
         p1d [...,  0] = np.sum ( p2d[...,  0, :], axis=-1 )
         p1d [..., -1] = np.sum ( p2d[..., -1, :], axis=-1 )

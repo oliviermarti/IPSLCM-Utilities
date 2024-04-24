@@ -38,6 +38,7 @@ Dates  formar
 '''
 
 import numpy as np
+import cftime
 debug = False
 
 DefaultCalendarType = 'Gregorian'
