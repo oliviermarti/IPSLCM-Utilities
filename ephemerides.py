@@ -29,9 +29,9 @@ month_names = ['january', 'february', 'march', 'april', 'may', 'june', 'july', '
 month_Names = list (map (lambda x: x.capitalize(), month_names))
 month_NAMES = list (map (lambda x: x.upper     (), month_names))
 
-mth_names = list (map (lambda x: x[0:3], month_names))
-mth_Names = list (map (lambda x: x.capitalize(), mth_names))
-mth_NAMES = list (map (lambda x: x.upper     (), mth_names))
+mth_names   = list (map (lambda x: x[0:3], month_names))
+mth_Names   = list (map (lambda x: x.capitalize(), mth_names))
+mth_NAMES   = list (map (lambda x: x.upper     (), mth_names))
 
 month_noms  = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 month_Noms  = list (map (lambda x: x.capitalize(), month_noms ))

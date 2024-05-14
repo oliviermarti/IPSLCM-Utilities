@@ -164,32 +164,32 @@ cmap.precip_6   = create_colormap (cmap.colors_precip_6, reverse=False, name='pr
 cmap.precip_6_r = create_colormap (cmap.colors_precip_6, reverse=True , name='precip_6_r')
 
 # Precip 7 colors
-cmap.colors_precip_7 = [[140, 81, 10], [216, 179, 101], [246, 232, 195],
-                        [245, 245, 245], [199, 234, 229], [90, 180, 172], [1, 102, 94]]
+cmap.colors_precip_7 = [[140,  81,  10], [216, 179, 101], [246, 232, 195],
+                        [245, 245, 245], [199, 234, 229], [ 90, 180, 172], [1, 102, 94]]
 cmap.precip_7   = create_colormap (cmap.colors_precip_7, reverse=False, name='precip_7'  )
 cmap.precip_7_r = create_colormap (cmap.colors_precip_7, reverse=True , name='precip_7_r')
 
 # Precip 8 colors
-cmap.colors_precip_8 = [[140, 81, 10], [191, 129, 45], [223, 194, 125], [246, 232, 195],
+cmap.colors_precip_8 = [[140,  81,  10], [191, 129, 45], [223, 194, 125], [246, 232, 195],
                         [199, 234, 229], [128, 205, 193], [53, 151, 143], [1, 102, 94]]
 cmap.precip_8   = create_colormap (cmap.colors_precip_8, reverse=False, name='precip_8'  )
 cmap.precip_8_r = create_colormap (cmap.colors_precip_8, reverse=True , name='precip_8_r')
 
 # Precip 9 colors
-cmap.colors_precip_9 = [[140, 81, 10], [191, 129, 45], [223, 194, 125], [246, 232, 195],
-                        [245, 245, 245], [199, 234, 229], [128, 205, 193], [53, 151, 143], [1, 102, 94]]
+cmap.colors_precip_9 = [[140,  81,  10], [191, 129,  45], [223, 194, 125], [246, 232, 195],
+                        [245, 245, 245], [199, 234, 229], [128, 205, 193],  [53, 151, 143], [1, 102, 94]]
 cmap.precip_9   = create_colormap (cmap.colors_precip_9, reverse=False, name='precip_9'  )
 cmap.precip_9_r = create_colormap (cmap.colors_precip_9, reverse=True , name='precip_9_r')
 
 # Precip 10 colors
-cmap.colors_precip_10 = [[84, 48, 5], [140, 81, 10], [191, 129, 45], [223, 194, 125], [246, 232, 195],
-                         [199, 234, 229], [128, 205, 193], [53, 151, 143], [1, 102, 94], [0, 60, 48]]
+cmap.colors_precip_10 = [[ 84,  48,   5], [140,  81,  10], [191, 129,  45], [223, 194, 125], [246, 232, 195],
+                         [199, 234, 229], [128, 205, 193],  [53, 151, 143], [1, 102, 94], [0, 60, 48]]
 cmap.precip_10   = create_colormap (cmap.colors_precip_10, reverse=False, name='precip_10'  )
 cmap.precip_10_r = create_colormap (cmap.colors_precip_10, reverse=True , name='precip_10_r')
 
 # Precip 11 colors
-cmap.colors_precip_11 = [[84, 48, 5], [140, 81, 10], [191, 129, 45], [223, 194, 125], [246, 232, 195],
-                         [245, 245, 245], [199, 234, 229], [128, 205, 193], [53, 151, 143], [1, 102, 94], [0, 60, 48]]
+cmap.colors_precip_11 = [[ 84,  48,   5], [140,  81,  10], [191, 129,  45], [223, 194, 125], [246, 232, 195],
+                         [245, 245, 245], [199, 234, 229], [128, 205, 193], [ 53, 151, 143], [  1, 102,  94], [0, 60, 48]]
 cmap.precip_11   = create_colormap (cmap.colors_precip_11, reverse=False, name='precip_11'  )
 cmap.precip_11_r = create_colormap (cmap.colors_precip_11, reverse=True , name='precip_11_r')
 
@@ -232,8 +232,8 @@ cmap.temp_10   = create_colormap (cmap.colors_temp_10, reverse=False, name='temp
 cmap.temp_10_r = create_colormap (cmap.colors_temp_10, reverse=True , name='temp_10_r')
 
 # Temp 11 colors
-cmap.colors_temp_11 = [[5,  48,  97], [33, 102, 172], [67, 147, 195], [146, 197, 222], [209, 229, 240],
-                       [247, 247, 247], [253, 219, 199], [244, 165, 130], [214,  96, 77], [178,  24,  43], [103,   0,  31]]
+cmap.colors_temp_11 = [[  5,  48,  97], [ 33, 102, 172], [ 67, 147, 195], [146, 197, 222], [209, 229, 240],
+                       [247, 247, 247], [253, 219, 199], [244, 165, 130], [214,  96,  77], [178,  24,  43], [103,   0,  31]]
 cmap.temp_11   = create_colormap (cmap.colors_temp_11, reverse=False, name='temp_11'  )
 cmap.temp_11_r = create_colormap (cmap.colors_temp_11, reverse=True , name='temp_11_r')
 

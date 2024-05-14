@@ -34,10 +34,61 @@ SVN information
 import os, subprocess, configparser, types
 from pathlib import Path
 
+import warnings
+from typing import TYPE_CHECKING, Literal, TypedDict
+
+# libIGCM_sys internal options
+if TYPE_CHECKING :
+    Options = Literal ["Debug", 'TGCC_User', 'TGCC_Group', 'IDRIS_User', 'IDRIS_Group', 'TGCC_ThreddsPrefix', 'IDRIS_ThreddsPrefix']
+
+    class T_Options (TypedDict) :
+        Debug = bool
+
+OPTIONS = { 'Debug'              : False,
+            'TGCC_User'          : 'p86mart',
+            'TGCC_Group'         : 'gen12006',
+            'IDRIS_User'         : 'rces009',
+            'IDRIS_Group'        : 'ces',
+            'TGCC_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+            'IDRIS_ThreddsPrefix': 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+            }
+
+class set_options :
+    """
+    set options for libIGCM_sys
+    """
+    def __init__ (self, **kwargs) :
+        self.old = {}
+        for k, v in kwargs.items () :
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update (kwargs)
+
+    def _apply_update (self, options_dict):
+        OPTIONS.update (options_dict)
+
+    def __enter__ (self):
+        return
+
+    def __exit__ (self, type, value, traceback):
+        self._apply_update (self.old)
+
+def get_options () :
+    """
+    Get options for libIGCM_sys
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
 
-# def unDefined (char) :
+# def unDefined (char: str) -> bool :
 #     '''Returns True if a variable is not defined, ot if it's set to None'''
 #     if char in globals () :
 #         if globals ()[char] == None or  globals ()[char] == 'None': unDefined = True
@@ -45,7 +96,7 @@ SysName, NodeName, Release, Version, Machine = os.uname ()
 #     else : unDefined = True
 #     return unDefined
 
-def Mach (long=False) :
+def Mach (long: bool=False) -> str :
     '''
     Find the computer we are on
     On Irene, Mach returns Irene, Irene-Next, Rome or Rome-Prev if long==True
@@ -98,8 +149,7 @@ class config :
     def __getitem__ (self, attr) : return getattr (self, attr)
     def __setitem__ (self, attr, value) : setattr (self, attr, value)
     def __iter__    (self) : return self
-
-    def __next__ (self) :
+    def __next__    (self) :
         if self.index == 0 : raise StopIteration
         self.index = self.index - 1
         return self.data[self.index]
@@ -107,24 +157,33 @@ class config :
     def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
                   LongName=None, ModelName=None, ShortName=None,
                   Source=None, Host=None, ConfigCard=None, User=None, Group=None,
-                  TGCC_User='p86mart', TGCC_Group='gen12006', IDRIS_User='rces009', IDRIS_Group='ces',
+                  TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
                   ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
                   R_FIG=None, L_EXP=None,
                   R_SAVE=None, R_FIGR=None, R_BUF=None, R_BUFR=None, R_BUF_KSH=None,
                   REBUILD_DIR=None, POST_DIR=None,
                   ThreddsPrefix=None, R_GRAF=None, DB=None,
-                  IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None) :
+                  IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
+                  Debug=None, TGCC_ThreddsPrefix=None, IDRIS_ThreddsPrefix=None ) :
         '''
         Defines the libIGCM directories
         
         Source : for Spip
         Possibilities :
-        Local        : local (~/Data/IGCMG/...)
-        TGCC_sshfs   : TGCC disks mounted via sshfs
-        TGCC_thredds : thredds TGCC via IPSL
-        ('https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds/store/...)       
+          Local        : local (~/Data/IGCMG/...)
+          TGCC_sshfs   : TGCC disks mounted via sshfs
+          TGCC_thredds : thredds TGCC via IPSL
+              ('https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds/store/...)       
         '''
-        
+
+        if not Debug               : Debug               = OPTIONS['Debug']
+        if not TGCC_User           : TGCC_User           = OPTIONS['TGCC_User']
+        if not TGCC_Group          : TGCC_Group          = OPTIONS['TGCC_Group']
+        if not IDRIS_User          : IDRIS_User          = OPTIONS['IDRIS_User']
+        if not IDRIS_Group         : IDRIS_Group         = OPTIONS['IDRIS_Group']
+        if not TGCC_ThreddsPrefix  : TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix']
+        if not IDRIS_ThreddsPrefix : IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
+
         if not Host : Host = Mach (long=False)
 
         if not Host : Host = 'Unknown'
@@ -161,8 +220,8 @@ class config :
             if not User  and TGCC_User  : User  = TGCC_User
             if not Group and TGCC_Group : Group = TGCC_Group
                 
-            if not ThreddsPrefix :
-                ThreddsPrefix = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds'
+            if not ThreddsPrefix : 
+                ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix']
                
             if not ARCHIVE : ARCHIVE = f'{ThreddsPrefix}/store/{TGCC_User}'
             if not R_FIG   : R_FIG   = f'{ThreddsPrefix}/work/{TGCC_User}'
@@ -175,7 +234,7 @@ class config :
             if not Group and IDRIS_Group : Group = IDRIS_Group
                 
             if not ThreddsPrefix :
-                ThreddsPrefix = 'https://thredds-su.ipsl.fr/thredds/catalog/idris_thredds'
+                ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
                 
             if not ARCHIVE : ARCHIVE = f'{ThreddsPrefix}/store/{IDRIS_User}'
             if not R_FIG   : R_FIG   = f'{ThreddsPrefix}/work/{IDRIS_User}'
@@ -361,39 +420,43 @@ class config :
         ### ===========================================================================================
         ## Builds the class attributes
         
-        self.TagName        = TagName
-        self.SpaceName      = SpaceName
-        self.ExperimentName = ExperimentName
-        self.JobName        = JobName
-        self.LongName       = LongName
-        self.ModelName      = ModelName
-        self.ShortName      = ShortName
-        self.ConfigCard     = ConfigCard
-        self.ARCHIVE        = ARCHIVE
-        self.STORAGE        = STORAGE
-        self.SCRATCHDIR     = SCRATCHDIR
-        self.R_OUT          = R_OUT
-        self.R_BUF          = R_BUFR
-        self.R_GRAF         = R_GRAF
-        self.DB             = DB
-        self.IGCM_OUT       = IGCM_OUT
-        self.R_SAVE         = R_SAVE
-        self.R_FIGR         = R_FIGR
-        self.R_BUFR         = R_BUFR
-        self.REBUILD_DIR    = REBUILD_DIR
-        self.POST_DIR       = POST_DIR
-        self.R_IN           = R_IN
-        self.Host           = Host
-        self.Source         = Source
-        self.User           = User
-        self.Group          = Group
-        self.IGCM_OUT_name  = IGCM_OUT_name
-        self.rebuild        = rebuild
-        self.TmpDir         = TmpDir
-        self.TGCC_User      = TGCC_User
-        self.TGCC_Group     = TGCC_Group
-        self.ThreddsPrefix  = ThreddsPrefix
-        self.IDRIS_User     = IDRIS_User
-        self.IDRIS_Group    = IDRIS_Group
+        self.TagName             = TagName
+        self.SpaceName           = SpaceName
+        self.ExperimentName      = ExperimentName
+        self.JobName             = JobName
+        self.LongName            = LongName
+        self.ModelName           = ModelName
+        self.ShortName           = ShortName
+        self.ConfigCard          = ConfigCard
+        self.ARCHIVE             = ARCHIVE
+        self.STORAGE             = STORAGE
+        self.SCRATCHDIR          = SCRATCHDIR
+        self.R_OUT               = R_OUT
+        self.R_BUF               = R_BUFR
+        self.R_GRAF              = R_GRAF
+        self.DB                  = DB
+        self.IGCM_OUT            = IGCM_OUT
+        self.R_SAVE              = R_SAVE
+        self.R_FIGR              = R_FIGR
+        self.R_BUFR              = R_BUFR
+        self.REBUILD_DIR         = REBUILD_DIR
+        self.POST_DIR            = POST_DIR
+        self.R_IN                = R_IN
+        self.Host                = Host
+        self.Source              = Source
+        self.User                = User
+        self.Group               = Group
+        self.IGCM_OUT_name       = IGCM_OUT_name
+        self.rebuild             = rebuild
+        self.TmpDir              = TmpDir
+        self.TGCC_User           = TGCC_User
+        self.TGCC_Group          = TGCC_Group
+        self.ThreddsPrefix       = ThreddsPrefix
+        self.IDRIS_User          = IDRIS_User
+        self.IDRIS_Group         = IDRIS_Group
+        self.TGCC_ThreddsPrefix  = TGCC_ThreddsPrefix
+        self.IDRIS_ThreddsPrefix = IDRIS_ThreddsPrefix
+        self.Debug               = Debug
+        
 
  

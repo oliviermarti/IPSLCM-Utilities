@@ -46,17 +46,19 @@ RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
 REPSI = np.finfo (1.0).eps
 
-RAAMO  = xr.DataArray (12)        ; RAAMO.attrs.update  ({'units':"mth"    , 'long_name':"Number of months in one year"})
-RJJHH  = xr.DataArray (24)        ; RJJHH.attrs.update  ({'units':"h"      , 'long_name':"Number of hours in one day"})
-RHHMM  = xr.DataArray (60)        ; RHHMM.attrs.update  ({'units':"min"    , 'long_name':"Number of minutes in one hour"})
-RMMSS  = xr.DataArray (60)        ; RMMSS.attrs.update  ({'units':"s"      , 'long_name':"Number of seconds in one minute"})
-RA     = xr.DataArray (6371229.0) ; RA.attrs.update     ({'units':"m"      , 'long_name':"Earth radius"})
-GRAV   = xr.DataArray (9.80665)   ; GRAV.attrs.update   ({'units':"m/s2"   , 'long_name':"Gravity"})
-RT0    = xr.DataArray (273.15)    ; RT0.attrs.update    ({'units':"K"      , 'long_name':"Freezing point of fresh water"})
-RAU0   = xr.DataArray (1026.0)    ; RAU0.attrs.update   ({'units':"kg/m3"  , 'long_name':"Volumic mass of sea water"} )
-RLEVAP = xr.DataArray (2.5e+6)    ; RLEVAP.attrs.update ({'units':"J/K"    , 'long_name':"Latent heat of evaporation (water)"})
-VKARMN = xr.DataArray (0.4)       ; VKARMN.attrs.update ({'units':"-"      , 'long_name':"Von Karman constant"})
-STEFAN = xr.DataArray (5.67e-8)   ; STEFAN.attrs.update ({'units':"w/m2/K4", 'long_name':"Stefan-Boltzmann constant"})
+RAAMO  = xr.DataArray (12)        ; RAAMO .name='RAAMO'  ; RAAMO.attrs.update  ({'units':"mth"    , 'long_name':"Number of months in one year" })
+RJJHH  = xr.DataArray (24)        ; RJJHH .name='RJJHH'  ; RJJHH.attrs.update  ({'units':"h"      , 'long_name':"Number of hours in one day"} )
+RHHMM  = xr.DataArray (60)        ; RHHMM .name='RHHMM'  ; RHHMM.attrs.update  ({'units':"min"    , 'long_name':"Number of minutes in one hour"} )
+RMMSS  = xr.DataArray (60)        ; RMMSS .name='RMMSS'  ; RMMSS.attrs.update  ({'units':"s"      , 'long_name':"Number of seconds in one minute"} )
+RA     = xr.DataArray (6371229.0) ; RA    .name='RA'     ; RA.attrs.update     ({'units':"m"      , 'long_name':"Earth radius"} )
+GRAV   = xr.DataArray (9.80665)   ; GRAV  .name='GRAV'   ; GRAV.attrs.update   ({'units':"m/s2"   , 'long_name':"Gravity"} )
+RT0    = xr.DataArray (273.15)    ; RT0   .name='RT0'    ; RT0.attrs.update    ({'units':"K"      , 'long_name':"Freezing point of fresh water"} )
+RAU0   = xr.DataArray (1026.0)    ; RAU0  .name='RAU0'   ; RAU0.attrs.update   ({'units':"kg/m3"  , 'long_name':"Volumic mass of sea water"} )
+SICE   = xr.DataArray (6.0)       ; SICE  .name='SICE'   ; SICE.attrs.update   ({'units':"psu"    , 'long_name':"Salinity of ice (for pisces)"} )
+SOCE   = xr.DataArray (34.7)      ; SOCE  .name='SOCE'   ; SOCE.attrs.update   ({'units':"psu"    , 'long_name':"Salinity of sea (for pisces and isf)"} )
+RLEVAP = xr.DataArray (2.5e+6)    ; RLEVAP.name='RLEVAP' ; RLEVAP.attrs.update ({'units':"J/K"    , 'long_name':"Latent heat of evaporation (water)"} )
+VKARMN = xr.DataArray (0.4)       ; VKARMN.name='VKARMN' ; VKARMN.attrs.update ({'units':"-"      , 'long_name':"Von Karman constant"} )
+STEFAN = xr.DataArray (5.67e-8)   ; STEFAN.name='STEFAN' ; STEFAN.attrs.update ({'units':"W/m2/K4", 'long_name':"Stefan-Boltzmann constant"} )
 
 RDAY   = RJJHH * RHHMM * RMMSS               ; RDAY.attrs.update   ({'units':"s"      , 'long_name':"Day length"})
 RSIYEA = 365.25 * RDAY * 2. * RPI / 6.283076 ; RSIYEA.attrs.update ({'units':"s"      , 'long_name':"Sideral year length"})
@@ -66,14 +68,14 @@ ROMEGA = 2. * RPI / RSIDAY                   ; ROMEGA.attrs.update ({'units':"s-
 ## Default names of dimensions
 UDIMS = { 'x':'lon', 'y':'lat', 'z':'presnivs', 't': 'time_counter' }
 
-## All possibles name of dimensions in LMDZ files
+## All possible names of dimensions in LMDZ files
 XNAME = [ 'x', 'X', 'lon', ]
 YNAME = [ 'y', 'Y', 'lat', ]
 CNAME = [ 'c', 'cell', ]
 ZNAME = [ 'z', 'Z', 'presnivs', ]
 TNAME = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
 
-## ALL possibles name of units of dimensions in LMDZ files
+## All possibles name of units of dimensions in LMDZ files
 XUNIT = [ 'degrees_east', ]
 YUNIT = [ 'degrees_north', ]
 CUNIT = [ 'cell', ]
@@ -81,10 +83,11 @@ ZUNIT = [ 'Pa', ]
 TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
 ## All possibles size of dimensions in LMDZ files
-XLENGTH = [ 96, 144, 180, 360, ]
-YLENGTH = [ 95, 96, 143, 144, 180, 360, ]
-CLENGTH = [ 16002, ]
-ZLENGTH = [ 39, 59, 79, ]
+XLENGTH  = [ 96, 144, 180, 360, ]
+YLENGTH  = [ 95, 96, 143, 144, 180, 360, ]
+XYLENGTH = [ [96,95], [144, 143], [180, 180], [360, 360]]
+CLENGTH  = [ 16002, ]
+ZLENGTH  = [ 39, 59, 79, ]
 
 def __mmath__ (ptab, default=None) :
     '''

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 '''
-This library handles date calculs and convertions in different calendars.
+This library handles date computations and convertions in different calendars.
 
 Mostly conversion of IGCM_date.ksh to python.
 
-Dates  formar
+Dates format
  - Human format     : [yy]yy-mm-dd
  - Gregorian format : yymmdd
  - Julian format    : yyddd
 
-  Types of calendars are possible :
+  Types of avalaible calendars :
 
   - leap|gregorian|standard (other name leap) :
       The normal calendar. The time origin for the
@@ -29,24 +29,18 @@ Dates  formar
   consequences caused directly or indirectly by the usage of his
   software by incorrectly or partially configured personal
 
- SVN information
- $Author:  $
- $Date:  $
- $Revision:  $
- $Id:  $
- $HeadURL:  $
 '''
 
 import numpy as np
 import cftime
-debug = False
 
-DefaultCalendarType = 'Gregorian'
+# Stack depth
+sdep = 1
 
 # Characteristics of the gregorian calender
 mth_length = np.array ( [31, 28, 31,  30,  31,  30,  31,  31,  30,  31,  30,  31] )
 mth_start  = np.array ( [ 0, 31, 59,  90, 120, 151, 181, 212, 243, 273, 304, 334] )
-mth_end    = mth_start + mth_length + 1  # A cause des bornes superieures de Python
+#mth_end    = mth_start + mth_length + 1  # Because of upper bounds in Python
 
 # Other calendars
 mth_length365 = np.array ( [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] )
@@ -56,22 +50,86 @@ mth_length360 = np.array ( [30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30] )
 # List of possible names for calendar types
 Calendar_gregorian = [ 'Gregorian', 'GREGORIAN', 'leap', 'LEAP', 'Leap', 'gregorian',  ]
 Calendar_360d      = [ '360d', '360_day', '360d', '360_days', '360D', '360_DAY', '360D', '360_DAYS' ]
-Calendar_noleap    = [ 'noleap', '365_day', '365_days', 'NOLEAP', '365_DAY', '365_DAYS',  ]
+Calendar_noleap    = [ 'noleap', '365_day', '365_days', 'NOLEAP', '365_DAY', '365_DAYS', '365d', '365D', '365_d', '365_D'  ]
 Calendar_allleap   = [ 'all_leap', '366_day', 'allleap', '366_days', '336d', 'ALL_LEAP', '366_DAY', 'ALLLEAP', '366_DAYS', '336D',  ]
 
 # List of possible names for day, month and year
-YE_name = [ 'YE', 'YEAR', 'Years', 'years', 'YEAR', 'Year', 'year', 'YE', 'ye', 'Y', 'y' ]
+YE_name = [ 'YE', 'YEAR'  , 'Years' , 'years' , 'YEAR' , 'Year' , 'year' , 'YE', 'ye', 'Y', 'y' ]
 MO_name = [ 'MO', 'MONTHS', 'Months', 'months', 'MONTH', 'Month', 'month', 'MO', 'mo', 'M', 'm' ]
-DA_name = [ 'DA', 'DAYS', 'Days', 'days', 'DAY', 'Day', 'day', 'DA', 'da', 'D', 'd' ]
+DA_name = [ 'DA', 'DAYS'  , 'Days'  , 'days'  , 'DAY'  , 'Day'  , 'day'  , 'DA', 'da', 'D', 'd' ]
 
 # Still to do
 # function IGCM_date_DaysInNextPeriod
 # function IGCM_date_DaysInPreviousPeriod
 
-def GetMonthsLengths ( year, CalendarType=DefaultCalendarType ) :
+# libIGCM_date internal options
+import warnings
+from typing import TYPE_CHECKING, Literal, TypedDict
+
+stack = list()
+
+if TYPE_CHECKING :
+    Options = Literal [ "DefaultCalendarType", "Debug", "Stack", "Depth" ]
+
+    class T_Options (TypedDict) :
+        DefaultCalendarType: Literal['Gregorian', 'GREGORIAN', 'leap', 'LEAP', 'Leap', 'gregorian',
+                                     '360d', '360_day', '360d', '360_days', '360D', '360_DAY', '360D', '360_DAYS', 
+                                     'noleap', '365_day', '365_days', 'NOLEAP', '365_DAY', '365_DAYS',
+                                     'all_leap', '366_day', 'allleap', '366_days', '336d', 'ALL_LEAP', '366_DAY', 'ALLLEAP', '366_DAYS', '336D',]
+        Debug = bool
+        Stack = bool
+        Depth = -1
+
+OPTIONS = { 'DefaultCalendarType':'Gregorian', 'Debug':False, 'Stack':False, 'Depth':-1 }
+
+class set_options :
+    """
+    set options for libIGCM_date
+    """
+    def __init__ (self, **kwargs):
+        self.old = {}
+        for k, v in kwargs.items():
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update(kwargs)
+
+    def _apply_update (self, options_dict):
+        OPTIONS.update (options_dict)
+
+    def __enter__ (self):
+        return
+
+    def __exit__ (self, type, value, traceback):
+        self._apply_update (self.old)
+
+def get_options () -> dict :
+    """
+    Get options for libIGCM_date
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
+def PushStack (string:str) :
+    OPTIONS['Depth'] += 1
+    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '-->libIGCM_date: ', string)
+    return
+
+def PopStack (string:str) :
+    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '<--libIGCM_date: ', string)
+    OPTIONS['Depth'] -= 1
+    return
+    
+def GetMonthsLengths ( year, CalendarType=OPTIONS['DefaultCalendarType'] ) :
     '''
     Returns the month lengths for a given year and calendar type
     '''
+    PushStack ( f'GetMonthsLengths ( {year=}, {CalendarType=} )' )
+        
     if CalendarType in Calendar_360d   : zlengths = mth_length360
     if CalendarType in Calendar_noleap : zlengths = mth_length365
     if CalendarType in Calendar_noleap : zlengths = mth_length366
@@ -79,27 +137,38 @@ def GetMonthsLengths ( year, CalendarType=DefaultCalendarType ) :
         if IsLeapYear (year, CalendarType) : zlengths = mth_length366
         else                               : zlengths = mth_length365
 
+    PopStack ( f'GetMonthsLengths : {zlengths}' )
     return zlengths
 
-def DaysInMonth ( yy, mm=None, CalendarType=DefaultCalendarType) :
+def DaysInMonth (yy, mm=None, CalendarType=None) :
     '''
     Returns the number of days in a month
     
     Usage:  DaysInMonth ( yyyy    , mm, [CalendarType] )
          or DaysInMonth ( yyyymmdd, [CalendarType] )
          '''
+    PushStack ( f'DaysInMonth ( {yy=}, {mm=}, {CalendarType=} )' )
+
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     if mm : year = int(yy) ; month = int(mm)
     else  : year, month = GetYearMonth (yy)
         
     length = GetMonthsLengths ( year, CalendarType=CalendarType )[ np.mod(month-1, 12) ]
+
+    PopStack ( f'DaysInMonth : {length}' )
     return length
     
-def DaysSinceJC ( date, CalendarType=DefaultCalendarType ) :
+def DaysSinceJC ( date, CalendarType=None ) -> int :
     '''
     Calculate the days difference between a date and 00010101
 
     Computation is splitted in three case for the sake of speed
     '''
+    PushStack ( f'DaysSinceJC ( {date=}, {CalendarType=} )' )
+
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     yy, mo, da = GetYearMonthDay (date)
     if yy < 500 :
         date0 = '0101-01-01'
@@ -124,20 +193,33 @@ def DaysSinceJC ( date, CalendarType=DefaultCalendarType ) :
             
     ndays = DaysBetweenDate ( date, date0 ) + aux
      
+    PopStack ( f'DaysSinceJC : {ndays}' )
     return ndays
 
-def IsLeapYear ( year, CalendarType=DefaultCalendarType ) :
+def IsLeapYear (year : [int, str], CalendarType=None) -> bool :
     '''
     True if Year is a leap year
     '''
+    PushStack ( f'IsLeapYear ( {year=}, {CalendarType=} )' )
+
     yy = int ( year )
     zis_leap_year = None
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
 
+    if OPTIONS['Debug'] : print ( f'{year=} {CalendarType=}' )
+    
     # What is the CalendarType :
-    if CalendarType in Calendar_360d      : zis_leap_year = False
-    if CalendarType in Calendar_noleap    : zis_leap_year = False
-    if CalendarType in Calendar_allleap   : zis_leap_year = True
+    if CalendarType in Calendar_360d      :
+        if OPTIONS['Debug'] : print ( f'{CalendarType=} 360d' )
+        zis_leap_year = False
+    if CalendarType in Calendar_noleap    :
+        if OPTIONS['Debug'] : print ( f'{CalendarType=} noleap' )
+        zis_leap_year = False
+    if CalendarType in Calendar_allleap   :
+        if OPTIONS['Debug'] : print ( f'{CalendarType=} allleap' )
+        zis_leap_year = True
     if CalendarType in Calendar_gregorian :
+        if OPTIONS['Debug'] : print ( f'{CalendarType=} gregorian' )
         # A year is a leap year if it is even divisible by 4
         # but not evenly divisible by 100
         # unless it is evenly divisible by 400
@@ -157,48 +239,67 @@ def IsLeapYear ( year, CalendarType=DefaultCalendarType ) :
         if not zis_leap_year :
             zis_leap_year = False
 
+    PopStack ( f'IsLeapYear : {zis_leap_year}' )
     return zis_leap_year
 
-def DateFormat ( date ) :
+def DateFormat ( date ) -> str :
     '''
-    Get date format. Could be human or gregorian
+    Get date format. Could be 'human' or 'gregorian'
 
       [yy]yymmdd   is Gregorian
       [yy]yy-mm-dd is Human
     '''
-    #print ( f'{type(date)}' )
+    PushStack ( f'DateFormat ( {date=} )' )
+        
+    if OPTIONS['Debug'] : print ( f'{type(date)=}' )
     zdate_format = None
     if isinstance (date, str) :
         if '-' in date : zdate_format = 'Human'
         else           : zdate_format = 'Gregorian'
     if isinstance (date, int) : zdate_format = 'Gregorian'
+
+    PopStack ( f'DateFormat : {zdate_format}' )
     return zdate_format
 
 def PrintDate ( ye, mo, da, pformat ) :
     '''
     Return a date in the requested format
     '''
+    PushStack ( f'PrintDate ( {ye=}, {mo=}, {da=}, {pformat=} )' )
+
     zPrintDate = None
     if pformat == 'Human'     : zPrintDate = f'{ye:04d}-{mo:02d}-{da:02d}'
     if pformat == 'Gregorian' : zPrintDate = f'{ye:04d}{mo:02d}{da:02d}'
+
+    PopStack ( f'PrintDate : {zPrintDate}' )
     return zPrintDate
 
 def ConvertFormatToGregorian ( date ) :
     '''
     From a yyyy-mm-dd or yyymmdd date format returns a yyymmdd date format
     '''
-    return PrintDate ( *GetYearMonthDay ( date ), 'Gregorian' )
+    PushStack ( f'ConvertFormatToGregorian ( {date=} )' )
+        
+    zz = PrintDate ( *GetYearMonthDay ( date ), 'Gregorian' )
+    
+    PopStack ( f'ConvertFormatToGregorian : {zz}' )
+    return zz
 
 def ConvertFormatToHuman ( date ) :
     '''
     From a yyyymmdd or yyymmdd date format returns a yyy-mm-dd date format
     '''
-    return PrintDate ( *GetYearMonthDay ( date ), 'Human' )
+    PushStack ( f'ConvertFormatToHuman ( {date=} )' )
+    zz = PrintDate ( *GetYearMonthDay ( date ), 'Human' )
+    PopStack ( f'ConvertFormatToHuman : {zz}' )
+    return 
 
 def GetYearMonthDay  ( date ) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm, dd
     '''
+    PushStack ( f'GetYearMonthDay ( {date=} )' )
+        
     if isinstance (date, str) :
         if '-' in date :
             zz = date.split ('-')
@@ -229,19 +330,26 @@ def GetYearMonthDay  ( date ) :
     if ye : ye = int (ye)
     if mo : mo = int (mo)
     if da : da = int (da)
+
+    PopStack ( f'GetYearMonthDay : {ye}, {mo}, {da}' )
     return ye, mo, da
 
 def GetYearMonth ( date ) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm
     '''
+    PushStack ( f'GetYearMonth ( {date=} )' )
+
     ye, mo, da = GetYearMonthDay (date)
+    
+    PopStack ( f'GetYearMonth : {ye}, {mo}' )
     return ye, mo
 
 def DateAddYear ( date, year_inc='1Y' ) :
     '''
     Add year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
+    PushStack ( f'DateAddYear ( {date=}, {year_inc=} )' )
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
 
@@ -254,12 +362,17 @@ def DateAddYear ( date, year_inc='1Y' ) :
             raise AttributeError ( f'Parameter {year_inc=} is not a year period' )
             
     ye_new = ye + year_inc
-    return PrintDate ( ye_new, mo, da, zformat)
+    zz = PrintDate ( ye_new, mo, da, zformat)
+    
+    PopStack ( f'DateAddYear : {zz}' )
+    return zz
 
 def CorrectYearMonth ( ye, mo) :
     '''
     Correct month values outside [1,12]
     '''
+    PushStack ( f'CorrectYearMonth ( {ye=}, {mo=} )' )
+
     mo_new = mo
     ye_new = ye
 
@@ -270,13 +383,18 @@ def CorrectYearMonth ( ye, mo) :
     while mo_new < 1 :
         mo_new = mo_new + 12
         ye_new = ye_new - 1
-
+        
+    PopStack ( 'CorrectYearMonth : {ye_new}, {mo_new}' )
     return ye_new, mo_new
 
-def CorrectYearMonthDay (ye, mo, da, CalendarType=DefaultCalendarType) :
+def CorrectYearMonthDay (ye, mo, da, CalendarTypeNone) :
     '''
     Correct month values outside [1,12] and day outside month length
     '''
+    PushStack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {CalendarTypeNone=} )' )
+
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     ye_new, mo_new = CorrectYearMonth ( ye, mo)
     da_new = da
     
@@ -293,17 +411,22 @@ def CorrectYearMonthDay (ye, mo, da, CalendarType=DefaultCalendarType) :
         da_new = da_new + num_day
         ye_new, mo_new = CorrectYearMonth ( ye_new, mo_new)
         num_day = DaysInMonth (ye, mo, CalendarType)
-
+        
+    PopStack ( f'CorrectYearMonthDay : {ye_new}, {mo_new}, {da_new}' )
     return ye_new, mo_new, da_new
 
-def DateAddMonth ( date, month_inc=1, CalendarType=DefaultCalendarType, verbose=False ) :
+def DateAddMonth (date, month_inc=1, CalendarType=None) :
     '''
     Add on year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
+    PushStack ( f'DateAddMonth ( {date=}, {month_inc=}, {CalendarType=} )' )
+        
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
 
-    if isinstance ( month_inc, str) :
+    if isinstance (month_inc, str) :
         PeriodType, PeriodLength = AnaPeriod ( month_inc )
         if PeriodType == MO_name[0] :
             month_inc = PeriodLength
@@ -318,17 +441,23 @@ def DateAddMonth ( date, month_inc=1, CalendarType=DefaultCalendarType, verbose=
     ye_new, mo_new = CorrectYearMonth (ye_new, mo_new)
     lday1 = DaysInMonth ( ye    , mo    , CalendarType=CalendarType )
     lday2 = DaysInMonth ( ye_new, mo_new, CalendarType=CalendarType )
+    if OPTIONS['Debug'] : print ( f'{ye=} {mo=} {da=} {ye_inc=} {month_inc=} {ye_new=} {mo_new=} {lday1=} {lday2=}' )
+    da_new = da
     if da == lday1 : da_new = lday2
     da_new = np.minimum ( da_new, lday2)
 
-    if verbose : print ( f'{ye=} {mo=} {da=} {ye_new=} {mo_new=} {lday1=} {lday2=} {da_new=}' )
-       
+    if OPTIONS['Debug'] : print ( f'{ye=} {mo=} {da=} {ye_new=} {mo_new=} {lday1=} {lday2=} {da_new=}' )
+
+    PopStack ( 'DateAddMonth : {ye_new}, {mo_new, {da_new}, {zformat}' )
     return PrintDate ( ye_new, mo_new, da_new, zformat)
 
-def DateAddPeriod ( date, period='1YE', CalendarType=DefaultCalendarType ) :
+def DateAddPeriod ( date, period='1YE', CalendarType=None ) :
     '''
     Add a period to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
+    PushStack ( f'DateAddPeriod ( {date=}, {period=}, {CalendarType=} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     zformat = DateFormat ( date )
    
     PeriodType, PeriodLength = AnaPeriod ( period )
@@ -336,19 +465,26 @@ def DateAddPeriod ( date, period='1YE', CalendarType=DefaultCalendarType ) :
     if PeriodType == YE_name[0] :
         new_date = DateAddYear ( date, year_inc=period )
     if PeriodType == MO_name[0] :
-        new_date = DateAddMonth ( date, month_inc=period, CalendarType=DefaultCalendarType )
+        new_date = DateAddMonth ( date, month_inc=period, CalendarType=OPTIONS['DefaultCalendarType'] )
     if PeriodType == DA_name[0] :
-        new_date = AddDaysToDate ( date, ndays=period, CalendarType=DefaultCalendarType )
+        new_date = AddDaysToDate ( date, ndays=period, CalendarType=OPTIONS['DefaultCalendarType'] )
     if PeriodType == 'Unknown' :
         raise AttributeError ( f"DateAddPeriod : period syntax {period=} not understood" )
 
     ye, mo, da = GetYearMonthDay ( new_date )
-    return PrintDate ( ye, mo, da, zformat )
+    zz = PrintDate ( ye, mo, da, zformat )
     
-def SubOneDayToDate (date, CalendarType=DefaultCalendarType) :
+    PopStack ( f'DateAddPeriod : {zz}' )
+    return zz
+    
+def SubOneDayToDate (date, CalendarType=None) :
     '''
     Substracts one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
+    PushStack ( f'SubOneDayToDate ( {date=}, {CalendarType=} )' )
+
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
     zlength = GetMonthsLengths ( ye, CalendarType )
@@ -362,13 +498,18 @@ def SubOneDayToDate (date, CalendarType=DefaultCalendarType) :
     else :
         da_new, mo_new, ye_new = da - 1, mo, ye
 
-    return PrintDate ( ye_new, mo_new, da_new, zformat)
+    zz = PrintDate ( ye_new, mo_new, da_new, zformat)
+    PopStack ( f'SubOneDayToDate : {zz}' )
+    return zz
 
-def AddOneDayToDate ( date, CalendarType=DefaultCalendarType ) :
+def AddOneDayToDate ( date, CalendarType=None ) :
     '''
     Add one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
-    if debug : print ( f'AddOneDayToDate : {date=}' )
+    PushStack ( f'AddOneDayToDate ( {date=}, {CalendarType=} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
+    if OPTIONS['Debug'] : print ( f'AddOneDayToDate : {date=}' )
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
     zlength = GetMonthsLengths ( ye, CalendarType )
@@ -383,13 +524,18 @@ def AddOneDayToDate ( date, CalendarType=DefaultCalendarType ) :
             mo_new =  1
             ye_new += 1
 
-    return PrintDate ( ye_new, mo_new, da_new, zformat )
+    zz = PrintDate ( ye_new, mo_new, da_new, zformat )
+    PopStack ( 'AddOneDayToDate : {zz}' )
+    return zz
 
-def AddDaysToDate ( date, ndays='1D', CalendarType=DefaultCalendarType ) :
+def AddDaysToDate ( date, ndays='1D', CalendarType=None ) :
     '''
     Add days to date in format [yy]yymmdd or [yy]yy-mm-dd
     Number of days migth be negative
     '''
+    PushStack ( f'AddDaysToDate ( {date=}, {ndays=}, {CalendarType=} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     zformat = DateFormat ( date )
      
     # Break it into pieces
@@ -413,23 +559,33 @@ def AddDaysToDate ( date, ndays='1D', CalendarType=DefaultCalendarType ) :
             zdate0 = SubOneDayToDate ( zdate0, CalendarType )
 
     yy, mm, dd = GetYearMonthDay ( zdate0 )
-    
-    return PrintDate ( yy, mm, dd, zformat )
 
-def AddPeriodToDate ( date, period, CalendarType=DefaultCalendarType ) :
+    zz = PrintDate ( yy, mm, dd, zformat )
+    PopStack ( f'AddDaysToDate : {zz}' )
+    return zz
+
+def AddPeriodToDate ( date, period, CalendarType=None ) :
     '''
     Add a period to a date.
     period is specified as '1D', '5YE', '3DA', etc ...
     '''
+    PushStack ( f'AddPeriodToDate ( {date=}, {period=}, {CalendarType=} )' )
+
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     ndays = DaysInCurrentPeriod ( date, period, CalendarType=CalendarType)
     new_date = AddDaysToDate ( date, ndays=1, CalendarType=CalendarType )
 
+    PopStack ( f'AddPeriodToDate : {new_date}' )
     return new_date
 
-def DaysInYear (year, CalendarType=DefaultCalendarType ) :
+def DaysInYear (year, CalendarType=None ) -> int :
     '''
     Return the number of days in a year
     '''
+    PushStack ( f'DaysInYear ( {year=}, {CalendarType=} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+
     if CalendarType in Calendar_360d :
         ndays = 360
   
@@ -445,9 +601,10 @@ def DaysInYear (year, CalendarType=DefaultCalendarType ) :
         else :
             ndays = 365
 
+    PopStack ( 'DaysInYear : {ndays}' )
     return ndays
 
-def DaysBetweenDate ( pdate1, pdate2, CalendarType=DefaultCalendarType ) :
+def DaysBetweenDate ( pdate1, pdate2, CalendarType=None ) -> int :
   '''
   Calculates the days difference between two dates
 
@@ -455,6 +612,9 @@ def DaysBetweenDate ( pdate1, pdate2, CalendarType=DefaultCalendarType ) :
   than pdate1 then reverse the arguments. The calculations are done
   and then the sign is reversed.
   '''
+  PushStack ( f'DaysBetweenDate ( {pdate1=}, {pdate2=}, {CalendarType=} )' )
+  if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+    
   if pdate1 < pdate2 :
     date1=pdate2 ; date2=pdate1
   if pdate1 > pdate2 :
@@ -477,21 +637,28 @@ def DaysBetweenDate ( pdate1, pdate2, CalendarType=DefaultCalendarType ) :
       res = -res 
 
   # and output the results
+  PopStack ( 'DaysBetweenDate : {res}' )
   return res
 
-def ConvertGregorianDateToJulian (date, CalendarType=DefaultCalendarType) :
+def ConvertGregorianDateToJulian (date, CalendarType=None) :
     '''
     Convert yyyymmdd to yyyyddd
     '''
+    PushStack ( f'ConvertGregorianDateToJulian ( {date=}, {CalendarType} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     ye, mo, da = GetYearMonthDay (date)
     ndays = DaysBetweenDate ( PrintDate (ye,mo,da, 'Human'), PrintDate (ye,1,1, 'Human'), CalendarType=CalendarType )
-
-    return int ( f'{ye}{ndays+1:03d}' )
+    zz = int ( f'{ye}{ndays+1:03d}' )
+    if OPTIONS['Stack'] : print ( '--> ConvertGregorianDateToJulian' )
+    return zz
     
-def ConvertJulianDateToGregorian (date, CalendarType=DefaultCalendarType) : 
+def ConvertJulianDateToGregorian (date, CalendarType=None) : 
     '''
     Convert yyyyddd to yyyymmdd
     '''
+    PushStack ( f'ConvertJulianDateToGregorian ( {date=}, {CalendarType} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
    
     # Break apart the year and the days
     zdate = int (date)
@@ -514,12 +681,18 @@ def ConvertJulianDateToGregorian (date, CalendarType=DefaultCalendarType) :
     mm = mm - 1 
     
     # Assemble the results into a gregorian date
-    return PrintDate ( yy, mm, dd, 'Gregorian')
+    zz = PrintDate ( yy, mm, dd, 'Gregorian')
 
-def DaysInCurrentPeriod ( startdate, period, CalendarType=DefaultCalendarType ) :
+    PushStack ( f'ConvertJulianDateToGregorian : {zz}' )
+    return zz
+
+def DaysInCurrentPeriod ( startdate, period, CalendarType=None ) :
     ''' 
     Give the numbers of days during the period from startdate date
     '''
+    PushStack ( f'DaysInCurrentPeriod ( {startdate=}, {period=}, {CalendarType=} )' )
+    if not CalendarType : CalendarType=OPTIONS['DefaultCalendarType']
+        
     year, month, day = GetYearMonthDay ( startdate )
     PeriodType, PeriodLength = AnaPeriod ( period )
 
@@ -547,7 +720,8 @@ def DaysInCurrentPeriod ( startdate, period, CalendarType=DefaultCalendarType ) 
 
     else :
       Length = None
-      
+
+    PopStack ( 'DaysInCurrentPeriod : {Length}' )
     return Length
 
 def AnaPeriod ( period ) :
@@ -555,10 +729,12 @@ def AnaPeriod ( period ) :
     Decodes a period definition like '1Y', ''1MO', 'DA', etc ...
     Return period types (string) and period length (integer)
     '''
+    PushStack ( f'AnaPeriod ( {period=} )' )
+
     periodName   = rmDigits  (period)
     periodLength = getDigits (period)
 
-    if '-' in periodName :
+    if '-' in periodName : 
         Neg = True
     else :
         Neg = False
@@ -591,13 +767,20 @@ def AnaPeriod ( period ) :
         PeriodLength = 0
 
     if Neg : PeriodLength = -PeriodLength
-      
+
+    PopStack ( 'AnaPeriod' )
     return PeriodType, PeriodLength
 
-def getDigits ( s ) :
+def getDigits ( s: str ) -> str :
     '''Extract digits in a string'''
-    return ''.join (i for i in s if i.isdigit())
+    PushStack ( f'getDigits ( {s=} )' )
+    zz = ''.join (i for i in s if i.isdigit())
+    PopStack ( f'getDigits : {zz}' )
+    return zz
 
-def rmDigits ( s ) :
+def rmDigits ( s:str ) -> str :
     '''Removes digits from a string'''
-    return ''.join (i for i in s if not i.isdigit())
+    PushStack ( f'rmDigits ( {s=} )' )
+    zz =  ''.join (i for i in s if not i.isdigit())
+    PopStack ( f'rmDigits : {zz}' )
+    return zz
