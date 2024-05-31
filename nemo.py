@@ -123,10 +123,10 @@ ZUNIT = [ 'm', 'meter', ]
 TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
 ## All possibles size of dimensions in Orca files
-XLENGTH = [ 180, 182, 360, 362, 1440, 1442 ]
-YLENGTH = [ 148, 149, 331, 332 ]
-ZLENGTH = [ 31, 75]
-XYZLENGTH =  [ [180,148,31], [182,149,31], [360,331,75], [362,332,75] ]
+XLENGTH   = [ 180, 182, 360, 362, 1440, 1442 ]
+YLENGTH   = [ 148, 149, 331, 332 ]
+ZLENGTH   = [ 31, 75]
+XYZLENGTH = [ [180,148,31], [182,149,31], [360,331,75], [362,332,75] ]
 
 ## T, S array to plot TS diagrams
 Ttab = np.linspace (-2, 40, 100)
@@ -150,7 +150,7 @@ if TYPE_CHECKING :
     class T_Options (TypedDict) :
         Debug = bool
         Stack = bool
-        Depth = -1
+        Depth = int
 
 OPTIONS = { 'Debug':False, 'Stack':False, 'Depth':-1 }
 
@@ -2715,10 +2715,10 @@ def fill_closed_seas (imask, nperio=None,  cd_type='T') :
 # ======================================================
 # Sea water state function parameters from NEMO code
 
-RDELTAS = 32.
+RDELTAS = 32.0
 R1_S0   = 0.875/35.16504
-R1_T0   = 1./40.
-R1_Z0   = 1.e-4
+R1_T0   = 1.0/40.
+R1_Z0   = 1.0e-4
 
 EOS000 =  8.0189615746e+02
 EOS100 =  8.6672408165e+02
@@ -2773,7 +2773,7 @@ EOS003 = -2.3342758797e-02
 EOS103 = -1.8507636718e-02
 EOS013 =  3.7969820455e-01
 
-def rhop ( ptemp, psal ) :
+def rhop (ptemp, psal) :
     '''Returns potential density referenced to surface
 
     Computation from NEMO code

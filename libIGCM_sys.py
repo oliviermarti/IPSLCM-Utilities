@@ -104,7 +104,7 @@ def Mach (long: bool=False) -> str :
 
     zmach = None
 
-    if SysName == 'Darwin' and 'lsce5138' in NodeName : zmach = 'Spip'
+    if SysName == 'Darwin' and ( 'lsce5138' in NodeName or 'sargas028' in NodeName ) : zmach = 'Spip'
     if 'obelix'    in NodeName : zmach = 'Obelix'
     if 'jupyter'   in NodeName and "/home/users/" in os.path.abspath("")  : zmach = 'Obelix'
     if 'forge'     in NodeName : zmach = 'Forge'
@@ -156,7 +156,7 @@ class config :
 
     def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
                   LongName=None, ModelName=None, ShortName=None,
-                  Source=None, Host=None, ConfigCard=None, User=None, Group=None,
+                  Source=None, Host=None, ConfigCard=None, RunCard=None, User=None, Group=None,
                   TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
                   ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
                   R_FIG=None, L_EXP=None,
@@ -185,10 +185,13 @@ class config :
         if not IDRIS_ThreddsPrefix : IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
 
         if not Host : Host = Mach (long=False)
-
         if not Host : Host = 'Unknown'
             
         LocalUser = os.environ ['USER']
+
+        if Debug :
+            print ( f'libIGCM_sys : {Host=}' )
+            print ( f'libIGCM_sys : {LocalUser=}' )
             
         # ===========================================================================================
         # Reads config.card if available
@@ -211,7 +214,25 @@ class config :
             LongName       = MyReader['UserChoices']['LongName']
             ModelName      = MyReader['UserChoices']['ModelName']
             TagName        = MyReader['UserChoices']['TagName']
+
+
+        # Reads run.card if available
+        if RunCard :
+            # Text existence of RunCard
+            if not os.path.exists (RunCard ) :
+                raise FileExistsError ( f"File not found : {RunCard = }" )
+                
+            ## Creates parser for reading .ini input file
+            MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
+            MyReader.optionxform = str # To keep capitals
             
+            MyReader.read (ConfigCard)
+
+            PeriodDateBegin= MyReader['Configuration']['PeriodDateBegin']
+            PeriodDateEnd  = MyReader['Configuration']['PeriodDateEnd']
+            CumulPeriod    = MyReader['Configuration']['CumulPeriod']
+            PeriodState    = MyReader['Configuration']['PeriodState']
+
         ### ===========================================================================================
         ## Part specific to access by OpenDAP/Thredds server
         
@@ -220,8 +241,7 @@ class config :
             if not User  and TGCC_User  : User  = TGCC_User
             if not Group and TGCC_Group : Group = TGCC_Group
                 
-            if not ThreddsPrefix : 
-                ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix']
+            if not ThreddsPrefix : ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix']
                
             if not ARCHIVE : ARCHIVE = f'{ThreddsPrefix}/store/{TGCC_User}'
             if not R_FIG   : R_FIG   = f'{ThreddsPrefix}/work/{TGCC_User}'
@@ -233,8 +253,7 @@ class config :
             if not User  and IDRIS_User  : User  = IDRIS_User
             if not Group and IDRIS_Group : Group = IDRIS_Group
                 
-            if not ThreddsPrefix :
-                ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
+            if not ThreddsPrefix : ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
                 
             if not ARCHIVE : ARCHIVE = f'{ThreddsPrefix}/store/{IDRIS_User}'
             if not R_FIG   : R_FIG   = f'{ThreddsPrefix}/work/{IDRIS_User}'
@@ -246,8 +265,9 @@ class config :
         
         # ===========================================================================================
         if Host == 'Obelix' :
-            if not User : User = LocalUser
-            if not Source : IGCM_OUT_name = 'IGCM_OUT'
+            if not User   : User = LocalUser
+            if Source : IGCM_OUT_name = ''
+            else      : IGCM_OUT_name = 'IGCM_OUT'
             if not ARCHIVE    : ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data' )
             if not SCRATCHDIR : SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
             if not R_BUF      : R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
@@ -261,11 +281,12 @@ class config :
                 
         # ===========================================================================================
         if Host == 'Spip' :
-            if not User : User = LocalUser
-            if not Source : IGCM_OUT_name = 'IGCM_OUT'
-            if not ARCHIVE    : ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data' )
-            if not SCRATCHDIR : SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
-            if not R_BUF      : R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+            if not User   : User = LocalUser
+            if Source : IGCM_OUT_name = ''
+            else      : IGCM_OUT_name = 'IGCM_OUT'
+            if not ARCHIVE    : ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+            if not SCRATCHDIR : SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Data' )
+            if not R_BUF      : R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
             if not R_FIG      : R_FIG       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
                 
             if not STORAGE    : STORAGE     = ARCHIVE
@@ -406,13 +427,18 @@ class config :
             
         if TagName and SpaceName and ExperimentName and JobName :
             if not L_EXP : L_EXP = os.path.join ( TagName, SpaceName, ExperimentName, JobName )
+
+            if Debug :
+                print ( f'libIGCM_sys : {R_BUF=}' )
+                print ( f'libIGCM_sys : {IGCM_OUT_name=}' )
+                print ( f'libIGCM_sys : {L_EXP=}' )
                 
             if R_OUT and not R_SAVE : R_SAVE      = os.path.join ( R_OUT  , L_EXP )
             if IGCM_OUT_name :
                 if STORAGE and not R_FIGR : R_FIGR      = os.path.join ( STORAGE, IGCM_OUT_name, L_EXP )
             else :
                 if STORAGE and not R_FIGR  : R_FIGR      = os.path.join ( STORAGE, L_EXP )
-            if R_BUF   and not R_BUFR      : R_BUFR      = os.path.join ( R_BUF  , L_EXP )
+            if R_BUF   and not R_BUFR      : R_BUFR      = os.path.join ( R_BUF  , IGCM_OUT_name, L_EXP )
             if R_BUFR  and not R_BUF_KSH   : R_BUF_KSH   = os.path.join ( R_BUFR , 'Out' )
             if R_BUF   and not REBUILD_DIR : REBUILD_DIR = os.path.join ( R_BUF  , L_EXP, 'REBUILD' )
             if R_BUF   and not POST_DIR    : POST_DIR    = os.path.join ( R_BUF  , L_EXP, 'Out' )
@@ -428,6 +454,7 @@ class config :
         self.ModelName           = ModelName
         self.ShortName           = ShortName
         self.ConfigCard          = ConfigCard
+        self.RunCard             = RunCard
         self.ARCHIVE             = ARCHIVE
         self.STORAGE             = STORAGE
         self.SCRATCHDIR          = SCRATCHDIR

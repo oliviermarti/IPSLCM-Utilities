@@ -743,6 +743,40 @@ def en2geo (pte, ptn, glam, gphi) :
 
     return pxx, pyy, pzz
 
+def limit_blon (blon, clon, lon_cen=0) :
+    '''
+    From mapper https://github.com/PBrockmann/VTK_Mapper
+    needed to limit excursion from center of the cell to longitude boundaries
+    '''
+    lon_min = lon_cen-180. ; lon_max = lon_cen+180.
+    
+    clon  = (clon+360.*10.)%360
+    clon  = np.where (np.greater (clon, lon_max), clon-360., clon)
+    clon  = np.where (np.less    (clon, lon_min), clon+360.,clon)
+    clon1 = np.ones  (blon.shape, dtype=float) * clon[..., None]
+
+    blon = (blon+360.*10.)%360
+    blon = np.where (np.greater(blon, lon_max), blon-360., blon)
+    blon = np.where (np.less   (blon, lon_min), blon+360., blon)
+    
+    blon = np.where (np.greater(abs(blon-clon1), abs(blon+360. -clon1)), blon+360., blon)
+    blon = np.where (np.greater(abs(blon-clon1), abs(blon-360. -clon1)), blon-360., blon)
+    
+    return blon, clon
+
+def limit_lon (clon, lon_cen=0) :
+    '''
+    From mapper https://github.com/PBrockmann/VTK_Mapper
+    needed to limit excursion from center of the cell to longitude boundaries
+    '''
+    lon_min = lon_cen-180. ; lon_max = lon_cen+180.
+    
+    clon  = (clon+360.*10.)%360
+    clon  = np.where (np.greater (clon, lon_max), clon-360., clon)
+    clon  = np.where (np.less    (clon, lon_min), clon+360.,clon)
+    
+    return clon
+
 ## ===========================================================================
 ##
 ##                               That's all folk's !!!
