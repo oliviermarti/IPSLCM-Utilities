@@ -89,45 +89,108 @@ XYLENGTH = [ [96,95], [144, 143], [180, 180], [360, 360]]
 CLENGTH  = [ 16002, ]
 ZLENGTH  = [ 39, 59, 79, ]
 
+# lmdz internal options
+import warnings
+from typing import TYPE_CHECKING, Literal, TypedDict
+
+stack = list()
+
+if TYPE_CHECKING :
+    Options = Literal [ "Debug", "Stack", "Depth" ]
+
+    class T_Options (TypedDict) :
+        Debug = bool
+        Stack = bool
+        Depth = int
+
+OPTIONS = { 'Debug':False, 'Stack':False, 'Depth':-1 }
+
+class set_options :
+    """
+    Set options for LMDZ
+    """
+    def __init__ (self, **kwargs):
+        self.old = {}
+        for k, v in kwargs.items():
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update(kwargs)
+
+    def _apply_update (self, options_dict):
+        OPTIONS.update (options_dict)
+
+    def __enter__ (self):
+        return
+
+    def __exit__ (self, type, value, traceback):
+        self._apply_update (self.old)
+
+def get_options () -> dict :
+    """
+    Get options for LMDZ
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
+def PushStack (string:str) :
+    OPTIONS['Depth'] += 1
+    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '-->lmdz:', string)
+    return
+
+def PopStack (string:str) :
+    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '<--lmdz:', string)
+    OPTIONS['Depth'] -= 1
+    return
+
+
 def __mmath__ (ptab, default=None) :
     '''
     Determines the type of tab : xarray, numpy or numpy.ma object ?
 
     Returns type : xr, np or np.ma
     '''
+    PushStack ( f'__mmath__ ( ptab, {default=} )' )
     mmath = default
     if isinstance (ptab, xr.core.dataarray.DataArray) : mmath = xr
     if isinstance (ptab, np.ndarray)                  : mmath = np
     if isinstance (ptab, np.ma.MaskType)              : mmath = np.ma
-
+        
+    PopStack ( f'__math_ : {mmath}' )
     return mmath
 
-def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
+def __find_axis__ (ptab, axis='z', back=True) :
     '''Returns name and name of the requested axis'''
+    PushStack ( f'__find_axis__ ( ptab, {axis=} {back=} )' )
+
     mmath = __mmath__ (ptab)
     ax, ix = None, None
 
     if axis in XNAME :
         ax_name, unit_list, length = XNAME, XUNIT, XLENGTH
-        if verbose : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in YNAME :
         ax_name, unit_list, length = YNAME, YUNIT, YLENGTH
-        if verbose : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in CNAME :
         ax_name, unit_list, length = CNAME, CUNIT, CLENGTH
-        if verbose : print ( f'Working on caxis found by name : {axis=} : {CNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on caxis found by name : {axis=} : {CNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in ZNAME :
         ax_name, unit_list, length = ZNAME, ZUNIT, ZLENGTH
-        if verbose : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in TNAME :
         ax_name, unit_list, length = TNAME, TUNIT, None
-        if verbose : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
 
     if mmath == xr :
         # Try by name
         for dim in ax_name :
             if dim in ptab.dims :
-                if verbose : print ( f'Rule 2 : {name=} axis found by unit : {axis=} : {XNAME=}' )
+                if OPTIONS['Debug'] : print ( f'Rule 2 : {name=} axis found by unit : {axis=} : {XNAME=}' )
                 ix, ax = ptab.dims.index (dim), dim
 
         # If not found, try by axis attributes
@@ -135,21 +198,21 @@ def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
             for i, dim in enumerate (ptab.dims) :
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
-                    if verbose : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
+                    if OPTIONS['Debug'] : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
                     if l_axis in ax_name and l_axis == 'X' :
-                        if verbose : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'Y' :
-                        if verbose : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'C' :
-                        if verbose : print ( f'Rule 3 : caxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : caxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'Z' :
-                        if verbose : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'T' :
-                        if verbose : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
 
         # If not found, try by units
@@ -158,7 +221,7 @@ def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
                 if 'units' in ptab.coords[dim].attrs.keys() :
                     for name in unit_list :
                         if name in ptab.coords[dim].attrs['units'] :
-                            if verbose : print ( f'Rule 4 : axis found by unit {name} : {unit_list=} {i=} {dim=}' )
+                            if OPTIONS['Debug'] : print ( f'Rule 4 : axis found by unit {name} : {unit_list=} {i=} {dim=}' )
                             ix, ax = i, dim
 
     # If numpy array or dimension not found, try by length
@@ -167,17 +230,20 @@ def __find_axis__ (ptab, axis='z', back=True, verbose=False) :
             l_shape = ptab.shape
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
-                    if verbose : print ( f'Rule 5 : axis found by length : {axis=} : {XNAME=} {i=} {dim=}' )
+                    if OPTIONS['Debug'] : print ( f'Rule 5 : axis found by length : {axis=} : {XNAME=} {i=} {dim=}' )
                     ix = nn
 
     if ix and back :
         ix -= len(ptab.shape)
 
+    PopStack ( f'__find_axis__ ( {ax=} {ix=} )' )
     return ax, ix
 
-def find_axis ( ptab, axis='z', back=True, verbose=False ) :
+def find_axis ( ptab, axis='z', back=True ) :
     '''Version of find_axis with no __'''
+    PushStack ( f'find_axis__ ( ptab {axis=} {back=} )' )
     ix, xx = __find_axis__ (ptab, axis, back, verbose)
+    PopStack ( f'find_axis ( {ax=} {ix=} )' )
     return xx, ix
 
 def get_shape ( ptab ) :
@@ -188,6 +254,7 @@ def get_shape ( ptab ) :
     X is missing for on longitudinal slice
     etc ...
     '''
+    PushStack ( f'get_shape ( ptab) ' )
 
     g_shape = ''
     if __find_axis__ (ptab, 'x')[0] : g_shape = 'X'
@@ -195,6 +262,8 @@ def get_shape ( ptab ) :
     if __find_axis__ (ptab, 'c')[0] : g_shape = 'C' + g_shape
     if __find_axis__ (ptab, 'z')[0] : g_shape = 'Z' + g_shape
     if __find_axis__ (ptab, 't')[0] : g_shape = 'T' + g_shape
+
+    PushStack ( f'get_shape : {g_shape=} ' )
     return g_shape
 
 #
@@ -209,7 +278,8 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
         size of the field != jpi (avoid to extend several times)
     jplus (optional, default=25) : number of points added on the east side of the field
     '''
-    
+    PushStack ( f'extend (tab, {Lon=}, {jplus=}, {jpi=}, {lonplus=})' )
+
     math = __mmath__ (tab)
     if tab.shape[-1] == 1 :
         ztab = tab
@@ -240,9 +310,10 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
                 ztab = np.concatenate ((tab    [..., istart:istart+le],
                                         tab    [..., istart+la:jplus]+xplus  ), axis=-1)
 
+    PopStack ( f'extend ' )
     return ztab
 
-def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='linear') :
+def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
     '''One-dimensionnal interpolation of a multi-dimensionnal field
 
     Intended to interpolate on standard pressure level
@@ -261,28 +332,30 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='lin
 
            Warning : xp should be decreasing values along zdim axis
     '''
+    PushStack ( f'interp1d (x, xp, yp, {zdim=}, {units=}, {method=})' )
+
     # Get the number of dimension with dim==zdim in input array
     axis = list (yp.dims).index(zdim)
-    if verbose : print ( f'{axis=}' )
+    if OPTIONS['Debug'] : print ( f'{axis=}' )
 
     # Get the number of levels in each arrays
     nk_ou = len (x)
 
     # Define the result array
     in_shape       = np.array (yp.shape)
-    if verbose : print ( f'{in_shape=}' )
+    if OPTIONS['Debug'] : print ( f'{in_shape=}' )
     ou_shape       = np.array (in_shape)
-    if verbose : print ( f'{ou_shape=}' )
+    if OPTIONS['Debug'] : print ( f'{ou_shape=}' )
     ou_shape[axis] = nk_ou
 
     in_dims        = list (yp.dims)
-    if verbose : print ( f'{in_dims=}' )
+    if OPTIONS['Debug'] : print ( f'{in_dims=}' )
     ou_dims        = in_dims
 
     pdim           = x.dims[0]
     ou_dims[axis]  = pdim
 
-    if verbose : print ( f'{pdim=}' )
+    if OPTIONS['Debug'] : print ( f'{pdim=}' )
 
     new_coords = []
     for i, dim in enumerate (yp.dims) :
@@ -290,19 +363,19 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='lin
             ou_dims[i] = x.dims[0]
             if units is not None :
                 yp[dim].attrs['units'] = units
-            if verbose : print ( f'append new coord for {dim=} {x.shape=}' )
+            if OPTIONS['Debug'] : print ( f'append new coord for {dim=} {x.shape=}' )
             new_coords.append (x             .values)
         else :
-            if verbose : print ( f'append coord for {dim=} {yp.coords[dim].shape=}' )
+            if OPTIONS['Debug'] : print ( f'append coord for {dim=} {yp.coords[dim].shape=}' )
             new_coords.append (yp.coords[dim].values)
 
-    if verbose :
-        print ( f'{ou_dims   =}' )
-        print ( f'{new_coords=}' )
+    #if OPTIONS['Debug'] :
+    #    print ( f'{ou_dims   =}' )
+    #    print ( f'{new_coords=}' )
 
     ou_tab = xr.DataArray (np.empty (ou_shape), dims=ou_dims, coords=new_coords)
 
-    if verbose :
+    if OPTIONS['Debug'] :
         print ( f'{ou_tab.shape=} {ou_tab.dims=}' )
     
     if 'log' in method :
@@ -315,19 +388,20 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='lin
             print ( 'strictly positive or strictly negative input values. ')
             raise ValueError
 
-    def __interp (x, xp, yp, pdim='presnivs', verbose=False) :
+    def __interp (x, xp, yp, pdim='presnivs') :
         # Interpolate
         # Find index of the just above level
+        PushStack ( f'interp1d.__interp (x, xp, yp, {pdim=})' )
 
-        if verbose :
-            print ( f'{x.shape=} {x.dims=} {xp.shape=} {yp.shape=}' )
-            print ( f'{pdim=}' )
+        #if OPTIONS['Debug'] :
+        #    print ( f'{x.shape=} {x.dims=} {xp.shape=} {yp.shape=}' )
+        #    print ( f'{pdim=}' )
         idk1 = np.minimum ( (x-xp), 0.).argmax (dim=pdim)
         idk2 = idk1 - 1
         idk2 = np.maximum (idk2, 0)
 
-        if verbose :
-            print ( f'{idk1=} {idk2=}' )
+        #if OPTIONS['Debug'] :
+        #    print ( f'{idk1=} {idk2=}' )
         
         x1   = xp[{pdim:idk1}]
         x2   = xp[{pdim:idk2}]
@@ -349,15 +423,17 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, verbose=False, method='lin
         if 'nearest' in method :
             result = xr.where ( dx2>=dx1, y1, y2)
 
+        PopStack ( f'interp1d.__interp' )
         return result
 
     for k in np.arange (nk_ou) :
         zlev = x[{pdim:k}]
-        result = __interp  (zlev, xp, yp, verbose=verbose)
+        result = __interp  (zlev, xp, yp)
 
         # Put result in the final array
         ou_tab [{pdim:k}] = result
 
+    PopStack ( f'interp1d' )
     return ou_tab.squeeze()
 
 def correct_uv (u, v, lon, lat) :
@@ -377,6 +453,8 @@ def correct_uv (u, v, lon, lat) :
     Outputs :
        modified eastward/nothward components to have correct polar projections in cartopy
     '''
+    PushStack ( f'correct_uv (u, v, lon, lat)' )
+    
     uv = np.sqrt (u*u + v*v)           # Original modulus
     zu = u
     zv = v * np.cos (RAD*lat)
@@ -389,7 +467,8 @@ def correct_uv (u, v, lon, lat) :
     vc[...,  0, :] = np.nan #p.nan
     vc[..., -1, :] = np.nan #np.nan
     # Keep only one value at poles
-      
+
+    PopStack ( f'correct_uv' )
     return uc, vc
 
 def fixed_lon (lon, center_lon=0.0) :
@@ -400,6 +479,8 @@ def fixed_lon (lon, center_lon=0.0) :
 
     Designed by Phil Pelson. See https://gist.github.com/pelson/79cf31ef324774c97ae7
     '''
+    PushStack ( f'fixed_lon (lon {center_lon=})' )
+
     mmath = __mmath__ (lon)
 
     zfixed_lon = lon.copy ()
@@ -410,46 +491,53 @@ def fixed_lon (lon, center_lon=0.0) :
     start = np.argmax (np.abs (np.diff (zfixed_lon, axis=-1)) > 180., axis=-1)
     zfixed_lon [start+1:] += 360.
 
+    PopStack ( f'fixed_lon' )
     return zfixed_lon
 
 def nord2sud (p2d) :
     '''
     Swap north to south a 2D field
     '''
-    return p2d [..., -1::-1, : ]
+    PopStack ( f'nord2sud (p2d)' )
+    z2d_inv = p2d[..., -1::-1, : ]
+    PopStack ( f'nord2sud' )
+    return z2d_inv 
 
-def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell', verbose=False ) :
+def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell' ) :
     '''
     Rename dimensions to unify them between LMDZ versions
     '''
+    PushStack ( f'unify_dims ( dd, {x=}, {y=}, {z=}, {t=}, {c=} )' )
+
     for xx in XNAME :
         if xx in dd.dims and xx != x :
-            if verbose : print ( f"{xx} renamed to {x}" )
+            if OPTIONS['Debug'] : print ( f"{xx} renamed to {x}" )
             dd = dd.rename ( {xx:x})
 
     for yy in YNAME :
         if yy in dd.dims and yy != y  :
-            if verbose : print ( f"{yy} renamed to {y}" )
+            if OPTIONS['Debug'] : print ( f"{yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
 
     for cc in CNAME :
         if cc in dd.dims and cc != c  :
-            if verbose : print ( f"{cc} renamed to {c}" )
+            if OPTIONS['Debug'] : print ( f"{cc} renamed to {c}" )
             dd = dd.rename ( {cc:c} )
 
     for zz in ZNAME :
         if zz in dd.dims and zz != z :
-            if verbose : print ( f"{zz} renamed to {z}" )
+            if OPTIONS['Debug'] : print ( f"{zz} renamed to {z}" )
             dd = dd.rename ( {zz:z} )
 
     for tt in TNAME  :
         if tt in dd.dims and tt != t :
-            if verbose : print ( f"{tt} renamed to {t}" )
+            if OPTIONS['Debug'] : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
+    PopStack ( f'unify_dims' )
     return dd
 
-def add_cyclic (data, x, y, axis=-1, verbose=False, cyclic=360, precision=0.0001) :
+def add_cyclic (ptab, x, y, axis=-1, cyclic=360, precision=0.0001) :
     '''
     Add a cyclic point to an array and optionally corresponding x/longitude and y/latitude coordinates.
     
@@ -457,27 +545,28 @@ def add_cyclic (data, x, y, axis=-1, verbose=False, cyclic=360, precision=0.0001
 
     Use cartopy.util.add_cyclic
     '''
-    if verbose : print ( f'--add_cyclic-- {tab.shape=} {lon.shape=} {lat.shape=}' )
+    PushStack ( f'add_cyclic ({ptab.shape=} {axis=} {cyclic=} {precision=} )' )
 
     #yy1, xx1 = xr.broadcast (y, x)
     xx1=x
     yy1=y
-    ztab, xx, yy = cutil.add_cyclic (data=data, x=xx1, y=yy1, axis=axis, cyclic=360, precision=0.0001)
+    ztab, xx, yy = cutil.add_cyclic (data=ptab, x=xx1, y=yy1, axis=axis, cyclic=360, precision=0.0001)
     #xx = xr.DataArray (xx, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
     #yy = xr.DataArray (yy, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
     xx = xr.DataArray (xx, dims=(x.dims[0],), coords=(xx.squeeze(),) )
     yy = xr.DataArray (yy, dims=(y.dims[0],), coords=(yy.squeeze(),) )
 
     new_coords = []
-    for i, dim in enumerate (data.dims) :
-        if dim == data.dims[axis] : new_coords.append (xx)
-        else                      : new_coords.append (data.coords[dim].values)
+    for i, dim in enumerate (ptab.dims) :
+        if dim == ptab.dims[axis] : new_coords.append (xx)
+        else                      : new_coords.append (ptab.coords[dim].values)
 
-    ztab = xr.DataArray (ztab, dims=data.dims, coords=new_coords)
+    ztab = xr.DataArray (ztab, dims=ptab.dims, coords=new_coords)
 
+    PopStack ( f'add_cyclic' )
     return ztab, xx, yy
 
-def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, lon_name=None, lat_name=None) :
+def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, lon_name=None, lat_name=None) :
     '''
     From 1D [..., points_physiques] (restart type) to 2D [..., lat, lon]
 
@@ -486,6 +575,8 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
     if lon/lat is True, add longitude/latitude values (regular grid), with name lon_name (or 'lon' if lon_name not defined)
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
+    PushStack ( f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}, {lon_name=}, {lat_name=}) ' )
+    
     math = __mmath__ (p1d)
 
     # Get the horizontal dimension
@@ -514,7 +605,7 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
 
     p2d = np.empty (form_all)
     p2d [..., 1:-1, :] = np.reshape (np.float64 (p1d [..., 1:-1]), form_shape )
-    if verbose : print (f'{math=} {jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}')
+    if OPTIONS['Debug'] : print (f'{math=} {jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}')
 
     if share_pole :
         p2d [...,  0 , :].flat = p1d [...,  0] / float (jpi)
@@ -546,7 +637,7 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
             if lat :
                 if not lat_name : lat_name = 'lat'
                 lat = np.linspace ( 90, -90, jpj, endpoint=True)
-        if verbose : print ( f'{lon_name=} {type(lon)=}' )
+        if OPTIONS['Debug'] : print ( f'{lon_name=} {type(lon)=}' )
 
         if __mmath__(lon) == np :
             if math == xr :
@@ -574,7 +665,7 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
         if not lon_name : lon_name = 'x'
         if not lat_name : lat_name = 'y'
 
-        if verbose : print ( f'{lon_name=}' )
+        if OPTIONS['Debug'] : print ( f'{lon_name=}' )
             
         if lon_name != p2d.dims[-1] : p2d = p2d.rename ( {p2d.dims[-1]:lon_name} ) 
         if lat_name != p2d.dims[-2] : p2d = p2d.rename ( {p2d.dims[-2]:lat_name} )
@@ -589,9 +680,10 @@ def point2geo (p1d, verbose=False, lon=False, lat=False, jpi=None, jpj=None, sha
             if __mmath__ (lat) == xr : p2d[lon_name].attrs.update ( lat.attrs )
             else                     : p2d[lat_name].attrs.update ( { 'units':'degrees_north', 'long_name':'Latitude' , 'standard_name':'latitude' , 'axis':'Y' }  )
 
+    PopStack ( f'point2geo')
     return p2d
 
-def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=None, share_pole=False, lon_name=None, lat_name=None, lev_name=None) :
+def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=None, share_pole=False, lon_name=None, lat_name=None, lev_name=None) :
     '''
     From 2D [..., horizon_vertical] (restart type) to 3D [..., lev, lat, lon]
 
@@ -600,6 +692,7 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
     if lon/lat is True, add longitude/latitude values (regular grid), with name lon_name (or 'lon' if lon_name not defined)
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
+    PushStack ( f'point3geo (p1d, {lon=}, {lat=}, {lev=}, {jpi=}, {jpj=}, {jpk=}, {share_pole=}, {lon_name=}, {lat_name=}, {lev_name=}) ' )
     math = __mmath__ (p1d)
 
     # Get the horizontal dimension
@@ -637,13 +730,13 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
 
     form_2D = form1 + list ( (jpk, jpi*(jpj-2) + 2, ) )
 
-    if verbose :
+    if OPTIONS['Debug'] :
         print ( f'{jpn=}, {jpij=} {jpi=}, {jpj=}, {jpk=}' )
         print ( f'{form1=}, {form_2D=}' )
     if math == xr : p2d = np.reshape ( p1d.values, form_2D )
     else          : p2d = np.reshape ( p1d, form_2D )
         
-    if verbose :
+    if OPTIONS['Debug'] :
         print ( f'{p2d.shape=}' )
     
     if math == xr :
@@ -654,7 +747,7 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
             p2d = p2d.rename        ( {p2d.dims[idim]:p1d.dims[idim]}  )
             p2d = p2d.assign_coords ( {p2d.dims[idim]:p1d.coords[dim]} )
             
-    p3d = point2geo ( p2d, verbose=verbose, lon=lon, lat=lat, jpi=jpi, jpj=jpj, share_pole=share_pole, lon_name=lon_name, lat_name=lat_name )
+    p3d = point2geo ( p2d, lon=lon, lat=lat, jpi=jpi, jpj=jpj, share_pole=share_pole, lon_name=lon_name, lat_name=lat_name )
 
     if lev_name != p3d.dims[-3] :
         p3d = p3d.rename ( {p3d.dims[-3]:lev_name} ) 
@@ -663,12 +756,15 @@ def point3geo (p1d, verbose=False, lon=False, lat=False, lev=False, jpi=None, jp
             if __mmath__ (lon) in [xr, np, np.ma] : p2d[lon_name].attrs.update ( lon.attrs )
             #else : 
             #    p2d[lon_name].attrs.update ( { 'units':'degrees_east' , 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' } )
+
+    PushStack ( f'point3geo')
     return p3d
 
 def geo2point ( p2d, cumul_poles=False, dim1d='points_physiques' ) :
     '''
     From 2D [..., lat, lon] to 1D [..., points_phyiques]
     '''
+    PushStack ( f'geo2point ( p2d, {cumul_poles=}, {dim1d=} )' )
     math = __mmath__ (p2d)
     #
     # Get the horizontal dimensions
@@ -702,6 +798,7 @@ def geo2point ( p2d, cumul_poles=False, dim1d='points_physiques' ) :
                 p1d = p1d.assign_coords ( {p1d.dims[idim] :p2d.coords[dim].values} )
         p1d = p1d.rename ( {p1d.dims[-1]:dim1d} )
 
+    PopStack ( f'geo2point' )
     return p1d
 
 def geo2en (pxx, pyy, pzz, glam, gphi) :
@@ -712,7 +809,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         pxx, pyy, pzz : components on the geocentric system
         glam, gphi : longitude and latitude of the points
     '''
-
+    PushStack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
     gsinlon = np.sin (RAD * glam)
     gcoslon = np.cos (RAD * glam)
     gsinlat = np.sin (RAD * gphi)
@@ -721,6 +818,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
 
+    PopStack ( f'geo2en ')
     return pte, ptn
 
 def en2geo (pte, ptn, glam, gphi) :
@@ -731,7 +829,7 @@ def en2geo (pte, ptn, glam, gphi) :
         pte, ptn : eastward/northward components
         glam, gphi : longitude and latitude of the points
     '''
-
+    PushStack ( f'en2geo (pte, ptn, glam, gphi)' )
     gsinlon = np.sin (RAD * glam)
     gcoslon = np.cos (RAD * glam)
     gsinlat = np.sin (RAD * gphi)
@@ -741,6 +839,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
     pzz =   ptn * gcoslat
 
+    PopStack ( 'geo2en')
     return pxx, pyy, pzz
 
 def limit_blon (blon, clon, lon_cen=0) :
@@ -748,6 +847,7 @@ def limit_blon (blon, clon, lon_cen=0) :
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
     '''
+    PushStack ( f'limit_blon (blon, clon, {lon_cen=})' )
     lon_min = lon_cen-180. ; lon_max = lon_cen+180.
     
     clon  = (clon+360.*10.)%360
@@ -761,7 +861,8 @@ def limit_blon (blon, clon, lon_cen=0) :
     
     blon = np.where (np.greater(abs(blon-clon1), abs(blon+360. -clon1)), blon+360., blon)
     blon = np.where (np.greater(abs(blon-clon1), abs(blon-360. -clon1)), blon-360., blon)
-    
+
+    PopStack ( 'limit_blon' )
     return blon, clon
 
 def limit_lon (clon, lon_cen=0) :
@@ -769,6 +870,7 @@ def limit_lon (clon, lon_cen=0) :
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
     '''
+    PushStack ( f'limit_lon (clon, {lon_cen})' )
     lon_min = lon_cen-180. ; lon_max = lon_cen+180.
     
     clon  = (clon+360.*10.)%360

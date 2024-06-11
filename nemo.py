@@ -156,7 +156,7 @@ OPTIONS = { 'Debug':False, 'Stack':False, 'Depth':-1 }
 
 class set_options :
     """
-    set options for nemo
+    Set options for nemo
     """
     def __init__ (self, **kwargs):
         self.old = {}
@@ -222,8 +222,10 @@ def __guess_nperio__ (jpj:int, jpi:int, nperio=None, out:str='nperio') :
     jpi    : number of longitudes
     nperio : periodicity parameter
     '''
+    PushStack ( f'__guess_nperio__ ( {jpj=} {jpi=} {nperio=}, {out=} )' )
     if nperio is None :
         nperio = __guess_config__ (jpj, jpi, nperio=None, out=out)
+    PopStack (  f'__guess_nperio__ : {nperio}' )
     return nperio
 
 def __guess_config__ (jpj:int, jpi:int, nperio:bool=None, config=None, out='nperio') :
@@ -318,6 +320,7 @@ def __guess_point__ (ptab) :
         PopStack ( f'__guess_point__ : {gp}' )
         return gp
     else :
+        PopStack ( f'__guess_point__ : cd_type not found, input is not an xarray data' )
         raise AttributeError  ('in nemo module : cd_type not found, input is not an xarray data')
 
 def get_shape (ptab) :

@@ -96,7 +96,7 @@ SysName, NodeName, Release, Version, Machine = os.uname ()
 #     else : unDefined = True
 #     return unDefined
 
-def Mach (long: bool=False) -> str :
+def Mach (long:bool=False) -> str :
     '''
     Find the computer we are on
     On Irene, Mach returns Irene, Irene-Next, Rome or Rome-Prev if long==True
@@ -134,6 +134,16 @@ def Mach (long: bool=False) -> str :
     return zmach
 
 class config :
+    '''
+    Defines the libIGCM directories
+        
+    Source : for Spip
+    Possibilities :
+        Local        : local (~/Data/IGCMG/...)
+        TGCC_sshfs   : TGCC disks mounted via sshfs
+        TGCC_thredds : thredds TGCC via IPSL
+              ('https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds/store/...)       
+    '''
     ## Public functions
     def update (self, dico):
         '''Use a dictionnary to update values'''
@@ -156,7 +166,7 @@ class config :
 
     def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
                   LongName=None, ModelName=None, ShortName=None,
-                  Source=None, Host=None, ConfigCard=None, RunCard=None, User=None, Group=None,
+                  Source=None, MASTER=None, ConfigCard=None, RunCard=None, User=None, Group=None,
                   TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
                   ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
                   R_FIG=None, L_EXP=None,
@@ -164,17 +174,8 @@ class config :
                   REBUILD_DIR=None, POST_DIR=None,
                   ThreddsPrefix=None, R_GRAF=None, DB=None,
                   IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
-                  Debug=None, TGCC_ThreddsPrefix=None, IDRIS_ThreddsPrefix=None ) :
-        '''
-        Defines the libIGCM directories
-        
-        Source : for Spip
-        Possibilities :
-          Local        : local (~/Data/IGCMG/...)
-          TGCC_sshfs   : TGCC disks mounted via sshfs
-          TGCC_thredds : thredds TGCC via IPSL
-              ('https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds/store/...)       
-        '''
+                  Debug=None, TGCC_ThreddsPrefix=None, IDRIS_ThreddsPrefix=None, CMIP6_BUF=None ) :
+   
 
         if not Debug               : Debug               = OPTIONS['Debug']
         if not TGCC_User           : TGCC_User           = OPTIONS['TGCC_User']
@@ -184,13 +185,13 @@ class config :
         if not TGCC_ThreddsPrefix  : TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix']
         if not IDRIS_ThreddsPrefix : IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
 
-        if not Host : Host = Mach (long=False)
-        if not Host : Host = 'Unknown'
+        if not MASTER : MASTER = Mach (long=False)
+        if not MASTER : MASTER = 'Unknown'
             
         LocalUser = os.environ ['USER']
 
         if Debug :
-            print ( f'libIGCM_sys : {Host=}' )
+            print ( f'libIGCM_sys : {MASTER=}' )
             print ( f'libIGCM_sys : {LocalUser=}' )
             
         # ===========================================================================================
@@ -264,7 +265,7 @@ class config :
         ## Machine dependant part
         
         # ===========================================================================================
-        if Host == 'Obelix' :
+        if MASTER == 'Obelix' :
             if not User   : User = LocalUser
             if Source : IGCM_OUT_name = ''
             else      : IGCM_OUT_name = 'IGCM_OUT'
@@ -280,7 +281,7 @@ class config :
             if not TmpDir     : TmpDir      = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
                 
         # ===========================================================================================
-        if Host == 'Spip' :
+        if MASTER == 'Spip' :
             if not User   : User = LocalUser
             if Source : IGCM_OUT_name = ''
             else      : IGCM_OUT_name = 'IGCM_OUT'
@@ -296,7 +297,7 @@ class config :
             if not TmpDir     : TmpDir      = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
                 
         # ===========================================================================================
-        if ( 'Irene' in Host ) or ( 'Rome' in Host ) :
+        if ( 'Irene' in MASTER ) or ( 'Rome' in MASTER ) :
         
             LocalHome  = subprocess.getoutput ( 'ccc_home --ccchome' )
             LocalGroup = os.path.basename ( os.path.dirname (LocalHome))
@@ -342,7 +343,7 @@ class config :
             if not TmpDir : TmpDir = subprocess.getoutput ( f'ccc_home --cccscratch' )
                 
         # ===========================================================================================
-        if Host == 'SpiritJ' :
+        if MASTER == ['SpiritJ', 'SpiritX'] :
             if not User  :
                 if TGCC_User  : User = TGCC_User
                 else          : User = LocalUser
@@ -350,7 +351,6 @@ class config :
                 ARCHIVE    = os.path.join ( '/', 'thredds', 'tgcc', 'store', User )
             if not  STORAGE   :
                 STORAGE    = os.path.join ( '/', 'thredds', 'tgcc', 'work' , User )
-            #if not SCRATCHDIR : SCRATCHDIR = os.path.join ( '/', 'thredds'  , 'tgcc', 'store', User )
             if not R_IN       :
                 R_IN       = os.path.join ( '/', 'projsu', 'igcmg', 'IGCM' )
             #if not R_GRAF     : R_GRAF     = os.path.join ('/', 'data', 'omamce', 'GRAF', 'DATA' )
@@ -359,28 +359,11 @@ class config :
             if not DB         :
                 DB         = os.path.join  ( '/', 'data', 'igcmg', 'database' )
             if not TmpDir     :
-                TmpDir = os.path.join ( '/', 'data', LocalUser )
-                
+                if MASTER == ['SpiritJ'] : TmpDir = os.path.join ( '/', 'data'    , LocalUser )
+                if MASTER == ['SpiritX'] : TmpDir = os.path.join ( '/', 'scratchx', LocalUser )
+   
         # ===========================================================================================
-        if Host == 'SpiritX' :
-            if not User  :
-                if TGCC_User  : User  = TGCC_User
-                else          : User = os.environ ['USER']
-            if not ARCHIVE    :
-                ARCHIVE    = os.path.join ( '/', 'thredds', 'tgcc', 'store', User )
-            if not  STORAGE   :
-                STORAGE    = os.path.join ( '/', 'thredds', 'tgcc', 'work' , User )
-            #if not SCRATCHDIR :
-            #  SCRATCHDIR = os.path.join ( '/', 'thredds', 'tgcc', 'store', User )
-            if not R_IN       :
-                R_IN       = os.path.join ( '/', 'projsu', 'igcmg', 'IGCM' )
-            if not R_GRAF     :
-                R_GRAF     = os.path.join  ( '/', 'thredds', 'tgcc', 'work' , 'p86mart', 'GRAF', 'DATA' )
-            if not DB         :
-                DB         = os.path.join  ( '/', 'data', 'igcmg', 'database' )
-                
-        # ===========================================================================================
-        if Host == 'Jean-Zay' :
+        if MASTER == 'Jean-Zay' :
             if not User  : User  = os.environ ['USER']
             LocalGroup = os.path.basename ( os.path.dirname ( os.path.expanduser ('~') ))
             if not Group : Group = LocalGroup
@@ -442,6 +425,7 @@ class config :
             if R_BUFR  and not R_BUF_KSH   : R_BUF_KSH   = os.path.join ( R_BUFR , 'Out' )
             if R_BUF   and not REBUILD_DIR : REBUILD_DIR = os.path.join ( R_BUF  , L_EXP, 'REBUILD' )
             if R_BUF   and not POST_DIR    : POST_DIR    = os.path.join ( R_BUF  , L_EXP, 'Out' )
+            if STORAGE and not CMIP6_BUF   : CMIP6_BUF   = os.path.join ( STORAGE, IGCM_OUT_name )
                 
         ### ===========================================================================================
         ## Builds the class attributes
@@ -469,7 +453,7 @@ class config :
         self.REBUILD_DIR         = REBUILD_DIR
         self.POST_DIR            = POST_DIR
         self.R_IN                = R_IN
-        self.Host                = Host
+        self.MASTER              = MASTER
         self.Source              = Source
         self.User                = User
         self.Group               = Group
@@ -483,6 +467,7 @@ class config :
         self.IDRIS_Group         = IDRIS_Group
         self.TGCC_ThreddsPrefix  = TGCC_ThreddsPrefix
         self.IDRIS_ThreddsPrefix = IDRIS_ThreddsPrefix
+        self.CMIP6_BUF           = CMIP6_BUF
         self.Debug               = Debug
         
 
