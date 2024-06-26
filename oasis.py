@@ -31,7 +31,63 @@ import time
 
 rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
 
+if TYPE_CHECKING :
+    Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
+
+    class T_Options (TypedDict) :
+        Debug = bool
+        Trace = bool
+        Depth = int
+        Stack = list()
+
+OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, 'Stack':list() }
+
+class set_options :
+    """
+    Set options for nemo
+    """
+    def __init__ (self, **kwargs):
+        self.old = {}
+        for k, v in kwargs.items():
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update(kwargs)
+
+    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
+    def __enter__ (self) : return
+    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+
+def get_options () -> dict :
+    """
+    Get options for oasis
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
+def return_stack () :
+    return Stack
+
+def PushStack (string:str) :
+    OPTIONS['Depth'] += 1
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}:', string)
+    Stack.append (string)
+    return
+
+def PopStack (string:str) :
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--{__name__}:', string)
+    OPTIONS['Depth'] -= 1
+    Stack.pop ()
+    return
+
+
 def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links) :
+    PushStack ( f'compute_links ( remap_matrix, src_address, dst_address, {src_grid_size=}, {dst_grid_size=}, {num_links=} )' )
+    
     src_grid_target     = np.zeros ((src_grid_size,), dtype=int)
     src_grid_weight     = np.zeros ((src_grid_size,))
 
@@ -43,9 +99,11 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
         src_grid_weight[src_address[link]] += remap_matrix [link]
         dst_grid_target[dst_address[link]] += 1
         dst_grid_weight[dst_address[link]] += remap_matrix [link]
+
+    PopStack ( 'compute_links')
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
-def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
+def rmp_remap (ptab, d_rmp, sval=np.nan) :
     '''
     Remap a field using OASIS rmpfile
 
@@ -60,7 +118,8 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
       sval : value for destinations points with no value assigned by the interpolation
     '''
 
-    print (__name__ + '.rmp_remap :  Read rmp file')
+    PushStack ( f'rmp_remap :  Read rmp file')
+    
     num_links      = d_rmp.dims ['num_links']
     src_grid_size  = d_rmp.dims ['src_grid_size']
     dst_grid_size  = d_rmp.dims ['dst_grid_size']
@@ -80,20 +139,20 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
         print ('Dimensions do not match')
         raise Exception ("Error in module: " + __name__ + ", file: " + __file__ + ", function: " + rmp_remap.__name__)
        
-    if verbose : print ('grid sizes      : ', src_grid_size, dst_grid_size)
-    if verbose : print ('num_links       : ', num_links)
-    if verbose : print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
-    if verbose : print ('src dimensions  : ', src_ny, src_nx)
-    if verbose : print ('dst dimensions  : ', dst_ny, dst_nx)
+    if OPTIONS['Debug'] : print ('grid sizes      : ', src_grid_size, dst_grid_size)
+    if OPTIONS['Debug'] : print ('num_links       : ', num_links)
+    if OPTIONS['Debug'] : print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
+    if OPTIONS['Debug'] : print ('src dimensions  : ', src_ny, src_nx)
+    if OPTIONS['Debug'] : print ('dst dimensions  : ', dst_ny, dst_nx)
 
     # Get information to create the destination field
     src_shape_2D   = list (ptab.shape)
     dst_shape_2D   = src_shape_2D[:-2] + [dst_ny, dst_nx]
-    if verbose : print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
+    if OPTIONS['Debug'] : print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
 
     src_shape_1D = src_shape_2D[:-2] + [src_ny*src_nx]
     dst_shape_1D = dst_shape_2D[:-2] + [dst_ny*dst_nx]
-    if verbose : print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
+    if OPTIONS['Debug'] : print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
     
     src_dims_2D = list (ptab.dims) ; 
     src_dims_1D = src_dims_2D[:-2] + ['xy']  
@@ -102,8 +161,8 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
     dst_dims_2D = dst_dims_2D + ['y', 'x']
     dst_dims_1D = dst_dims_2D[:-2] + ['xy']
     
-    if verbose : print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
-    if verbose : print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
+    if OPTIONS['Debug'] : print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
+    if OPTIONS['Debug'] : print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
         
     src_coords_2D = ptab.coords
     dst_coords_2D = []
@@ -117,11 +176,11 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
     ## Creates an array to mask destinations points with no value assigned by the interpolation
     dst_mask_1D = np.full (dst_shape_1D, np.nan)
     
-    if verbose : print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
-    if verbose : print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
+    if OPTIONS['Debug'] : print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
+    if OPTIONS['Debug'] : print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
 
     # Interpolate
-    dst_field_1D = remap ( src_field_1D, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan, verbose = True )
+    dst_field_1D = remap ( src_field_1D, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan )
         
     dst_field_2D = np.reshape   (dst_field_1D, dst_shape_2D)
     dst_field_2D = xr.DataArray (dst_field_2D, dims=dst_dims_2D, coords=dst_coords_2D)
@@ -130,7 +189,7 @@ def rmp_remap (ptab, d_rmp, sval=np.nan, verbose=False ) :
     for attr in ptab.attrs :
         dst_field_2D.attrs [attr] = ptab.attrs [attr]
 
-    if verbose : print ("End of " + __name__ + ".rmp_remap")   
+    PopStack ( ".rmp_remap")   
     return dst_field_2D
 
 def progress (percent=0, width=30) :
@@ -139,7 +198,7 @@ def progress (percent=0, width=30) :
         #print ('\r[', '#' * left, ' ' * right, ']', f' {percent:.0f}%',  sep='', end='', flush=True)
         print ( '\r[', '#' * left, ' ' * right, '] {:4d}%'.format(percent),  sep='', end='', flush=True)
 
-def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan, verbose = True ) :
+def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan ) :
     '''
     Remap a field using interpolation weights and addresses
 
@@ -155,11 +214,11 @@ def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst
       dst_address   : address of destination point for each link
       remap_matrix  : interpolation weights
       sval          : value of non reached point on te destiantion grid
-      verbose       : 
 
       All addresses should be in python/C convention : starting at 0
 
     '''
+    PushStack ( f'remap ( src_field, {src_grid_size=}, {dst_grid_size=}, {num_links=}, src_address, dst_address, remap_matrix, {sval=}' )
     width=80
     
     src_shape = src_field.shape
@@ -168,13 +227,13 @@ def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst
     dst_field = np.zeros ( (dst_shape) )
     dst_mask  = np.full  ( (dst_shape), np.nan)
      
-    if verbose :
+    if OPTIONS['Debug'] :
         print ("\nStarting interpolation")
     t_start = time.time ()
     t_0 = t_start
    
     for link in np.arange (num_links) :
-        if verbose :
+        if OPTIONS['Debug'] :
             if link%(num_links//100) == 0 :
                 t_1 = time.time ()
                 if t_1 > t_0 + 0.6 :
@@ -183,14 +242,15 @@ def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst
         dst_mask  [..., dst_address [link]] = 1.0
         dst_field [..., dst_address [link]] += remap_matrix[link] * src_field[..., src_address[link]]
     t_end = time.time ()
-    if verbose : progress (percent=100, width=width)
+    if OPTIONS['Debug'] : progress (percent=100, width=width)
     
-    if verbose :
+    if OPTIONS['Debug'] :
         print ("\nInterpolation time : {:5.3}s".format (t_end-t_start))
         print (" ")
         
     dst_field = np.where ( np.isnan(dst_mask), sval, dst_field)
 
+    PopStack ( 'remap' )
     return dst_field
 
 def geo2en (pxx, pyy, pzz, glam, gphi) : 
@@ -201,6 +261,8 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         pxx, pyy, pzz : components on the geocentric system
         glam, gphi : longitude and latitude of the points
     '''
+    PushStack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
+    
     gsinlon = np.sin (rad * glam)
     gcoslon = np.cos (rad * glam)
     gsinlat = np.sin (rad * gphi)
@@ -209,6 +271,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
 
+    PopStack ( 'geo2en' )
     return pte, ptn
 
 def en2geo (pte, ptn, glam, gphi) :
@@ -219,6 +282,7 @@ def en2geo (pte, ptn, glam, gphi) :
         pte, ptn : eastward/northward components
         glam, gphi : longitude and latitude of the points
     '''
+    PushStack ( f'en2geo (pte, ptn, glam, gphi)' )
     gsinlon = np.sin (rad * glam)
     gcoslon = np.cos (rad * glam)
     gsinlat = np.sin (rad * gphi)
@@ -227,7 +291,8 @@ def en2geo (pte, ptn, glam, gphi) :
     pxx = - pte * gsinlon - ptn * gcoslon * gsinlat
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
     pzz =   ptn * gcoslat
-    
+
+    PopStack ( 'en2geo' )
     return pxx, pyy, pzz
 
 ## Sommes des poids à l'arrivée
@@ -238,6 +303,8 @@ def sum_matrix (rmp) :
     rmp : an xarray dataset corresponding to a rmp file 
           Weight files are at OASIS-MCT format (matching ESMF or CDO weights files format)
     '''
+    PushStack ( f' sum_matrix (rmp)' )
+    
     src_sum_matrix = np.zeros ( (rmp.dims['src_grid_size'],) )
     dst_sum_matrix = np.zeros ( (rmp.dims['dst_grid_size'],) )
     for n in rmp['num_links'].values :
@@ -245,6 +312,8 @@ def sum_matrix (rmp) :
         dst_a = rmp['dst_address'][n]
         src_sum_matrix[src_a-1] += rmp['remap_matrix'][n]
         dst_sum_matrix[dst_a-1] += rmp['remap_matrix'][n]
+
+    PopStack ( 'sum_matrix' )
     return src_sum_matrix, dst_sum_matrix
 
 ## ===========================================================================

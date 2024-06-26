@@ -93,17 +93,18 @@ ZLENGTH  = [ 39, 59, 79, ]
 import warnings
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-stack = list()
+Stack = list()
 
 if TYPE_CHECKING :
-    Options = Literal [ "Debug", "Stack", "Depth" ]
+    Options = Literal [ "Debug", "Trace", "Depth" ]
 
     class T_Options (TypedDict) :
         Debug = bool
-        Stack = bool
+        Trace = bool
         Depth = int
+        Stack = list()
 
-OPTIONS = { 'Debug':False, 'Stack':False, 'Depth':-1 }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, Stack=list() }
 
 class set_options :
     """
@@ -139,12 +140,14 @@ def get_options () -> dict :
 
 def PushStack (string:str) :
     OPTIONS['Depth'] += 1
-    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '-->lmdz:', string)
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '-->lmdz:', string)
+    Stack.append (string)
     return
 
-def PopStack (string:str) :
-    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '<--lmdz:', string)
+def PopTrace (string:str) :
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--lmdz:', string)
     OPTIONS['Depth'] -= 1
+    Stack.pop()
     return
 
 

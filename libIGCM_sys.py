@@ -31,70 +31,14 @@ SVN information
  $HeadURL:  $
 '''
 
-import os, subprocess, configparser, types
-from pathlib import Path
+import os, subprocess, configparser, types, sys
 
 import warnings
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-# libIGCM_sys internal options
-if TYPE_CHECKING :
-    Options = Literal ["Debug", 'TGCC_User', 'TGCC_Group', 'IDRIS_User', 'IDRIS_Group', 'TGCC_ThreddsPrefix', 'IDRIS_ThreddsPrefix']
-
-    class T_Options (TypedDict) :
-        Debug = bool
-
-OPTIONS = { 'Debug'              : False,
-            'TGCC_User'          : 'p86mart',
-            'TGCC_Group'         : 'gen12006',
-            'IDRIS_User'         : 'rces009',
-            'IDRIS_Group'        : 'ces',
-            'TGCC_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-            'IDRIS_ThreddsPrefix': 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-            }
-
-class set_options :
-    """
-    set options for libIGCM_sys
-    """
-    def __init__ (self, **kwargs) :
-        self.old = {}
-        for k, v in kwargs.items () :
-            if k not in OPTIONS:
-                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
-            self.old[k] = OPTIONS[k]
-        self._apply_update (kwargs)
-
-    def _apply_update (self, options_dict):
-        OPTIONS.update (options_dict)
-
-    def __enter__ (self):
-        return
-
-    def __exit__ (self, type, value, traceback):
-        self._apply_update (self.old)
-
-def get_options () :
-    """
-    Get options for libIGCM_sys
-
-    See Also
-    ----------
-    set_options
-
-    """
-    return OPTIONS
-
+Stack = list()
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
-
-# def unDefined (char: str) -> bool :
-#     '''Returns True if a variable is not defined, ot if it's set to None'''
-#     if char in globals () :
-#         if globals ()[char] == None or  globals ()[char] == 'None': unDefined = True
-#         else                                                      : unDefined = False
-#     else : unDefined = True
-#     return unDefined
 
 def Mach (long:bool=False) -> str :
     '''
@@ -106,7 +50,7 @@ def Mach (long:bool=False) -> str :
 
     if SysName == 'Darwin' and ( 'lsce5138' in NodeName or 'sargas028' in NodeName ) : zmach = 'Spip'
     if 'obelix'    in NodeName : zmach = 'Obelix'
-    if 'jupyter'   in NodeName and "/home/users/" in os.path.abspath("")  : zmach = 'Obelix'
+    if 'jupyter'   in NodeName and "/home/users/" in os.path.abspath ("")  : zmach = 'Obelix'
     if 'forge'     in NodeName : zmach = 'Forge'
     if 'ciclad'    in NodeName : zmach = 'Ciclad'
     if 'climserv'  in NodeName : zmach = 'SpiritX'
@@ -126,12 +70,96 @@ def Mach (long:bool=False) -> str :
             if "Intel(R) Xeon(R) Platinum" in CPU :
                 zmachfull = 'Irene'
 
-            if "AMD" in CPU :
-                zmachfull = 'Rome'
+            if "AMD" in CPU : zmachfull = 'Rome'
 
         zmach = zmachfull
 
     return zmach
+
+
+MASTER = Mach (long=False)
+
+# libIGCM_sys internal options
+if TYPE_CHECKING :
+    Options = Literal ["Debug", 'TGCC_User', 'TGCC_Group', 'IDRIS_User', 'IDRIS_Group', 'TGCC_ThreddsPrefix', 'IDRIS_ThreddsPrefix', 'Trace', 'Stack']
+
+    class T_Options (TypedDict) :
+        TGCC_User           = 'p86mart'
+        TGCC_Group          = 'gen12006'
+        IDRIS_User          = 'rces009'
+        IDRIS_Group         = 'ces'
+        TGCC_ThreddsPrefix  = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds'
+        IDRIS_ThreddsPrefix = 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds'
+        Stack               = list()
+        
+OPTIONS = { 'Debug'              : False,
+            'Trace'              : False,
+            'TGCC_User'          : 'p86mart',
+            'TGCC_Group'         : 'gen12006',
+            'IDRIS_User'         : 'rces009',
+            'IDRIS_Group'        : 'ces',
+            'TGCC_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+            'IDRIS_ThreddsPrefix': 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+            'Stack'              : list(),
+            }
+
+class set_options :
+    """
+    Set options for libIGCM_sys
+    """
+    def __init__ (self, **kwargs) :
+        self.old = {}
+        for k, v in kwargs.items () :
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update (kwargs)
+
+    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
+    def __enter__ (self) : return
+    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+
+def get_options () :
+    """
+    Get options for libIGCM_sys
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
+def return_stack () :
+    return Stack
+
+def PushStack (string:str) :
+    OPTIONS['Depth'] += 1
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '-->libIGCM_date: ', string)
+    Stack.append (string)
+    return
+
+def PopStack (string:str) :
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--libIGCM_date: ', string)
+    OPTIONS['Depth'] -= 1
+    Stack.pop ()
+    return
+
+# Where do we run ?
+SysName, NodeName, Release, Version, Machine = os.uname ()
+
+# def unDefined (char: str) -> bool :
+#     '''Returns True if a variable is not defined, ot if it's set to None'''
+#     if char in globals () :
+#         if globals ()[char] == None or  globals ()[char] == 'None': unDefined = True
+#         else                                                      : unDefined = False
+#     else : unDefined = True
+#     return unDefined
+
+
+#@classmethod
+#def from_dict (cls, data_dict) :
+#    return cls ( **data_dict )
 
 class config :
     '''
@@ -275,9 +303,9 @@ class config :
             if not R_FIG      : R_FIG       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
                 
             if not STORAGE    : STORAGE     = ARCHIVE
-            if not R_IN       : R_IN        = os.path.join ( os.path.expanduser ('~marti'), 'Data', 'IGCM' )
+            if not R_IN       : R_IN        = os.path.join ( '/home', 'orchideeshare', 'igcmg', 'IGCM' )
             if not R_GRAF     : R_GRAF      = os.path.join ( os.path.expanduser ('~marti'), 'GRAF', 'DATA' )
-            if not DB         : DB          = os.path.join ( os.path.expanduser ('~marti'), 'GRAF', 'DB'   )
+            if not DB         : DB          = os.path.join ( '/home', 'biomac1', 'geocean', 'ocmip'   )
             if not TmpDir     : TmpDir      = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
                 
         # ===========================================================================================
@@ -343,7 +371,7 @@ class config :
             if not TmpDir : TmpDir = subprocess.getoutput ( f'ccc_home --cccscratch' )
                 
         # ===========================================================================================
-        if MASTER == ['SpiritJ', 'SpiritX'] :
+        if MASTER == ['SpiritJ', 'SpiritX', 'Spirit'] :
             if not User  :
                 if TGCC_User  : User = TGCC_User
                 else          : User = LocalUser

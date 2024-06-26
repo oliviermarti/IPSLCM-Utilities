@@ -142,17 +142,18 @@ Stab.attrs.update ( {'unit':'PSU',             'long_name':'Salinity'} )
 import warnings
 from typing import TYPE_CHECKING, Literal, TypedDict
 
-stack = list()
+Stack = list()
 
 if TYPE_CHECKING :
-    Options = Literal [ "Debug", "Stack", "Depth" ]
+    Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
 
     class T_Options (TypedDict) :
         Debug = bool
-        Stack = bool
+        Trace = bool
         Depth = int
+        Stack = list()
 
-OPTIONS = { 'Debug':False, 'Stack':False, 'Depth':-1 }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, 'Stack':list() }
 
 class set_options :
     """
@@ -166,14 +167,9 @@ class set_options :
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
-    def _apply_update (self, options_dict):
-        OPTIONS.update (options_dict)
-
-    def __enter__ (self):
-        return
-
-    def __exit__ (self, type, value, traceback):
-        self._apply_update (self.old)
+    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
+    def __enter__ (self) : return
+    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
 
 def get_options () -> dict :
     """
@@ -186,14 +182,19 @@ def get_options () -> dict :
     """
     return OPTIONS
 
+def return_stack () :
+    return Stack
+
 def PushStack (string:str) :
     OPTIONS['Depth'] += 1
-    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '-->nemo:', string)
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '-->nemo:', string)
+    Stack.append (string)
     return
 
 def PopStack (string:str) :
-    if OPTIONS['Stack'] : print ( '  '*OPTIONS['Depth'], '<--nemo:', string)
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--nemo:', string)
     OPTIONS['Depth'] -= 1
+    Stack.pop ()
     return
 
 ## ===========================================================================
@@ -833,7 +834,7 @@ def ff (plat) :
     '''Returns Coriolis factor
     '''
     PushStack ( 'ff ( plat )' )
-    zff   = np.sin (RAD * plat) * OMEGA
+    zff   = np.sin (RAD * plat) * ROMEGA
     PopStack ( 'ff' )
     return zff
 
@@ -841,7 +842,7 @@ def beta (plat) :
     '''Return Beta factor (derivative of Coriolis factor)
     '''
     PushStack ( 'beta ( plat )' )
-    zbeta = np.cos (RAD * plat) * OMEGA / RA
+    zbeta = np.cos (RAD * plat) * ROMEGA / RA
     PopStack ( 'beta' )
     return zbeta
 
@@ -1357,7 +1358,7 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
 
     See NEMO documentation for further details
     '''
-    PusStack ( f'lbc_index ( {jj=}, {ii=}, {jpj=}, {jpi=}, {nperio=}, {cd_type=} )' )
+    PushStack ( f'lbc_index ( {jj=}, {ii=}, {jpj=}, {jpi=}, {nperio=}, {cd_type=} )' )
     if nperio is None :
         nperio = __guess_nperio__ (jpj, jpi, nperio)
 
@@ -1379,8 +1380,10 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
 
     #
     def mod_ij (cond, jy_new, ix_new) :
+        PushStack ( f'mod_ij (cond, jy_new, ix_new)' )
         jy_r = mmath.where (cond, jy_new, jy)
         ix_r = mmath.where (cond, ix_new, ix)
+        PopStack ( 'mod_ij' )
         return jy_r, ix_r
     #
     #> North-South boundary conditions
@@ -1519,7 +1522,13 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
     elif out in ['array', 'numpy', 'np'] :
         return np.array (jmin), np.array (imin)
     elif out in ['xarray', 'xr']         :
-        return xr.DataArray (jmin, dims=('Num',)), xr.DataArray (imin, dims=('Num',))
+        jmin = xr.DataArray (jmin, dims=('Num',))
+        imin = xr.DataArray (imin, dims=('Num',))
+        jmin.attrs.update ( {'long_name':'j-index' } )
+        imin.attrs.update ( {'long_name':'i-index' } )
+        jmin.name = 'j_index'
+        imin.name = 'j_index'
+        return jmin, imin
     elif out=='list'                     :
         return [jmin, imin]
     elif out=='tuple'                    :
@@ -1674,6 +1683,7 @@ def depth2index (pz, gdept_0) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpk  = gdept_0.shape[0]
     if   isinstance (pz, xr.core.dataarray.DataArray ) :
         zz   = xr.DataArray (pz.values , dims=('zz',))
@@ -1698,6 +1708,7 @@ def index2depth_panels (pk, gdept_0, depth0, fact) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpk = gdept_0.shape[0]
     kk = xr.DataArray (pk)
     k  = np.maximum (0, np.minimum (jpk-1, kk    ))
@@ -1714,6 +1725,7 @@ def depth2index_panels (pz, gdept_0, depth0, fact) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpk = gdept_0.shape[0]
     if isinstance (pz, xr.core.dataarray.DataArray) :
         zz   = xr.DataArray (pz.values , dims=('zz',))
@@ -1743,6 +1755,7 @@ def depth2comp (pz, depth0, fact ) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     #print ('start depth2comp')
     if isinstance (pz, xr.core.dataarray.DataArray) :
         zz   = pz.values
@@ -1761,6 +1774,7 @@ def comp2depth (pz, depth0, fact ) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     if isinstance (pz, xr.core.dataarray.DataArray) :
         zz   = pz.values
     elif isinstance (pz, list) :
@@ -1779,6 +1793,7 @@ def index2lon (pi, plon_1d) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpi = plon_1d.shape[0]
     ii  = xr.DataArray (pi)
     i   =  np.maximum (0, np.minimum (jpi-1, ii    ))
@@ -1794,6 +1809,7 @@ def lon2index (px, plon_1d) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpi  = plon_1d.shape[0]
     if isinstance (px, xr.core.dataarray.DataArray) :
         xx   = xr.DataArray (px.values , dims=('xx',))
@@ -1819,6 +1835,7 @@ def index2lat (pj, plat_1d) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpj = plat_1d.shape[0]
     jj  = xr.DataArray (pj)
     j   = np.maximum (0, np.minimum (jpj-1, jj    ))
@@ -1834,6 +1851,7 @@ def lat2index (py, plat_1d) :
     Needed to use transforms in Matplotlib
     '''
     # No stack here, to avoid problem in Matplotlib
+    
     jpj = plat_1d.shape[0]
     if isinstance (py, xr.core.dataarray.DataArray) :
         yy   = xr.DataArray (py.values , dims=('yy',))
