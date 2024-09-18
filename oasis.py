@@ -22,18 +22,19 @@ A few fonctionnalities of the OASIS coupler in Python
 
 olivier.marti@lsce.ipsl.fr
 '''
-import sys, numpy as np, inspect
-
-try    : import xarray as xr
-except ImportError : pass
-    
+import sys, numpy as np, xarray as xr
 import time
 
 rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
 
+# OASIS internal options
+import warnings
+from typing import TYPE_CHECKING, Literal, TypedDict
+
+Stack = list()
+
 if TYPE_CHECKING :
     Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
-
     class T_Options (TypedDict) :
         Debug = bool
         Trace = bool
@@ -44,7 +45,7 @@ OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, 'Stack':list() }
 
 class set_options :
     """
-    Set options for nemo
+    Set options for oasis
     """
     def __init__ (self, **kwargs):
         self.old = {}
@@ -79,12 +80,12 @@ def PushStack (string:str) :
     return
 
 def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--{__name__}:', string)
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}:', string)
     OPTIONS['Depth'] -= 1
     Stack.pop ()
     return
 
-
+## ===========================================================================
 def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links) :
     PushStack ( f'compute_links ( remap_matrix, src_address, dst_address, {src_grid_size=}, {dst_grid_size=}, {num_links=} )' )
     
@@ -115,14 +116,14 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
       d_rmp : an xarray dataset corresponding to a rmp file 
           Weight files are at OASIS-MCT format (matching ESMF or CDO weights files format)
 
-      sval : value for destinations points with no value assigned by the interpolation
+      sval : value of destinations points with no value assigned by the interpolation
     '''
 
     PushStack ( f'rmp_remap :  Read rmp file')
     
-    num_links      = d_rmp.dims ['num_links']
-    src_grid_size  = d_rmp.dims ['src_grid_size']
-    dst_grid_size  = d_rmp.dims ['dst_grid_size']
+    num_links      = d_rmp.sizes ['num_links']
+    src_grid_size  = d_rmp.sizes ['src_grid_size']
+    dst_grid_size  = d_rmp.sizes ['dst_grid_size']
     # Address in rmp file are in Fortran convention : starting a 1
     # Here we shift to python/C convention : starting at 0
     src_address    = d_rmp ['src_address'].values - 1
@@ -189,7 +190,7 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     for attr in ptab.attrs :
         dst_field_2D.attrs [attr] = ptab.attrs [attr]
 
-    PopStack ( ".rmp_remap")   
+    PopStack ( "rmp_remap")   
     return dst_field_2D
 
 def progress (percent=0, width=30) :
@@ -198,7 +199,7 @@ def progress (percent=0, width=30) :
         #print ('\r[', '#' * left, ' ' * right, ']', f' {percent:.0f}%',  sep='', end='', flush=True)
         print ( '\r[', '#' * left, ' ' * right, '] {:4d}%'.format(percent),  sep='', end='', flush=True)
 
-def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan ) :
+def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval=np.nan) :
     '''
     Remap a field using interpolation weights and addresses
 
@@ -222,13 +223,12 @@ def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst
     width=80
     
     src_shape = src_field.shape
-    dst_shape = ( *src_shape[:1], dst_grid_size)
+    dst_shape = (*src_shape[:1], dst_grid_size)
     
     dst_field = np.zeros ( (dst_shape) )
     dst_mask  = np.full  ( (dst_shape), np.nan)
      
-    if OPTIONS['Debug'] :
-        print ("\nStarting interpolation")
+    if OPTIONS['Debug'] : print ("\nStarting interpolation")
     t_start = time.time ()
     t_0 = t_start
    
@@ -248,7 +248,7 @@ def remap ( src_field, src_grid_size, dst_grid_size, num_links, src_address, dst
         print ("\nInterpolation time : {:5.3}s".format (t_end-t_start))
         print (" ")
         
-    dst_field = np.where ( np.isnan(dst_mask), sval, dst_field)
+    dst_field = np.where (np.isnan(dst_mask), sval, dst_field)
 
     PopStack ( 'remap' )
     return dst_field
@@ -303,7 +303,7 @@ def sum_matrix (rmp) :
     rmp : an xarray dataset corresponding to a rmp file 
           Weight files are at OASIS-MCT format (matching ESMF or CDO weights files format)
     '''
-    PushStack ( f' sum_matrix (rmp)' )
+    PushStack ( f'sum_matrix (rmp)' )
     
     src_sum_matrix = np.zeros ( (rmp.dims['src_grid_size'],) )
     dst_sum_matrix = np.zeros ( (rmp.dims['dst_grid_size'],) )

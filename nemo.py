@@ -49,7 +49,7 @@ try :
 except ImportError as err :
     print ( f'===> Warning : Module nemo : Import error of f90nml : {err}' )
     f90nml = None
-
+    
 # SVN information
 __SVN__ = ({
     'Author'   : '$Author: $',
@@ -88,15 +88,15 @@ RLSUB  = xr.DataArray (2.834e+6)  ; RLSUB .name='RLSUB'  ; RLSUB.attrs.update  (
 RLFUS  = xr.DataArray (0.334e+6)  ; RLFUS .name='RLFUS'  ; RLFUS.attrs.update  ({'units':"J/kg"   , 'long_name':"Latent heat of fusion of fresh ice"} )
 RTMLT  = xr.DataArray (0.054)     ; RTMLT .name='RTMLT'  ; RTMLT.attrs.update  ({'units':"C/PSU"  , 'long_name':"Decrease of seawater meltpoint with salinity"} )
 
-RDAY     = RJJHH * RHHMM * RMMSS                ; RDAY  .name='RDAY'   ; RDAY.attrs.update   ({'units':"s"      , 'long_name':"Day length"} )
-RSIYEA   = 365.25 * RDAY * 2. * RPI / 6.283076  ; RSIYEA.name='RSIYEA' ; RSIYEA.attrs.update ({'units':"s"      , 'long_name':"Sideral year length"} )
-RSIDAY   = RDAY / (1. + RDAY / RSIYEA)          ; RSIDAY.name='RSIDAY' ; RSIDAY.attrs.update ({'units':"s"      , 'long_name':"Sideral day length"} )
-ROMEGA   = 2. * RPI / RSIDAY                    ; ROMEGA.name='ROMEGA' ; ROMEGA.attrs.update ({'units':"s-1"    , 'long_name':"Earth rotation parameter"} )
+RDAY     = RJJHH * RHHMM * RMMSS                ; RDAY  .name='RDAY'   ; RDAY.attrs.update   ({'units':"s"  , 'long_name':"Day length"} )
+RSIYEA   = 365.25 * RDAY * 2. * RPI / 6.283076  ; RSIYEA.name='RSIYEA' ; RSIYEA.attrs.update ({'units':"s"  , 'long_name':"Sideral year length"} )
+RSIDAY   = RDAY / (1. + RDAY / RSIYEA)          ; RSIDAY.name='RSIDAY' ; RSIDAY.attrs.update ({'units':"s"  , 'long_name':"Sideral day length"} )
+ROMEGA   = 2. * RPI / RSIDAY                    ; ROMEGA.name='ROMEGA' ; ROMEGA.attrs.update ({'units':"s-1", 'long_name':"Earth rotation parameter"} )
 
 NPERIO_VALID_RANGE = [0, 1, 4, 4.2, 5, 6, 6.2]
 
 ## Default names of dimensions
-UDIMS = {'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter' }
+UDIMS = {'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter'}
 
 ## All possible names of lon/lat variables in Nemo files
 LONNAME=['nav_lon', 'nav_lon_T', 'nav_lon_U', 'nav_lon_V', 'nav_lon_F', 'nav_lon_W',
@@ -139,29 +139,16 @@ Ttab.attrs.update ( {'unit':'degrees_celcius', 'long_name':'Temperature'} )
 Stab.attrs.update ( {'unit':'PSU',             'long_name':'Salinity'} )
 
 # nemo internal options
-import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
 
-Stack = list()
-
-if TYPE_CHECKING :
-    Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
-
-    class T_Options (TypedDict) :
-        Debug = bool
-        Trace = bool
-        Depth = int
-        Stack = list()
-
-OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, 'Stack':list() }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':None, 'Stack':None }
 
 class set_options :
     """
     Set options for nemo
     """
-    def __init__ (self, **kwargs):
+    def __init__ (self, **kwargs) :
         self.old = {}
-        for k, v in kwargs.items():
+        for k, v in kwargs.items() :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
@@ -183,19 +170,22 @@ def get_options () -> dict :
     return OPTIONS
 
 def return_stack () :
-    return Stack
+    return OPTIONS['Stack']
 
 def PushStack (string:str) :
-    OPTIONS['Depth'] += 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '-->nemo:', string)
-    Stack.append (string)
-    return
+    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
+    else                : OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}.{string}' )
+    #
+    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
+    else                : OPTIONS['Stack'] = [string,]
 
 def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--nemo:', string)
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}.{string}')
     OPTIONS['Depth'] -= 1
-    Stack.pop ()
-    return
+    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
 
 ## ===========================================================================
 def __mmath__ (ptab, default=None) :
@@ -240,7 +230,7 @@ def __guess_config__ (jpj:int, jpi:int, nperio:bool=None, config=None, out='nper
     '''
     PushStack ( f'__guessConfig__ ( {jpj=}, {jpi=}, {nperio=}, {config=}, {out=}')
     
-    print (jpi, jpj)
+    #if OPTIONS['Debug'] : print ( f'__guess_config__ : {jpi=}, {jpj=}' )
     if nperio is None :
         ## Values for NEMO version < 4.2
         if ( (jpj == 149 and jpi == 182) or (jpj is None and jpi == 182) or
@@ -269,23 +259,24 @@ def __guess_config__ (jpj:int, jpi:int, nperio:bool=None, config=None, out='nper
             raise ValueError ('in nemo module : nperio not found, and cannot by guessed')
 
         if nperio in NPERIO_VALID_RANGE :
-            print ( f'nperio set as {nperio} (deduced from {jpj=} and {jpi=})' )
+            if OPTIONS['Debug'] :
+                print ( f'nperio set as {nperio} (deduced from {jpj=} and {jpi=})' )
         else :
             raise ValueError ( f'nperio set as {nperio} (deduced from {jpi=} and {jpj=}) : \n'+
                                 'nemo.py is not ready for this value' )
 
     if out == 'nperio'        :
-        PushStack ( f'__guessConfig__ : {nperio=}' )
+        PopStack ( f'__guessConfig__ : {nperio=}' )
         return nperio
     if out == 'config'        :
         return config
-        PushStack ( f'__guessConfig__ : {config=}' )
+        PopStack ( f'__guessConfig__ : {config=}' )
     if out == 'perio'         :
         return iperio, jperio, nfold, nftype
-        PushStack ( f'__guessConfig__ : {iperio=}, {jperio=}, {nfold=}, {nftype=}' )
+        PopStack ( f'__guessConfig__ : {iperio=}, {jperio=}, {nfold=}, {nftype=}' )
     if out in ['full', 'all'] :
         zdict = {'nperio':nperio, 'iperio':iperio, 'jperio':jperio, 'nfold':nfold, 'nftype':nftype}
-        PushStack ( f'__guessConfig__ : {zdict}' )
+        PopStack ( f'__guessConfig__ : {zdict}' )
         return zdict
 
 def __guess_point__ (ptab) :
@@ -316,7 +307,7 @@ def __guess_point__ (ptab) :
 
         if gp is None :
             raise AttributeError ('in nemo module : cd_type not found, and cannot by guessed')
-        print ( f'Grid set as {gp} deduced from dims {ptab.dims}' )
+        if OPTIONS['Debug'] : print ( f'Grid set as {gp} deduced from dims {ptab.dims}' )
 
         PopStack ( f'__guess_point__ : {gp}' )
         return gp
@@ -352,56 +343,55 @@ def lbc_diag (nperio:int) :
     PopStack ( f'lbc_diag : {lperio}, {aperio}' )
     return lperio, aperio
 
-def __find_axis__ (ptab, axis='z', back:bool=True, verbose:bool=False) :
+def __find_axis__ (ptab, axis='z', back:bool=True) :
     '''Returns name and name of the requested axis'''
-    PushStack ( '__find_axis__ ( ptab, {axis=}, {back=}, {verbose=}' )
+    PushStack ( '__find_axis__ ( ptab, {axis=}, {back=}' )
     
     mmath = __mmath__ (ptab)
     ax, ix = None, None
 
     if axis in XNAME :
         ax_name, unit_list, length = XNAME, XUNIT, XLENGTH
-        if verbose : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in YNAME :
         ax_name, unit_list, length = YNAME, YUNIT, YLENGTH
-        if verbose : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in ZNAME :
         ax_name, unit_list, length = ZNAME, ZUNIT, ZLENGTH
-        if verbose : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in TNAME :
         ax_name, unit_list, length = TNAME, TUNIT, None
-        if verbose : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS['Debug'] : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
 
-    if verbose :
-        print ( f'{ax_name=} {unit_list=} {length=}' )
+    if OPTIONS['Debug'] : print ( f'{ax_name=} {unit_list=} {length=}' )
             
     if mmath in [xr, 'dataset' ]: 
         # Try by name
         for i, dim in enumerate (ptab.dims) :
-            if verbose : print ( f'{i=} {dim=}' )
+            if OPTIONS['Debug'] : print ( f'{i=} {dim=}' )
             if dim in ax_name :
-                if verbose : print ( f'Rule 2 : {dim=} axis found by name : {XNAME=}' )
+                if OPTIONS['Debug'] : print ( f'Rule 2 : {dim=} axis found by name : {XNAME=}' )
                 ix, ax = i, dim
 
         # If not found, try by axis attributes
         if not ix :
-            if verbose : print ( 'ix not found - 1' )
+            if OPTIONS['Debug'] : print ( 'ix not found - 1' )
             for i, dim in enumerate (ptab.dims) :
-                if verbose : print ( f'{i=} {dim=}' )
+                if OPTIONS['Debug'] : print ( f'{i=} {dim=}' )
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
-                    if verbose : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
+                    if OPTIONS['Debug'] : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
                     if l_axis in ax_name and l_axis == 'X' :
-                        if verbose : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'Y' :
-                        if verbose : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'Z' :
-                        if verbose : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'T' :
-                        if verbose : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS['Debug'] : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
 
         # If not found, try by units
@@ -410,7 +400,7 @@ def __find_axis__ (ptab, axis='z', back:bool=True, verbose:bool=False) :
                 if 'units' in ptab.coords[dim].attrs.keys() :
                     for name in unit_list :
                         if name in ptab.coords[dim].attrs['units'] :
-                            if verbose : print ( f'Rule 4 : {name=} found by unit : {axis=} : {unit_list=} {i=} {dim=}' )
+                            if OPTIONS['Debug'] : print ( f'Rule 4 : {name=} found by unit : {axis=} : {unit_list=} {i=} {dim=}' )
                             ix, ax = i, dim
 
     # If numpy array or dimension not found, try by length
@@ -424,7 +414,7 @@ def __find_axis__ (ptab, axis='z', back:bool=True, verbose:bool=False) :
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
                     ix = nn ; ax = None
-                    if verbose : print ( f'Rule 5 : {ax_name=} axis found by length : {axis=} : {XNAME=} {ix=} {ax=}' )
+                    if OPTIONS['Debug'] : print ( f'Rule 5 : {ax_name=} axis found by length : {axis=} : {XNAME=} {ix=} {ax=}' )
 
     if ix and back :
         if mmath in [xr, 'dataset'] :
@@ -435,11 +425,11 @@ def __find_axis__ (ptab, axis='z', back:bool=True, verbose:bool=False) :
     PopStack ( f'__find_axis__ : {ax}, {ix}' )
     return ax, ix
 
-def find_axis (ptab, axis:str='z', back:bool=True, verbose:bool=False) :
+def find_axis (ptab, axis:str='z', back:bool=True) :
     '''Version of find_axis with no __'''
-    PushStack ( f'find_axis ( ptab, {axis=}, {back=}, {varbose=}' )
+    PushStack ( f'find_axis ( ptab, {axis=}, {back=}' )
     
-    ix, xx = __find_axis__ (ptab, axis, back, verbose)
+    ix, xx = __find_axis__ (ptab, axis=axis, back=back)
     
     PopStack ( f'find_axis : {xx}, {ix}' )
     return xx, ix
@@ -455,18 +445,19 @@ def fixed_lon (plon, center_lon:float=0.0) :
     '''
     PushStack ( f'fixed_lon ( plon, {center_lon=}' )
     mmath = __mmath__ (plon)
-
+    ax, ix = __find_axis__ (plon, axis='x', back=True)
+    
     f_lon = plon.copy ()
 
     f_lon = mmath.where (f_lon > center_lon+180., f_lon-360.0, f_lon)
     f_lon = mmath.where (f_lon < center_lon-180., f_lon+360.0, f_lon)
 
-    for i, start in enumerate (np.argmax (np.abs (np.diff (f_lon, axis=-1)) > 180., axis=-1)) :
+    for i, start in enumerate (np.argmax (np.abs (np.diff (f_lon, axis=ix)) > 180., axis=ix)) :
         f_lon [..., i, start+1:] += 360.
 
     # Special case for eORCA025
-    if f_lon.shape [-1] == 1442 : f_lon [..., -2, :] = f_lon [..., -3, :]
-    if f_lon.shape [-1] == 1440 : f_lon [..., -1, :] = f_lon [..., -2, :]
+    if f_lon.shape [ix] == 1442 : f_lon [..., -2, :] = f_lon [..., -3, :]
+    if f_lon.shape [ix] == 1440 : f_lon [..., -1, :] = f_lon [..., -2, :]
 
     if f_lon.min () > center_lon       : f_lon += -360.0
     if f_lon.max () < center_lon       : f_lon +=  360.0
@@ -495,28 +486,28 @@ def bounds_clolon (pbounds_lon, plon, rad:bool=False, deg:bool=True) :
     PopStack ( f'bounds_clolon : b_clolon' )
     return b_clolon
 
-def unify_dims ( dd: "DataArray or Dataset", x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'], verbose:bool=False ) -> "DataArray or Dataset" :
+def unify_dims ( dd: "DataArray or Dataset", x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'] ) -> "DataArray or Dataset" :
     '''Rename dimensions to unify them between NEMO versions
     '''
-    PushStack ( f'unify_dims ( dd, {x=}, {y=}, {z=}, {t=}, {verbose=}' )
+    PushStack ( f'unify_dims (dd, {x=}, {y=}, {z=}, {t=})' )
     for xx in XNAME :
         if xx in dd.dims and xx != x :
-            if verbose : print ( f"{xx} renamed to {x}" )
+            if OPTIONS['Debug'] : print ( f"{xx} renamed to {x}" )
             dd = dd.rename ( {xx:x})
 
     for yy in YNAME :
         if yy in dd.dims and yy != y  :
-            if verbose : print ( f"{yy} renamed to {y}" )
+            if OPTIONS['Debug']  : print ( f"{yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
 
     for zz in ZNAME :
         if zz in dd.dims and zz != z :
-            if verbose : print ( f"{zz} renamed to {z}" )
+            if OPTIONS['Debug']  : print ( f"{zz} renamed to {z}" )
             dd = dd.rename ( {zz:z} )
 
     for tt in TNAME  :
         if tt in dd.dims and tt != t :
-            if verbose : print ( f"{tt} renamed to {t}" )
+            if OPTIONS['Debug']  : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
     PopStack ( f'unify_dims : dd' )
@@ -657,7 +648,7 @@ else :
         print ( 'Call arguments where : ' )
         print ( f'{ptab.shape=} {sval=} {transpose=}' )
         PopStack ( f'fill_empty [void version]' )
-
+        return ptab
 
     def fill_latlon (plat, plon, sval=-1) :
         ''' Void version of fill_latlon, because module sklearn.impute.SimpleImputer is not available
@@ -671,9 +662,10 @@ else :
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
-        print ( f'{ptab.shape=} {sval=} {transpose=}' )
+        print ( f'{plat.shape=} {sval=}' )
 
         PopStack ( f'fixed_lon [void version]')
+        return plat, plon
         
     def fill_lonlat (plon, plat, sval=-1) :
         ''''Void version of fill_lonlat, because module sklearn.impute.SimpleImputer is not available
@@ -687,9 +679,10 @@ else :
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
-        print ( f'{ptab.shape=} {sval=} {transpose=}' )
+        print ( f'{plat.shape=} {sval=}' )
 
         PopStack ( f'fill_lonlat [void version]' )
+        return plon, plat
     
     def fill_bounds_lonlat (pbounds_lon, pbounds_lat, sval=-1) :
         ''''Void version of fill_bounds_lonlat, because module sklearn.impute.SimpleImputer is not available
@@ -703,9 +696,10 @@ else :
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
-        print ( f'{ptab.shape=} {sval=} {transpose=}' )
+        print ( f'{pbounds_lat.shape=} {sval=}' )
 
         PopStack ( 'fill_bounds_lonlat [void version]' )
+        return pbounds_lon, pbounds_lat
 
 def jeq (plat) :
     '''Returns j index of equator in the grid
@@ -714,7 +708,7 @@ def jeq (plat) :
     '''
     PushStack ( f'jeq ( plat ) ' )
     mmath = __mmath__ (plat)
-    jy = __find_axis__ (plat, 'y')[-1]
+    ay, jy = __find_axis__ (plat, 'y')
 
     if mmath == xr : jj = int ( np.mean ( np.argmin (np.abs (np.float64 (plat)), axis=jy) ) )
     else           : jj = np.argmin (np.abs (np.float64 (plat[...,:, 0])))
@@ -741,9 +735,6 @@ def lon1d (plon, plat=None) :
         dlon = plon [..., jpj//3, 1].copy() - plon [..., jpj//3, 0].copy()
         lon_1d = np.linspace ( start=lon0, stop=lon0+360.+2*dlon, num=jpi )
 
-    #start = np.argmax (np.abs (np.diff (lon1D, axis=-1)) > 180.0, axis=-1)
-    #lon1D [..., start+1:] += 360
-
     if mmath == xr :
         lon_1d = xr.DataArray( lon_1d, dims=('lon',), coords=(lon_1d,))
         lon_1d.attrs.update (plon.attrs)
@@ -763,18 +754,25 @@ def latreg (plat, diff=0.1) :
     '''
     PushStack ( f'latreg ( plat, {diff=}' )
     #mmath = __mmath__ (plat)
+    ax, ix = __find_axis__ (plat, 'x')
+    ay, iy = __find_axis__ (plat, 'y')
+
     if diff is None :
         dy = np.float64 (np.mean (np.abs (plat -
-                        np.roll (plat,shift=1,axis=-2, roll_coords=False))))
-        print ( f'{dy=}' )
+                        np.roll (plat,shift=1,axis=iy, roll_coords=False))))
+        if OPTIONS['Debug'] : print ( f'latreg : {dy=}' )
         diff = dy/100.
 
-    je     = jeq (plat)
-    jreg   = np.where (plat[...,je:,:].max(axis=-1) -
-                       plat[...,je:,:].min(axis=-1)< diff)[-1][-1] + je
-    lareg  = np.float64 (plat[...,jreg,:].mean(axis=-1))
-
-    PopStack ( f'latreg : {jreg}, lareg' )
+    je = jeq (plat)
+    if ix : 
+        jreg   = np.where (plat[...,je:,:].max(axis=ix) -
+                           plat[...,je:,:].min(axis=ix)  < diff)[-1][-1] + je
+        lareg  = np.float64 (plat[...,jreg,:].mean(axis=ix))
+    else : 
+        jreg   = len (plat)
+        lareg = np.max (plat)
+        
+    PopStack ( f'latreg : {jreg=}, {lareg=}' )
     return jreg, lareg
 
 def lat1d (plat) :
@@ -784,16 +782,23 @@ def lat1d (plat) :
     '''
     PushStack ( f'lat1d ( plat )' )
     mmath = __mmath__ (plat)
-    iy = __find_axis__ (plat, 'y')[-1]
+    ax, ix = __find_axis__ (plat, 'x')
+    ay, iy = __find_axis__ (plat, 'y')
     jpj = plat.shape[iy]
 
-    dy     = np.float64 (np.mean (np.abs (plat - np.roll (plat, shift=1,axis=-2))))
+    dy     = np.float64 (np.mean (np.abs (plat - np.roll (plat, shift=1, axis=iy))))
     je     = jeq (plat)
-    lat_eq = np.float64 (plat[...,je,:].mean(axis=-1))
-
+    if ix : 
+        lat_eq = np.float64 (plat[...,je,:].mean(axis=ix))
+    else : 
+        lat_eq = np.float64 (plat[...,je])
+                                  
     jreg, lat_reg = latreg (plat)
-    lat_ave = np.mean (plat, axis=-1)
-
+    if ix : 
+        lat_ave = np.mean (plat, axis=ix)
+    else :
+        lat_ave = plat
+        
     if np.abs (lat_eq) < dy/100. : # T, U or W grid
         if jpj-1 > jreg : dys = (90.-lat_reg) / (jpj-jreg-1)*0.5
         else            : dys = (90.-lat_reg) / 2.0
@@ -884,7 +889,8 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
     '''
     PushStack ( f'extend ( ptab, {blon=}, {jplus=}, {jpi=}, {nperio=}' )
     mmath = __mmath__ (ptab)
-
+    ix, ax = __find_axis__ (ptab, axis, back)
+    
     if ptab.shape[-1] == 1 : tabex = ptab
 
     else :
@@ -905,7 +911,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
                 tabex = np.concatenate (
                      (ptab.values[..., istart   :istart+le+1    ] + xplus,
                       ptab.values[..., istart+la:istart+la+jplus]         ),
-                      axis=-1)
+                      axis=ix)
                 lon    = ptab.dims[-1]
                 new_coords = []
                 for coord in ptab.dims :
@@ -917,7 +923,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
                 tabex = np.concatenate (
                     (ptab [..., istart   :istart+le+1    ] + xplus,
                      ptab [..., istart+la:istart+la+jplus]          ),
-                     axis=-1)
+                     axis=ix)
 
     PopStack ( 'extend' )
     return tabex
@@ -944,8 +950,10 @@ def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
         for yn in LATNAME :
             if yn in dd.variables : lat_name = yn
 
-    print ( f'{dd.dims=}'   )
-    print ( f'{x_name=} {y_name=}' )
+    if OPTIONS['Debug'] :
+        print ( 'orga2reg : ' )
+        print ( f'{dd.dims=}'   )
+        print ( f'{x_name=} {y_name=}' )
     
     # Compute 1D longitude and latitude
     ylat, xlon = fill_latlon (dd[lat_name], dd[lon_name], sval=-1)
@@ -1257,7 +1265,8 @@ def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
     return ztab
 
 def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
-    '''Handles NEMO domain changes between NEMO 4.0 to NEMO 4.2
+    '''
+    Handles NEMO domain changes between NEMO 4.0 to NEMO 4.2
 
     Periodicity and north fold halos has been removed in NEMO 4.2
     This routine adds the halos if needed
@@ -1442,7 +1451,7 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
     PopStack ( f'lbc_index = {jy}, {ix}' )
     return jy, ix
 
-def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, drop_duplicates=False, out=None) :
+def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates=False, out=None) :
     '''
     Description: seeks J,I indices of the grid point which is the closest
        of a given point
@@ -1457,14 +1466,15 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
 
     Note : may work with 1D lon_data/lat_data (?)
     '''
-    PushStack ( f'find_ji ( lat_data, lon_data, lat_grid, lon_grid, mask, {verbose=}, {drop_duplicates=}, {out=} ) ')
+    PushStack ( f'find_ji ( lat_data, lon_data, lat_grid, lon_grid, mask, {drop_duplicates=}, {out=} ) ')
     # Get grid dimensions
     if len (lon_grid.shape) == 2 : jpi = lon_grid.shape[-1]
     else                         : jpi = len(lon_grid)
 
     #mmath = __mmath__ (lat_grid)
 
-    if verbose :
+    if OPTIONS['Debug'] :
+        print ( 'find_ij' )
         print ( f'{lat_data=}' )
         print ( f'{lon_data=}' )
 
@@ -1473,17 +1483,17 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
                + np.cos (RAD*lat_data) * np.cos (RAD*lat_grid) *
                  np.cos(RAD*(lon_data-lon_grid)) )
 
-    if verbose : print ( f'{type(arg)=} {arg.shape=}' )
+    if OPTIONS['Debug'] : print ( f'{type(arg)=} {arg.shape=}' )
     
     # Send masked points to 'infinite'
     distance = np.arccos (arg) + 4.0*RPI*(1.0-mask)
 
-    if verbose : print ( f'{type(distance)=} {distance.shape=}' )
+    if OPTIONS['Debug'] : print ( f'{type(distance)=} {distance.shape=}' )
 
     # Truncates to alleviate precision problem encountered with some grids
     prec = int (1E7)
     distance = (distance*prec).astype(int) / prec
-    if verbose : print ( f'{type(distance)=} {distance.shape=}' )
+    if OPTIONS['Debug'] : print ( f'{type(distance)=} {distance.shape=}' )
         
     # Compute index minimum of distance
     try :
@@ -1496,7 +1506,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
         for ji in np.arange (nn) :
             jimin[ji] = distance[ji].argmin()
     finally : 
-        if verbose :
+        if OPTIONS['Debug'] :
             print ( f'{type(jimin)=} {jimin.shape}' )
             print ( f'{jimin=}' )
 
@@ -1504,7 +1514,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, verbose=False, dr
     jmin = jimin // jpi
     imin = jimin - jmin*jpi
 
-    if verbose :
+    if OPTIONS['Debug'] :
         print ( f'{jmin=}' )
         print ( f'{imin=}' )
         
@@ -1764,7 +1774,7 @@ def depth2comp (pz, depth0, fact ) :
     else :
         zz   = pz
     gz = np.where ( zz>depth0, (zz-depth0)*fact+depth0, zz)
-    #print ( f'depth2comp : {gz=}' )
+    if OPTIONS['Debug'] : print ( f'depth2comp : {gz=}' )
     if type (pz) in [int, float] : return gz.item()
     else                         : return gz
 
@@ -1876,6 +1886,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     '''
     PushStack ( f'angle_full ( glamt, gphit, glamu, gphiu, glamv, gphiv, glamf, gphif, {nperio=} )') 
     mmath = __mmath__ (glamt)
+    ax, ix = __find_axis__ (glamt, 'x')
+    ay, iy = __find_axis__ (glamt, 'y')
 
     zlamt = lbc_add (glamt, nperio, 'T', 1.)
     zphit = lbc_add (gphit, nperio, 'T', 1.)
@@ -1909,8 +1921,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     # j-direction: v-point segment direction (around T-point)
     zlam = zlamv
     zphi = zphiv
-    zlan = np.roll ( zlamv, axis=-2, shift=1)  # glamv (ji,jj-1)
-    zphh = np.roll ( zphiv, axis=-2, shift=1)  # gphiv (ji,jj-1)
+    zlan = np.roll ( zlamv, axis=iy, shift=1)  # glamv (ji,jj-1)
+    zphh = np.roll ( zphiv, axis=iy, shift=1)  # gphiv (ji,jj-1)
     zxvvt =  2.0 * np.cos ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
           -  2.0 * np.cos ( RAD*zlan ) * np.tan ( RPI/4. - RAD*zphh/2. )
     zyvvt =  2.0 * np.sin ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
@@ -1920,8 +1932,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     # j-direction: f-point segment direction (around u-point)
     zlam = zlamf
     zphi = zphif
-    zlan = np.roll (zlamf, axis=-2, shift=1) # glamf (ji,jj-1)
-    zphh = np.roll (zphif, axis=-2, shift=1) # gphif (ji,jj-1)
+    zlan = np.roll (zlamf, axis=iy, shift=1) # glamf (ji,jj-1)
+    zphh = np.roll (zphif, axis=iy, shift=1) # gphif (ji,jj-1)
     zxffu =  2.0 * np.cos ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
           -  2.0 * np.cos ( RAD*zlan ) * np.tan ( RPI/4. - RAD*zphh/2. )
     zyffu =  2.0 * np.sin ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
@@ -1931,8 +1943,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     # i-direction: f-point segment direction (around v-point)
     zlam = zlamf
     zphi = zphif
-    zlan = np.roll (zlamf, axis=-1, shift=1) # glamf (ji-1,jj)
-    zphh = np.roll (zphif, axis=-1, shift=1) # gphif (ji-1,jj)
+    zlan = np.roll (zlamf, axis=ix, shift=1) # glamf (ji-1,jj)
+    zphh = np.roll (zphif, axis=ix, shift=1) # gphif (ji-1,jj)
     zxffv =  2.0 * np.cos ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
           -  2.0 * np.cos ( RAD*zlan ) * np.tan ( RPI/4. - RAD*zphh/2. )
     zyffv =  2.0 * np.sin ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
@@ -1940,8 +1952,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     znffv = np.sqrt ( znnpv * ( zxffv*zxffv + zyffv*zyffv )  )
 
     # j-direction: u-point segment direction (around f-point)
-    zlam = np.roll (zlamu, axis=-2, shift=-1) # glamu (ji,jj+1)
-    zphi = np.roll (zphiu, axis=-2, shift=-1) # gphiu (ji,jj+1)
+    zlam = np.roll (zlamu, axis=ix, shift=-1) # glamu (ji,jj+1)
+    zphi = np.roll (zphiu, axis=ix, shift=-1) # gphiu (ji,jj+1)
     zlan = zlamu
     zphh = zphiu
     zxuuf =  2. * np.cos ( RAD*zlam ) * np.tan ( RPI/4. - RAD*zphi/2. ) \
@@ -1993,7 +2005,9 @@ def angle (glam, gphi, nperio, cd_type='T') :
     '''
     PushStack ( f'angle (glam, gphi, {nperio=}, {cd_type=} ) ')
     mmath = __mmath__ (glam)
-
+    ax, ix = __find_axis__ (glam, 'x')
+    ay, iy = __find_axis__ (glam, 'y')
+    
     zlam = lbc_add (glam, nperio, cd_type, 1.)
     zphi = lbc_add (gphi, nperio, cd_type, 1.)
 
@@ -2003,10 +2017,10 @@ def angle (glam, gphi, nperio, cd_type='T') :
     znnp = zxnp*zxnp + zynp*zynp
 
     # j-direction: segment direction (around point)
-    zlan_n = np.roll (zlam, axis=-2, shift=-1) # glam [jj+1, ji]
-    zphh_n = np.roll (zphi, axis=-2, shift=-1) # gphi [jj+1, ji]
-    zlan_s = np.roll (zlam, axis=-2, shift= 1) # glam [jj-1, ji]
-    zphh_s = np.roll (zphi, axis=-2, shift= 1) # gphi [jj-1, ji]
+    zlan_n = np.roll (zlam, axis=iy, shift=-1) # glam [jj+1, ji]
+    zphh_n = np.roll (zphi, axis=iy, shift=-1) # gphi [jj+1, ji]
+    zlan_s = np.roll (zlam, axis=iy, shift= 1) # glam [jj-1, ji]
+    zphh_s = np.roll (zphi, axis=iy, shift= 1) # gphi [jj-1, ji]
 
     zxff = 2.0 * np.cos (RAD*zlan_n) * np.tan (RPI/4.0 - RAD*zphh_n/2.0) \
         -  2.0 * np.cos (RAD*zlan_s) * np.tan (RPI/4.0 - RAD*zphh_s/2.0)
@@ -2112,7 +2126,7 @@ def u2t (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     #lperio, aperio = lbc_diag (nperio)
     utab_0 = lbc_add (utab_0, nperio=nperio, cd_type='U', psgn=psgn)
     ax, ix = __find_axis__ (utab_0, 'x')
-    az     = __find_axis__ (utab_0, 'z')[0]
+    az, iz = __find_axis__ (utab_0, 'z')
 
     if ax :
         if action == 'ave' :
@@ -2146,7 +2160,7 @@ def v2t (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0, nperio=nperio, cd_type='V', psgn=psgn)
     ay, jy = __find_axis__ (vtab_0, 'y')
-    az     = __find_axis__ (vtab_0, 'z')[0]
+    az, iz = __find_axis__ (vtab_0, 'z')
     if ay :
         if action == 'ave'  :
             ttab = 0.5 *      (vtab_0 + np.roll (vtab_0, axis=jy, shift=1))
@@ -2193,8 +2207,8 @@ def t2u (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , nperio=nperio, cd_type='T', psgn=psgn)
-    ax, ix = __find_axis__ (ttab_0, 'x')[0]
-    az     = __find_axis__ (ttab_0, 'z')
+    ax, ix = __find_axis__ (ttab_0, 'x')
+    az, iz = __find_axis__ (ttab_0, 'z')
     if ix :
         if action == 'ave'  :
             utab = 0.5 *      (ttab_0 + np.roll (ttab_0, axis=ix, shift=-1))
@@ -2226,7 +2240,7 @@ def t2v (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , nperio=nperio, cd_type='T', psgn=psgn)
     ay, jy = __find_axis__ (ttab_0, 'y')
-    az     = __find_axis__ (ttab_0, 'z')[0]
+    az, jz = __find_axis__ (ttab_0, 'z')
     if jy :
         if action == 'ave'  :
             vtab = 0.5 *      (ttab_0 + np.roll (ttab_0, axis=jy, shift=-1))
@@ -2258,7 +2272,7 @@ def v2f (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0 , nperio=nperio, cd_type='V', psgn=psgn)
     ax, ix = __find_axis__ (vtab_0, 'x')
-    az     = __find_axis__ (vtab_0, 'z')[0]
+    az, jz = __find_axis__ (vtab_0, 'z')
     if ix :
         if action == 'ave'  :
             ftab = 0.5 *      (vtab_0 + np.roll (vtab_0, axis=ix, shift=-1))
@@ -2292,7 +2306,7 @@ def u2f (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     utab_0 = mmath.where ( np.isnan(utab), 0., utab)
     utab_0 = lbc_add (utab_0 , nperio=nperio, cd_type='U', psgn=psgn)
     ay, jy = __find_axis__ (utab_0, 'y')
-    az     = __find_axis__ (utab_0, 'z')[0]
+    az, kz = __find_axis__ (utab_0, 'z')
     if jy :
         if action == 'ave'  :
             ftab = 0.5 *      (utab_0 + np.roll (utab_0, axis=jy, shift=-1))
@@ -2339,7 +2353,7 @@ def f2u (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
     ay, jy = __find_axis__ (ftab_0, 'y')
-    az     = __find_axis__ (ftab_0, 'z')[0]
+    az, kz = __find_axis__ (ftab_0, 'z')
     if jy :
         if action == 'ave'  :
             utab = 0.5 *      (ftab_0 + np.roll (ftab_0, axis=jy, shift=-1))
@@ -2369,7 +2383,7 @@ def f2v (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
     ax, ix = __find_axis__ (ftab_0, 'x')
-    az     = __find_axis__ (ftab_0, 'z')[0]
+    az, kz = __find_axis__ (ftab_0, 'z')
     if ix :
         if action == 'ave'  :
             vtab = 0.5 *      (ftab_0 + np.roll (ftab_0, axis=ix, shift=-1))
@@ -2464,7 +2478,9 @@ def fill (ptab, nperio, cd_type='T', npass=1, sval=np.nan) :
     '''
     PushStack ( f'fill (ptab, {perio=}, {cd_type=}, {npass=}, {sval=} ) ')
     mmath = __mmath__ (ptab)
-
+    ax, ix = __find_axis__ (ptab, 'x')
+    ay, jy = __find_axis__ (ptab, 'y')
+    
     do_perio  = False
     lperio    = nperio
     if nperio == 4.2 :
@@ -2487,22 +2503,22 @@ def fill (ptab, nperio, cd_type='T', npass=1, sval=np.nan) :
         ztab0 = mmath.where ( np.isnan(ztab), 0., ztab )
         # Compte du nombre de voisins
         zcount = 1./6. * ( zmask \
-          + np.roll(zmask, shift=1, axis=-1) + np.roll(zmask, shift=-1, axis=-1) \
-          + np.roll(zmask, shift=1, axis=-2) + np.roll(zmask, shift=-1, axis=-2) \
+          + np.roll(zmask, shift=1, axis=ix) + np.roll(zmask, shift=-1, axis=ix) \
+          + np.roll(zmask, shift=1, axis=jy) + np.roll(zmask, shift=-1, axis=jy) \
           + 0.5 * ( \
-                + np.roll(np.roll(zmask, shift= 1, axis=-2), shift= 1, axis=-1) \
-                + np.roll(np.roll(zmask, shift=-1, axis=-2), shift= 1, axis=-1) \
-                + np.roll(np.roll(zmask, shift= 1, axis=-2), shift=-1, axis=-1) \
-                + np.roll(np.roll(zmask, shift=-1, axis=-2), shift=-1, axis=-1) ) )
+                + np.roll(np.roll(zmask, shift= 1, axis=jy), shift= 1, axis=ix) \
+                + np.roll(np.roll(zmask, shift=-1, axis=jy), shift= 1, axis=ix) \
+                + np.roll(np.roll(zmask, shift= 1, axis=jy), shift=-1, axis=ix) \
+                + np.roll(np.roll(zmask, shift=-1, axis=jy), shift=-1, axis=ix) ) )
 
         znew =1./6. * ( ztab0 \
-           + np.roll(ztab0, shift=1, axis=-1) + np.roll(ztab0, shift=-1, axis=-1) \
-           + np.roll(ztab0, shift=1, axis=-2) + np.roll(ztab0, shift=-1, axis=-2) \
+           + np.roll(ztab0, shift=1, axis=ix) + np.roll(ztab0, shift=-1, axis=ix) \
+           + np.roll(ztab0, shift=1, axis=jy) + np.roll(ztab0, shift=-1, axis=jy) \
            + 0.5 * ( \
-                + np.roll(np.roll(ztab0 , shift= 1, axis=-2), shift= 1, axis=-1) \
-                + np.roll(np.roll(ztab0 , shift=-1, axis=-2), shift= 1, axis=-1) \
-                + np.roll(np.roll(ztab0 , shift= 1, axis=-2), shift=-1, axis=-1) \
-                + np.roll(np.roll(ztab0 , shift=-1, axis=-2), shift=-1, axis=-1) ) )
+                + np.roll(np.roll(ztab0 , shift= 1, axis=jy), shift= 1, axis=ix) \
+                + np.roll(np.roll(ztab0 , shift=-1, axis=jy), shift= 1, axis=ix) \
+                + np.roll(np.roll(ztab0 , shift= 1, axis=jy), shift=-1, axis=ix) \
+                + np.roll(np.roll(ztab0 , shift=-1, axis=jy), shift=-1, axis=ix) ) )
 
         zcount = lbc (zcount, nperio=lperio, cd_type=cd_type)
         znew   = lbc (znew  , nperio=lperio, cd_type=cd_type)
@@ -2572,14 +2588,12 @@ def msf (vv, e1v_e3v, plat1d, depthw) :
     v_e1v_e3v = vv * e1v_e3v
     v_e1v_e3v.attrs = vv.attrs
 
-    ax = __find_axis__ (v_e1v_e3v, 'x')[0]
-    az = __find_axis__ (v_e1v_e3v, 'z')[0]
-    if az == 'olevel' :
-        new_az = 'olevel'
-    else :
-        new_az = 'depthw'
+    ax, ix = __find_axis__ (v_e1v_e3v, 'x')
+    az, kz = __find_axis__ (v_e1v_e3v, 'z')
+    if az == 'olevel' : new_az = 'olevel'
+    else              : new_az = 'depthw'
 
-    zomsf = -v_e1v_e3v.cumsum ( dim=az, keep_attrs=True).sum (dim=ax, keep_attrs=True)*1.E-6
+    zomsf = -v_e1v_e3v.cumsum (dim=az, keep_attrs=True).sum (dim=ax, keep_attrs=True)*1.E-6
     zomsf = zomsf - zomsf.isel ( { az:-1} )
 
     ay = __find_axis__ (zomsf, 'y' )[0]
@@ -2588,6 +2602,7 @@ def msf (vv, e1v_e3v, plat1d, depthw) :
     zomsf = zomsf.rename ( {ay:'lat'})
     if az != new_az :
         zomsf = zomsf.rename ( {az:new_az} )
+    
     zomsf.attrs ['standard_name'] = 'Meridional stream function'
     zomsf.attrs ['long_name'] = 'Meridional stream function'
     zomsf.attrs ['units'] = 'Sv'
@@ -2596,6 +2611,46 @@ def msf (vv, e1v_e3v, plat1d, depthw) :
 
     PopStack ( 'msf' )
     return zomsf
+
+def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None) :
+    '''
+    Compute index of zonal meridional stream function
+    
+    Known case (name) : nadw, aabw, npdw, deacon
+    '''
+    PushStack ( f'zmsf_index (zmsf, {name=}, {latname=}, lat)' )
+
+    if name == "nadw"   :
+        zlim = slice( 500,4000) ; ylim = slice( 11, 55) ; long_name = 'North Atlantic Deep Water'
+    if name == "aabw"   :
+        zlim = slice(2000,6000) ; ylim = slice(-30, 60) ; long_name = 'Antarctic Bottom Water'
+    if name == "npdw"   :
+        zlim = slice( 500,6000) ; ylim = slice( 15, 60) ; long_name = 'North Pacific Bottom Water'
+    if name == "deacon" :
+        zlim = slice(2000,6000) ; ylim = slice(-80,-30) ; long_name = 'Deacon Cell'
+    
+    zlat1d = lat1d  (zmsf[latname])
+    zmsf_lat = unify_dims (zmsf, **UDIMS)
+    if lat :
+        zmsf_lat = zmsf_lat.assign_coords ( {UDIMS['y']:lat} )
+    else : 
+        zmsf_lat = zmsf_lat.assign_coords ( {UDIMS['y']:zlat1d.values} )
+    if OPTIONS['Debug'] :
+        print ( f'{ylim=} - {zlim=}' )
+        print ( f'{zlat1d=}' )
+        print ( f'{zmsf_lat.y}' )
+        print ( f'{zmsf_lat.olevel}' )
+
+    za = zmsf_lat.sel ({UDIMS['z']:zlim})
+    if OPTIONS['Debug'] :
+        print ( f'{za.shape=}')
+        print ( f'{za=}')
+    index_ocean = zmsf_lat.sel ({UDIMS['z']:zlim}).max (dim=UDIMS['z']).sel ({UDIMS['y']:ylim}).max (dim=UDIMS['y'])
+    index_ocean.name = f'{name}_ocean'
+    index_ocean.attrs.update (zmsf.attrs)
+    index_ocean.attrs.update ({'long_name':long_name})
+    PopStack ('zmsf_index')
+    return index_ocean
 
 def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
     '''Computes the barotropic stream function
@@ -2611,8 +2666,8 @@ def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
     u_e2u_e3u       = uu * e2u_e3u
     u_e2u_e3u.attrs = uu.attrs
 
-    ay = __find_axis__ (u_e2u_e3u, 'y')[0]
-    az = __find_axis__ (u_e2u_e3u, 'z')[0]
+    ay, jy = __find_axis__ (u_e2u_e3u, 'y')
+    az, kz = __find_axis__ (u_e2u_e3u, 'z')
 
     zbsf = -u_e2u_e3u.cumsum ( dim=ay, keep_attrs=True )
     zbsf = zbsf.sum (dim=az, keep_attrs=True)*1.E-6
@@ -2631,7 +2686,7 @@ def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
     return zbsf
 
 if f90nml :
-    def namelist_read (ref=None, cfg=None, out='dict', flat=False, verbose=False) :
+    def namelist_read (ref=None, cfg=None, out='dict', flat=False) :
         '''Read NEMO namelist(s) and return either a dictionnary or an xarray dataset
 
         ref : file with reference namelist, or a f90nml.namelist.Namelist object
@@ -2644,7 +2699,7 @@ if f90nml :
         flat : only for dict output. Output a flat dictionary with all values.
 
         '''
-        PushStack ( f'namelist_read (ref, cfg, {out=}, {flat=}, {verbose=} )' )
+        PushStack ( f'namelist_read (ref, cfg, {out=}, {flat=})' )
         if ref :
             if isinstance (ref, str) :
                 nml_ref = f90nml.read (ref)
@@ -2673,21 +2728,18 @@ if f90nml :
             list_comment.append ('cfg')
 
         for nml, comment in zip (list_nml, list_comment) :
-            if verbose :
-                print (comment)
+            if OPTIONS['Debug'] : print (comment)
             if flat and out =='dict' :
                 for nam in nml.keys () :
-                    if verbose :
-                        print (nam)
+                    if OPTIONS['Debug'] : print (nam)
                     for value in nml[nam] :
                         if out == 'dict' :
                             dict_namelist[value] = nml[nam][value]
-                        if verbose :
+                        if OPTIONS['Debug'] :
                             print (nam, ':', value, ':', nml[nam][value])
             else :
                 for nam in nml.keys () :
-                    if verbose :
-                        print (nam)
+                    if OPTIONS['Debug'] : print (nam)
                     if out == 'dict' :
                         if nam not in dict_namelist.keys () :
                             dict_namelist[nam] = {}
@@ -2696,8 +2748,7 @@ if f90nml :
                             dict_namelist[nam][value] = nml[nam][value]
                         if out == 'xr'   :
                             xr_namelist[value] = nml[nam][value]
-                        if verbose :
-                            print (nam, ':', value, ':', nml[nam][value])
+                        if OPTIONS['Debug'] : print (nam, ':', value, ':', nml[nam][value])
 
         PopStack ( 'namelist_read' )
         if out == 'dict' :
@@ -2705,18 +2756,18 @@ if f90nml :
         if out == 'xr'   :
             return xr_namelist
 else :
-     def namelist_read (ref=None, cfg=None, out='dict', flat=False, verbose=False) :
+     def namelist_read (ref=None, cfg=None, out='dict', flat=False) :
         '''Shadow version of namelist read, when f90nm module was not found
 
         namelist_read : 
         Read NEMO namelist(s) and return either a dictionnary or an xarray dataset
         '''
-        PushStack ( f'namelist_read [void version] (ref, cfg, {out=}, {flat=}, {verbose=} )' )
+        PushStack ( f'namelist_read [void version] (ref, cfg, {out=}, {flat=})' )
 
         print ( 'Error : module f90nml not found' )
         print ( 'Cannot call namelist_read' )
         print ( 'Call parameters where : ')
-        print ( f'{err=} {ref=} {cfg=} {out=} {flat=} {verbose=}' )
+        print ( f'{err=} {ref=} {cfg=} {out=} {flat=}' )
         PopStack ( 'namelist_read [void version]' )
 
 def fill_closed_seas (imask, nperio=None,  cd_type='T') :

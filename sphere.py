@@ -39,7 +39,7 @@ RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
 REPSI = np.finfo (1.0).eps
 
-def distance ( lat1, lon1, lat2, lon2, radius=1.0 ) :
+def distance (lat1:float, lon1:float, lat2:float, lon2:float, radius:float=1.0) -> float :
     '''
     Compute distance on the sphere
     '''
@@ -51,11 +51,12 @@ def distance ( lat1, lon1, lat2, lon2, radius=1.0 ) :
     
     return zdistance
 
-def aire_triangle ( lat0, lon0, lat1, lon1, lat2, lon2 ) :
+def aire_triangle (lat0:float, lon0:float, lat1:float, lon1:float, lat2:float, lon2:float) -> float :
     '''
-    Aire of a triangle on the sphere
+    Area of a triangle on the sphere
     Girard's formula
     '''
+    
     a = distance (lat0 , lon0, lat1 , lon1)
     b = distance (lat1 , lon1, lat2 , lon2)
     c = distance (lat2 , lon2, lat0 , lon0)
@@ -64,16 +65,21 @@ def aire_triangle ( lat0, lon0, lat1, lon1, lat2, lon2 ) :
     arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / ( np.sin(a)*np.sin(c) ) 
     arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / ( np.sin(a)*np.sin(b) ) 
 
-    alpha = np.arccos ( arg_alpha ) 
-    beta  = np.arccos ( arg_alpha ) 
-    gamma = np.arccos ( arg_alpha )
+    alpha = np.arccos (arg_alpha) 
+    beta  = np.arccos (arg_alpha) 
+    gamma = np.arccos (arg_alpha)
 
-    S = (alpha + beta + gamma - np.pi )
+    Saire = (alpha + beta + gamma - np.pi)
 
-    return S
+    return Saire
 
-def aire_quadri (lat0, lon0, lat1, lon1, lat2, lon2, lat3, lon3) :
+def aire_quadri (lat0:float, lon0:float, lat1:float, lon1:float, lat2:float, lon2:float, lat3:float, lon3:float) -> float :
+    '''
+    Area of a quadrilatere on the sphere
+    Girard's formula
+    '''
     
-    S = aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2 ) \
-      + aire_triangle (lat2, lon2, lat3, lon3, lat0, lon0)
-    return S
+    Saire = aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2 ) \
+          + aire_triangle (lat2, lon2, lat3, lon3, lat0, lon0)
+          
+    return Saire

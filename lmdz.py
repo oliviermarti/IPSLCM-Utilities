@@ -26,11 +26,11 @@ Utilities for LMDZ grid
 Author: olivier.marti@lsce.ipsl.fr
 
 ## SVN information
-__Author__   = "$Author: omamce $"
-__Date__     = "$Date: 2023-10-10 12:58:04 +0200 (Tue, 10 Oct 2023) $"
-__Revision__ = "$Revision: 6647 $"
+__Author__   = "$Author: omamce$"
+__Date__     = "$Date: 2023-10-10 12:58:04 +0200 (Tue, 10 Oct 2023)$"
+__Revision__ = "$Revision: 6647$"
 __Id__       = "$Id: $"
-__HeadURL    = "$HeadURL: svn+ssh://omamce@forge.ipsl.jussieu.fr/ipsl/forge/projets/igcmg/svn/TOOLS/WATER_BUDGET/lmdz.py $"
+__HeadURL    = "$HeadURL: svn+ssh://omamce@forge.ipsl.jussieu.fr/ipsl/forge/projets/igcmg/svn/TOOLS/WATER_BUDGET/lmdz.py$"
 '''
 
 import numpy as np
@@ -90,21 +90,21 @@ CLENGTH  = [ 16002, ]
 ZLENGTH  = [ 39, 59, 79, ]
 
 # lmdz internal options
-import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
+#import warnings
+#from typing import TYPE_CHECKING, Literal, TypedDict
 
-Stack = list()
+#Stack = list()
 
-if TYPE_CHECKING :
-    Options = Literal [ "Debug", "Trace", "Depth" ]
+# if TYPE_CHECKING :
+#     Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
 
-    class T_Options (TypedDict) :
-        Debug = bool
-        Trace = bool
-        Depth = int
-        Stack = list()
+#     class T_Options (TypedDict) :
+#         Debug = bool
+#         Trace = bool
+#         Depth = int
+#         Stack = list()
 
-OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, Stack=list() }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':None, 'Stack':None }
 
 class set_options :
     """
@@ -138,18 +138,23 @@ def get_options () -> dict :
     """
     return OPTIONS
 
+def return_stack () :
+    return OPTIONS['Stack']
+
 def PushStack (string:str) :
-    OPTIONS['Depth'] += 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '-->lmdz:', string)
-    Stack.append (string)
-    return
+    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
+    else                : OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}.{string}' )
+    #
+    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
+    else                : OPTIONS['Stack'] = [string,]
 
-def PopTrace (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--lmdz:', string)
+def PopStack (string:str) :
+    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}.{string}')
     OPTIONS['Depth'] -= 1
-    Stack.pop()
-    return
-
+    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
 
 def __mmath__ (ptab, default=None) :
     '''

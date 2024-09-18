@@ -3,14 +3,13 @@ Compute some climatologies
 
 Olivier Marti - olivier.marti@lsce.ipsl.fr
 2021 December
+
+En gros inutile. Utiliser xcdat directement est plus simple
+
 '''
 
-import numpy as np, xarray as xr
+import numpy as np, xarray as xr, xcdat as xc
 
-try    : import numba
-except ImportError : pass
-
-@numba.jit(forceobj=True)
 def seamean (var, time_dim) :
     '''
     Compute climatological seasonal means
@@ -42,7 +41,6 @@ def seamean (var, time_dim) :
 
     return var_sea
 
-@numba.jit(forceobj=True)
 def monthmean (var, time_dim) :
     '''
     Compute climatological monthly means
@@ -73,7 +71,6 @@ def monthmean (var, time_dim) :
   
     return var_mth
 
-@numba.jit(forceobj=True)
 def yearmean (var, time_dim) :
     '''
     Compute yearly means
@@ -104,7 +101,6 @@ def yearmean (var, time_dim) :
         
     return var_year
 
-@numba.jit(forceobj=True)
 def yearmax (var, time_dim) :
     '''
     Compute yearly max
@@ -132,7 +128,6 @@ def yearmax (var, time_dim) :
     
     return var_yearmax
 
-@numba.jit(forceobj=True)
 def yearmin (var, time_dim) :
     '''
     Compute yearly min
@@ -161,76 +156,74 @@ def yearmin (var, time_dim) :
     
     return var_yearmin
 
-@numba.jit(forceobj=True)
-def yseamean (var, time_dim, season='All', drop_incomplete=False) :
+def yseamean (dd: xc.dataset, varname:str, season:str='JJAS', drop_incomplete_djf:bool=True, dec_mode:str='DJF') -> xr.DataArray :
     '''
-    Compute seasonal means for a specific season, or all seasons
-    Correct for any start time of data, for monthly means
-
-    Inputs :
-       var      : an xr.DataArray with a proper time dimension
-       time_dim : the time dimension (name of dimension object)
-       season   : 'DJF', 'MAM', 'JJA', 'SON', 'JJAS, 'DJFM', 'SOND', 'MJJA', 'NDJF' or None
-
-    Ouput :
-        A yearly time series of one specific season mean
-        A yearly time series of all season if season == None
+    Compute seasonal mean
+    dd      : an xcdat dataset
+    varname : variable name in dd
+    season  : 3 or 4 months seasons (i.e. 'JJA', 'JJAS', etc ...) 
+       due to xcdat limitations, 4 months seasons that cross the year limits
+    drop_incomplete_djf : only for 3 months means
     '''
-    if isinstance (time_dim, str) :
-        ztime_dim = var[time_dim]
-        ztime_name = time_dim
-    else : 
-        ztime_dim  = time_dim
-        ztime_name = time_dim.name
-        
-    if not season or season.upper() == 'ALL' :
-        season = 'ALL'
-        month_length = ztime_dim.dt.days_in_month
-        var_yseamean = (var * month_length).resample ({ztime_name:'QS-DEC'}).sum() / month_length.resample ({ztime_name:'QS-DEC'}).sum()
-        
-    else : 
-        if season.upper () == 'ANNUAL' : 
-            var_yseamean = yearmean (var, time_dim)
-       
-        if season.upper () in  ['DJF', 'MAM', 'JJA', 'SON' ] :
-            month_length  = ztime_dim.dt.days_in_month
-            var_yseamean = (var * month_length).resample ({ztime_name:'QS-DEC'}).sum() / month_length.resample({ztime_name:'QS-DEC'}).sum()
-            if season.upper() == 'DJF' : var_yseamean = var_yseamean[0::4]
-            if season.upper() == 'MAM' : var_yseamean = var_yseamean[1::4]
-            if season.upper() == 'JJA' : var_yseamean = var_yseamean[2::4]
-            if season.upper() == 'SON' : var_yseamean = var_yseamean[3::4]
-         
-
-        if season.upper () in ['DJFM', 'JJAS', 'MAMJ', 'SOND', 'MJJA'] :          
-            if season == 'JJAS' : lm = [ 6,  7,  8,  9]
-            if season == 'DJFM' : lm = [11, 12,  2,  3]
-            if season == 'MAMJ' : lm = [ 3,  4,  5,  6]
-            if season == 'SOND' : lm = [ 9, 10, 11, 12]
-            if season == 'MJJA' : lm = [ 5,  6,  7,  8]
-            if season == 'NDJF' : lm = [11, 12,  1,  2]
-
-            ll = ztime_dim.dt.month.isin (lm)
-            month_length  = ztime_dim.dt.days_in_month
-            season_length = month_length[ll].resample ({ztime_name:"1YE"}).sum ()
-            var_yseamean  = var*month_length.where (ll)
-            var_yseamean  = var_yseamean.resample ({ztime_name:"1YE"})
-            var_yseamean  = var_yseamean.sum () / season_length
-
-    #print ( f'{season=}')
-    print ( season )
     
-    if drop_incomplete and season.upper() in ['DJF', 'ALL'] :
-        print ( '--' )
-        if ztime_dim.dt.month[ 0] == 2  : var_yseamean = var_yseamean[1:]
-        if ztime_dim.dt.month[ 0] == 1  : var_yseamean = var_yseamean[1:]
-        if ztime_dim.dt.month[-1] == 12 : var_yseamean = var_yseamean[:-1]
-                    
-    if len (var.attrs) > 0 : 
-        var_yseamean.attrs.update (var.attrs)
+    if season == 'JJAS' : 
+        use_custom=True
+        if xc.__version__ >= '0.8' :
+            custom_seasons = [ ["Jun", "Jul", "Aug", "Sep"], ]
+        else :
+            nseason = 1
+            custom_seasons = [ ["Jan", "Feb", "Mar", "Apr", "May"], ["Jun", "Jul", "Aug", "Sep"], ["Oct", "Nov", "Dec"] ]
+    if season == 'MAMJ' :
+        use_custom=True
+        if xc.__version__ >= '0.8' :
+            nseason = 1
+            custom_seasons = [ ["Mar", "Apr", "May", "Jun"], ]
+        else : 
+            custom_seasons = [ ["Jan", "Feb"], ["Mar", "Apr", "May", "Jun"], ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] ]
+    if season == 'DJFM' :
+        use_custom=True
+        custom_seasons = [ ["Dec", "Jan", "Feb", "Mar"], ["Apr", "May", "Jun"], ["Jul", "Aug", "Sep", "Oct", "Nov"] ]
+        if xc.__version__ >= '0.8' :
+            custom_seasons = [ ["Dec", "Jan", "Feb", "Mar"], ]
+        else : 
+            raise ValueError ( 'xcdat can not compute 4 months seasons that cross the year limits' )
+    if season == 'NDJF' :
+        use_custom=True
+        custom_seasons = [ ["Nov", "Dec", "Jan", "Feb"], ["Mar", "Apr", "May", "Jun"], ["Jul", "Aug", "Sep", "Oct"] ]
+        if xc.__version__ >= '0.8' :
+            custom_seasons = [["Nov", "Dec", "Jan", "Feb"], ]
+        else : 
+            raise ValueError ( 'xcdat can not compute 4 months seasons that cross the year limits' )
+    if season == 'SOND' :
+        use_custom=True
+        if xc.__version__ >= '0.8' :
+            custom_seasons = [ ["Sep", "Oct", "Nov", "Dec"], ]
+        else :
+            nseason = 1
+        custom_seasons = [ ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"], ["Sep", "Oct", "Nov", "Dec"] ]
 
-    return var_yseamean
+    if season == 'DJF'  :
+        use_custom=False ; nseason=0
+    if season == 'MAM'  :
+        use_custom=False ; nseason=1
+    if season == 'JJA'  :
+        use_custom=False ; nseason=2
+    if season == 'SON'  :
+        use_custom=False ; nseason=3
+        
+    if use_custom :
+        if xc.__version__ > '0.8' :
+            zz = dd.temporal.group_average ( varname, "season",
+                                             season_config={"custom_seasons":custom_seasons} )[varname]
+        else : 
+            zz = dd.temporal.group_average ( varname, "season",
+                                             season_config={"custom_seasons":custom_seasons} )[varname][nseason::len(custom_seasons)]
+    else :
+        zz = dd.temporal.group_average ( varname, "season",
+                                             season_config={"drop_incomplete_djf":drop_incomplete_djf, 'dec_mode':dec_mode} )[varname][nseason::4]
 
-@numba.jit(forceobj=True)
+    return zz
+
 def ymonthmean (var, time_dim, month=None) :
     '''
     Compute seasonal means for a specific month

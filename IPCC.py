@@ -19,6 +19,7 @@ def color2hex ( r, g, b ) :
     return "#{:02X}{:02X}{:02X}".format ( int(r*255), int(g*255), int(b*255) )
 
 Color = types.SimpleNamespace ()
+
 # Shading
 Color.Shading = [ 
     np.array ([128, 128, 128])/255,
@@ -32,12 +33,12 @@ Color.ShadingHexa = list ( map ( lambda x: color2hex (*x), Color.Shading ) )
 
 # Lines
 Color.Line = [
-    np.array ([   0,   0,   0])/255, 
-    np.array ([ 112, 160, 205])/255, 
-    np.array ([ 196, 121,   0])/255, 
-    np.array ([ 178, 178, 178])/255, 
-    np.array ([   0,  52, 102])/255,
-    np.array ([   0,  79,   0])/255 ]
+    np.array ([  0,   0,   0])/255, 
+    np.array ([112, 160, 205])/255, 
+    np.array ([196, 121,   0])/255, 
+    np.array ([178, 178, 178])/255, 
+    np.array ([  0,  52, 102])/255,
+    np.array ([  0,  79,   0])/255 ]
 
 Color.LineHexa = list ( map ( lambda x: color2hex (*x), Color.Line ) )
 

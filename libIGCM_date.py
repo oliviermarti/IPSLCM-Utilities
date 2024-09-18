@@ -133,7 +133,7 @@ def GetMonthsLengths ( year, Calendar=OPTIONS['DefaultCalendar'] ) :
     if Calendar in Calendar_noleap : zlengths = mth_length366
     if Calendar in Calendar_gregorian :
         if IsLeapYear (year, Calendar) : zlengths = mth_length366
-        else                               : zlengths = mth_length365
+        else                           : zlengths = mth_length365
 
     PopStack ( f'GetMonthsLengths : {zlengths}' )
     return zlengths
@@ -157,17 +157,18 @@ def DaysInMonth (yy, mm=None, Calendar=None) :
     PopStack ( f'DaysInMonth : {length}' )
     return length
     
-def DaysSinceJC ( date, Calendar=None ) -> int :
+def DaysSinceJC (date, Calendar=None) -> int :
     '''
     Calculate the days difference between a date and 00010101
 
-    Computation is splitted in three case for the sake of speed
     '''
     PushStack ( f'DaysSinceJC ( {date=}, {Calendar=} )' )
 
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     yy, mo, da = GetYearMonthDay (date)
+    
+    ## Computation is splitted in three case for the sake of speed
     if yy < 500 :
         date0 = '0101-01-01'
         if Calendar in Calendar_360d      : aux = -360
@@ -189,14 +190,14 @@ def DaysSinceJC ( date, Calendar=None ) -> int :
         if Calendar in Calendar_allleap   : aux = 695034
         if Calendar in Calendar_gregorian : aux = 693595
             
-    ndays = DaysBetweenDate ( date, date0 ) + aux
+    ndays = DaysBetweenDate (date, date0) + aux
      
     PopStack ( f'DaysSinceJC : {ndays}' )
     return ndays
 
 def IsLeapYear (year : [int, str], Calendar=None) -> bool :
     '''
-    True if Year is a leap year
+    True if year is a leap year
     '''
     PushStack ( f'IsLeapYear ( {year=}, {Calendar=} )' )
 
@@ -259,7 +260,7 @@ def DateFormat ( date ) -> str :
     PopStack ( f'DateFormat : {zdate_format}' )
     return zdate_format
 
-def PrintDate ( ye, mo, da, pformat ) :
+def PrintDate ( ye, mo, da, pformat ) -> str :
     '''
     Return a date in the requested format
     '''
@@ -290,17 +291,19 @@ def ConvertFormatToHuman ( date ) :
     PushStack ( f'ConvertFormatToHuman ( {date=} )' )
     zz = PrintDate ( *GetYearMonthDay ( date ), 'Human' )
     PopStack ( f'ConvertFormatToHuman : {zz}' )
-    return 
+    return zz
 
 def GetYearMonthDay  ( date ) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm, dd
     '''
     PushStack ( f'GetYearMonthDay ( {date=} )' )
-        
+
+    if OPTIONS['Debug'] : print ( f'{date=}' )
     if isinstance (date, str) :
         if '-' in date :
             zz = date.split ('-')
+            if OPTIONS['Debug'] : print ( f'Date splitted : {zz=}' )
             if len(zz) == 3 :
                 ye, mo, da = zz
             if len(zz) == 2 :
@@ -365,7 +368,7 @@ def DateAddYear ( date, year_inc='1Y' ) :
     PopStack ( f'DateAddYear : {zz}' )
     return zz
 
-def CorrectYearMonth ( ye, mo) :
+def CorrectYearMonth (ye, mo) :
     '''
     Correct month values outside [1,12]
     '''
@@ -625,7 +628,7 @@ def DaysBetweenDate ( pdate1, pdate2, Calendar=None ) -> int :
     zdate1 = date2
     
     while zdate1 < date1  :
-      zdate1 = AddOneDayToDate ( zdate1, Calendar)
+      zdate1 = AddOneDayToDate (zdate1, Calendar)
       res += 1
     
     # if argument 2 was larger than argument 1 then
@@ -722,7 +725,7 @@ def DaysInCurrentPeriod ( startdate, period, Calendar=None ) :
     PopStack ( 'DaysInCurrentPeriod : {Length}' )
     return Length
 
-def AnaPeriod ( period ) :
+def AnaPeriod (period: str) :
     '''
     Decodes a period definition like '1Y', ''1MO', 'DA', etc ...
     Return period types (string) and period length (integer)
