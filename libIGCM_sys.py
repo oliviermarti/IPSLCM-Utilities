@@ -35,96 +35,12 @@ olivier.marti@lsce.ipsl.fr
 
 '''
 
-import os, subprocess, configparser, types, sys, pprint
+import os, subprocess, configparser, types, sys, time
+import numpy as np
 import libIGCM_date
 
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
-
-# libIGCM_sys internal options
-#import warnings
-#from typing import TYPE_CHECKING, Literal, TypedDict
-#Stack = list()
-
-# if TYPE_CHECKING :
-#     Options = Literal [ "Debug", "Trace", "Depth", "Stack", 
-#                        'TGCC_User', 'TGCC_Group', 'IDRIS_User', 'IDRIS_Group',
-#                        'TGCC_DapPrefix'    , 'IDRIS_DapPrefix', 'DapPrefix',
-#                        'TGCC_ThreddsPrefix', 'IDRIS_ThreddsPrefix', 'ThreddsPrefix', ]
-
-#     class T_Options (TypedDict) :
-#         Debug = bool
-#         Trace = bool
-#         Depth = -1
-#         Stack = list()
-#         TGCC_User           = 'p86mart'
-#         TGCC_Group          = 'gen12006'
-#         IDRIS_User          = 'rces009'
-#         IDRIS_Group         = 'ces'
-#         TGCC_DapPrefix      = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds'
-#         TGCC_ThreddsPrefix  = 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds'
-#         IDRIS_DapPrefix     = 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds'
-#         IDRIS_ThreddsPrefix = 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds'
-#         DapPrefix           = None
-#         ThreddsPrefix       = None
-        
-OPTIONS = {'Debug':False, 'Trace':False, 'Depth':None, 'Stack':None, 
-            'TGCC_User'           : 'p86mart',
-            'TGCC_Group'          : 'gen12006',
-            'IDRIS_User'          : 'rces009',
-            'IDRIS_Group'         : 'ces',
-            'TGCC_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-            'TGCC_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
-            'IDRIS_DapPrefix'     : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-            'IDRIS_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
-            'DapPrefix'           : None,
-            'ThreddsPrefix'       : None,
-            }
-    
-class set_options :
-    """
-    ! Set options for libIGCM_sys
-    """
-    def __init__ (self, **kwargs) :
-        self.old = {}
-        for k, v in kwargs.items () :
-            if k not in OPTIONS:
-                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
-            self.old[k] = OPTIONS[k]
-        self._apply_update (kwargs)
-
-    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
-    def __enter__ (self) : return
-    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
-
-def get_options () :
-    """
-    ! Get options for libIGCM_sys
-
-    See Also
-    ----------
-    set_options
-
-    """
-    return OPTIONS
-
-def return_stack () :
-    return OPTIONS['Stack']
-
-def PushStack (string:str) :
-    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
-    else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}.{string}' )
-    #
-    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
-    else                : OPTIONS['Stack'] = [string,]
-
-def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}.{string}')
-    OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
 
 def Mach (long:bool=False) -> str :
     '''Find the computer we are on
@@ -164,26 +80,153 @@ def Mach (long:bool=False) -> str :
 
     return zmach
 
+MASTER    = Mach (long=False)
+LocalUser = os.environ ['USER']
 
-MASTER = Mach (long=False)
 
+IGCM_Catalog = None
+IGCM_Catalog_list = ['IGCM_Catalog.json',]
+
+if LocalUser in  ['marti', 'omamce', 'p25mart', 'p86mart', 'rces009' ] :
+    IGCM_Catalog_list.append (os.path.join(os.environ['HOME'], 'Python', 'Library', 'IGCM_Catalog.json'))
+    
+# =======================================================================
+
+if 'IGCM_Catalog' in os.environ :
+    IGCM_Catalog_list = os.environ['IGCM_Catalog']
+    
+if isinstance (IGCM_Catalog_list, str) :
+    print ( ' string  {IGCM_Catalog_list=}' )
+    if os.path.isfile (IGCM_Catalog_list) :
+        IGCM_Catalog = IGCM_Catalog_list
+    if os.path.isdir (IGCM_Catalog_list) :
+        IGCM_Catalog = os.path.join (IGCM_Catalog_list, 'IGCM_Catalog.json')
+        
+if isinstance (IGCM_Catalog_list, list) :
+    for file in IGCM_Catalog_list :
+        if os.path.isfile (file) :
+            IGCM_Catalog = file
+            break
+        if os.path.isdir (file) :
+            IGCM_Catalog = os.path.join (file, 'IGCM_Catalog.json')
+            break
+
+OPTIONS = {'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,
+            'TGCC_User'           : 'p86mart',
+            'TGCC_Group'          : 'gen12006',
+            'IDRIS_User'          : 'rces009',
+            'IDRIS_Group'         : 'ces',
+            'TGCC_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+            'TGCC_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
+            'IDRIS_DapPrefix'     : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+            'IDRIS_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
+            'DapPrefix'           : None,
+            'ThreddsPrefix'       : None,
+            'IGCM_Catalog'        : IGCM_Catalog,
+            }
+   
+class set_options :
+    """
+    ! Set options for libIGCM_sys
+    """
+    def __init__ (self, **kwargs) :
+        self.old = {}
+        for k, v in kwargs.items () :
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update (kwargs)
+
+    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
+    def __enter__ (self) : return
+    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+
+def get_options () :
+    """
+    ! Get options for libIGCM_sys
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
+def return_stack () :
+    return OPTIONS['Stack']
+
+def push_stack (string:str) :
+    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
+    else                : OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    #
+    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
+    else                : OPTIONS['Stack'] = [string,]
+    #
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
+        else :
+            OPTIONS['t0'] = [ time.time(), ]
+
+def pop_stack (string:str) :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
+    else :
+        dt = None
+    if OPTIONS['Trace'] or dt :
+        if dt : 
+            if dt < 1e-3 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            if dt >= 1e-3 and dt < 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+            if dt >= 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+        else : 
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+    #
+    OPTIONS['Depth'] -= 1
+    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    #
+
+## ==========================================================================
+        
+class Container :
+    ''' 
+    Void class to act as a container
+    Class members can be accessed either with dictionnary or namespace syntax
+       i.e  <Container>['member'] or <Container>.member
+    '''
+    def update (self, dico=None, **kwargs):
+        '''Use a dictionnary to update values'''
+        if dico : 
+            for attr in dico.keys () : super().__setattr__(attr, dico[attr])
+        self.__dict__.update (kwargs)
+    def keys    (self) : return self.__dict__.keys()
+    def values  (self) : return self.__dict__.values()
+    def items   (self) : return self.__dict__.items()
+    def dict    (self) : return self.__dict__()
+    ## Hidden functions
+    def __str__     (self) : return str  (self.__dict__)
+    def __repr__    (self) : return repr (self.__dict__)
+    def __name__    (self) : return self.__class__.__name__
+    def __getitem__ (self, attr) : return getattr (self, attr)
+    def __setitem__ (self, attr, value) : setattr (self, attr, value)
+    def __iter__    (self) : return self.__dict__.__iter__()
+    def __next__    (self) : return self.__dict__.__next__()
+    def __len__     (self) : return len (self.__dict__)
+    def __init__ (self, **kwargs) :
+        for attr, value in kwargs.items () :
+            super().__setattr__(attr, value)
+        return None
+                
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
 
-# def unDefined (char: str) -> bool :
-#     '''Returns True if a variable is not defined, ot if it's set to None'''
-#     if char in globals () :
-#         if globals ()[char] == None or  globals ()[char] == 'None': unDefined = True
-#         else                                                      : unDefined = False
-#     else : unDefined = True
-#     return unDefined
-
-
-#@classmethod
-#def from_dict (cls, data_dict) :
-#    return cls ( **data_dict )
-
-class config :
+class Config :
     '''
     ! Defines the libIGCM directories
         
@@ -195,27 +238,28 @@ class config :
         IDRIS_thredds : thredds IDRIS via IPSL
     '''
     ## Public functions
-    def update (self, dico):
+    def update (self, dico=None, **kwargs):
         '''Use a dictionnary to update values'''
-        for attr in dico.keys () :
-            super().__setattr__(attr, dico[attr])
-
-    def setattr (self, attr, value) : super().__setattr__(attr, value)
-
+        if dico : 
+            for attr in dico.keys () : super().__setattr__(attr, dico[attr])
+        self.__dict__.update (kwargs)
+        for attr in dico.keys () : super().__setattr__(attr, dico[attr])
+    def keys    (self) : return self.__dict__.keys()
+    def values  (self) : return self.__dict__.values()
+    def items   (self) : return self.__dict__.items()
+    def dict    (self) : return self.__dict__()
     ## Hidden functions
-    def __str__     (self) : return pprint.saferepr (self.__dict__)
-    def __repr__    (self) : return pprint.saferepr (self.__dict__)
+    def __str__     (self) : return str  (self.__dict__)
+    def __repr__    (self) : return repr (self.__dict__)
     def __name__    (self) : return self.__class__.__name__
     def __getitem__ (self, attr) : return getattr (self, attr)
     def __setitem__ (self, attr, value) : setattr (self, attr, value)
-    def __iter__    (self) : return self
-    def __next__    (self) :
-        if self.index == 0 : raise StopIteration
-        self.index = self.index - 1
-        return self.data[self.index]
+    def __iter__    (self) : return self.__dict__.__iter__()
+    def __next__    (self) : return self.__dict__.__next__()
+    def __len__     (self) : return len(self.__dict__)
 
     def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
-                  LongName=None, ModelName=None, ShortName=None,
+                  LongName=None, ModelName=None, ShortName=None, Comment=None,
                   Source=None, MASTER=None, ConfigCard=None, RunCard=None, User=None, Group=None,
                   TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
                   ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
@@ -225,10 +269,12 @@ class config :
                   ThreddsPrefix=None, DapPrefix=None, R_GRAF=None, DB=None,
                   IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
                   Debug=None, TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None, IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
-                  DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None, SeasonalFrequency=None, CalendarType=None,
+                  DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
+                  SeasonalFrequency=None, CalendarType=None,
                   DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
-                  ColorLine=None, ColorShading=None, Marker=None,
-                  CMIP6_BUF=None ) :
+                  ColorLine=None, ColorShading=None, Marker=None, Line=None,
+                  OCE=None, ATM=None,
+                  CMIP6_BUF=None, Custom=None ) :
    
         if not Debug               : Debug               = OPTIONS['Debug']
         if not TGCC_User           : TGCC_User           = OPTIONS['TGCC_User']
@@ -245,8 +291,6 @@ class config :
         if not MASTER : MASTER = Mach (long=False)
         if not MASTER : MASTER = 'Unknown'
             
-        LocalUser = os.environ ['USER']
-
         if Debug :
             print ( f'libIGCM_sys : {MASTER=}' )
             print ( f'libIGCM_sys : {LocalUser=}' )
@@ -264,14 +308,14 @@ class config :
             
             MyReader.read (ConfigCard)
             
-            if not JobName        : JobName        = MyReader['UserChoices']['JobName']
+            if not JobName        : JobName         = MyReader['UserChoices']['JobName']
             #----- Short Name of Experiment
             if not ExperimentName :  ExperimentName = MyReader['UserChoices']['ExperimentName']
             #----- DEVT TEST PROD
-            if not SpaceName      : SpaceName      = MyReader['UserChoices']['SpaceName']
-            if not LongName       : LongName       = MyReader['UserChoices']['LongName']
-            if not ModelName      : ModelName      = MyReader['UserChoices']['ModelName']
-            if not TagName        : TagName        = MyReader['UserChoices']['TagName']
+            if not SpaceName      : SpaceName       = MyReader['UserChoices']['SpaceName']
+            if not LongName       : LongName        = MyReader['UserChoices']['LongName']
+            if not ModelName      : ModelName       = MyReader['UserChoices']['ModelName']
+            if not TagName        : TagName         = MyReader['UserChoices']['TagName']
 
 
         # Reads run.card if available
@@ -292,11 +336,11 @@ class config :
             if not PeriodState     : PeriodState     = MyReader['Configuration']['PeriodState']
                 
         ## ===========================================================================================
-        if YearBegin and not DateBegin : DateBegin = f'{YearBegin}-01-01'
-        if YearEnd   and not DateEnd   : DateEnd   = f'{YearEnd}-12-31'
-        if DateBegin and not DateBeginGregorian : DateBeginGregorian = libIGCM_date.ConvertFormatToGregorian ( DateBegin )
-        if DateEnd   and not DateEndGregorian   : DateEndGregorian   = libIGCM_date.ConvertFormatToGregorian ( DateEnd )
-        if not FullPeriod : FullPeriod = f'{DateBeginGregorian}_{DateEndGregorian}'
+        if YearBegin and not DateBegin          : DateBegin = f'{YearBegin}-01-01'
+        if YearEnd   and not DateEnd            : DateEnd   = f'{YearEnd}-12-31'
+        if DateBegin and not DateBeginGregorian : DateBeginGregorian = libIGCM_date.ConvertFormatToGregorian (DateBegin)
+        if DateEnd   and not DateEndGregorian   : DateEndGregorian   = libIGCM_date.ConvertFormatToGregorian (DateEnd  )
+        if not FullPeriod and DateBeginGregorian and DateEndGregorian : FullPeriod = f'{DateBeginGregorian}_{DateEndGregorian}'
             
         ### ===========================================================================================
         ## Part specific to access by OpenDAP/Thredds server
@@ -380,55 +424,37 @@ class config :
             if not Source : IGCM_OUT_name = 'IGCM_OUT'
             
             if not R_IN        :
-                if ccc_home :
-                    R_IN       = os.path.join ( subprocess.getoutput ( 'ccc_home --cccwork -d igcmg -u igcmg' ), 'IGCM')
-                else : 
-                    R_IN          = '/ccc/work/cont003/igcmg/igcmg/IGCM'
-            if not ARCHIVE     :
-                if ccc_home :
-                    ARCHIVE    = subprocess.getoutput ( f'ccc_home --cccstore   -u {User} -d {Group}' )
-                else : 
-                    ARCHIVE       = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
-            if not STORAGE     :
-                if ccc_home :
-                    STORAGE    = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}' )
-                else :
-                    STORAGE       = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+                if ccc_home : R_IN       = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg' ), 'IGCM')
+                else        : R_IN       = '/ccc/work/cont003/igcmg/igcmg/IGCM'
+            if not ARCHIVE  :
+                if ccc_home : ARCHIVE    = subprocess.getoutput ( f'ccc_home --cccstore   -u {User} -d {Group}')
+                else        : ARCHIVE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+            if not STORAGE  :
+                if ccc_home : STORAGE    = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
+                else        : STORAGE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
             if not SCRATCHDIR  :
-                if ccc_home : 
-                    SCRATCHDIR = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}' )
-                else : 
-                    SCRATCHDIR       = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
+                if ccc_home : SCRATCHDIR = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
+                else        : SCRATCHDIR = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
             if not R_BUF       :
-                if ccc_home :
-                    R_BUF      = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}' )
-                else :
-                    R_BUF      = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
+                if ccc_home : R_BUF      = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
+                else        : R_BUF      = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
             if not R_FIG       :
-                if ccc_home :
-                    R_FIG      = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}' )
-                else : 
-                    R_FIG      = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+                if ccc_home : R_FIG      = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
+                else        : R_FIG      = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
             if not R_GRAF or 'http' in R_GRAF :
-                if ccc_home :
-                    R_GRAF      = os.path.join ( subprocess.getoutput ( 'ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA' )
-                else :
-                    R_GRAF      = f'/ccc/store/cont003/drf/p86mart'
+                if ccc_home : R_GRAF     = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA')
+                else        : R_GRAF     = f'/ccc/store/cont003/drf/p86mart'
             if not DB          :
-                if ccc_home : 
-                    DB         = os.path.join ( subprocess.getoutput ( 'ccc_home --cccwork -d igcmg -u igcmg'), 'database' )
-                else :
-                    DB         =  f'/ccc/store/cont003/igcmg/igcmg/database'
+                if ccc_home : DB         = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg'), 'database')
+                else        : DB         = f'/ccc/store/cont003/igcmg/igcmg/database'
                     
             if not rebuild :
-                rebuild = os.path.join ( subprocess.getoutput ( 'ccc_home --ccchome -d igcmg -u igcmg' ),
+                rebuild = os.path.join ( subprocess.getoutput ('ccc_home --ccchome -d igcmg -u igcmg' ),
                     'Tools', 'irene', 'rebuild_nemo', 'bin', 'rebuild_nemo' )
                 
             if not TmpDir :
-                if ccc_home :
-                    TmpDir = subprocess.getoutput ( f'ccc_home --cccscratch' )
-                else :
-                    TmpDir = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
+                if ccc_home : TmpDir = subprocess.getoutput (f'ccc_home --cccscratch')
+                else        : TmpDir = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
                 
         # ===========================================================================================
         if MASTER in ['SpiritJ', 'SpiritX', 'Spirit'] :
@@ -516,6 +542,19 @@ class config :
             if R_BUF   and not REBUILD_DIR : REBUILD_DIR = os.path.join ( R_BUF  , L_EXP, 'REBUILD' )
             if R_BUF   and not POST_DIR    : POST_DIR    = os.path.join ( R_BUF  , L_EXP, 'Out' )
             if STORAGE and not CMIP6_BUF   : CMIP6_BUF   = os.path.join ( STORAGE, IGCM_OUT_name )
+
+        ### =========
+        if not ColorLine is None :
+            if OPTIONS['Debug'] : print ( f'{type(ColorLine) = } - {ColorLine =}' )
+            if isinstance (ColorLine, list) :
+                ColorLine = np.array (ColorLine)
+            if isinstance (ColorLine, np.ndarray) :
+                if np.max (ColorLine) > 1.0 : ColorLine = ColorLine / 255.
+        if not ColorShading is None :
+            if isinstance (ColorShading, list) :
+                ColorShading = np.array (ColorShading)
+            if isinstance (ColorShading, np.ndarray) :
+                if np.max (ColorShading) > 1.0 : ColorShading = ColorShading / 255.
                 
         ### ===========================================================================================
         ## Builds the class attributes
@@ -527,6 +566,7 @@ class config :
         self.LongName            = LongName
         self.ModelName           = ModelName
         self.ShortName           = ShortName
+        self.Comment             = Comment
         self.ConfigCard          = ConfigCard
         self.DateBegin           = DateBegin
         self.DateEnd             = DateEnd
@@ -575,14 +615,27 @@ class config :
         self.DatePattern         = DatePattern
         self.ColorLine           = ColorLine
         self.ColorShading        = ColorShading
+        self.Line                = Line
         self.Marker              = Marker
+        self.OCE                 = OCE
+        self.ATM                 = ATM
+
+        ### ===========================================================================================
+        ## Add user defined attributes
+        if Custom :
+            for attr, value in Custom.items() :
+                super().__setattr__(attr, value)
+
+        ### ===========================================================================================
+        ## Add custom attributes
+        return None
         
 ### ===========================================================================================
 def Dap2Thredds (file, mm=None) :
     '''
     ! Convert a Dap URL to http URL
     '''
-    PushStack ( f'Dap2Thredds ({file=}, {mm=})'  )
+    push_stack ( f'Dap2Thredds ({file=}, {mm=})'  )
     replaced = False
     zfile = file
     
@@ -601,5 +654,5 @@ def Dap2Thredds (file, mm=None) :
         zfile = zfile.replace ( 'dodsC', 'fileServer' )
 
 
-    PopStack ( f'Dap2Thredds -> {zfile=}' )
+    pop_stack ( f'Dap2Thredds -> {zfile=}' )
     return zfile

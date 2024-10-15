@@ -31,6 +31,7 @@ Id       = "$Id: $"
 HeadURL  = "$HeadURL: $"
 '''
 
+import time
 import numpy as np
 import xarray as xr
   
@@ -39,6 +40,76 @@ RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
 REPSI = np.finfo (1.0).eps
 
+# sphere internal options
+OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,  }
+
+class set_options :
+    """
+    Set options for nemo
+    """
+    def __init__ (self, **kwargs) :
+        self.old = {}
+        for k, v in kwargs.items() :
+            if k not in OPTIONS:
+                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update(kwargs)
+
+    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
+    def __enter__ (self) : return
+    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+
+def get_options () -> dict :
+    """
+    Get options for nemo
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return OPTIONS
+
+def return_stack () :
+    return OPTIONS['Stack']
+
+def push_stack (string:str) :
+    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
+    else                : OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    #
+    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
+    else                : OPTIONS['Stack'] = [string,]
+    #
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
+        else :
+            OPTIONS['t0'] = [ time.time(), ]
+
+def pop_stack (string:str) :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
+    else :
+        dt = None
+    if OPTIONS['Trace'] or dt :
+        if dt : 
+            if dt < 1e-3 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            if dt >= 1e-3 and dt < 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+            if dt >= 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+        else : 
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+    #
+    OPTIONS['Depth'] -= 1
+    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    #
+    
 def distance (lat1:float, lon1:float, lat2:float, lon2:float, radius:float=1.0) -> float :
     '''
     Compute distance on the sphere

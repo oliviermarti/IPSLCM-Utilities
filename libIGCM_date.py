@@ -28,9 +28,9 @@ Dates format
   no responsability for errors, omissions, data loss, or any other
   consequences caused directly or indirectly by the usage of his
   software by incorrectly or partially configured personal
-
 '''
 
+import time
 import numpy as np
 import cftime
 
@@ -60,74 +60,86 @@ DA_name = [ 'DA', 'DAYS'  , 'Days'  , 'days'  , 'DAY'  , 'Day'  , 'day'  , 'DA',
 # function IGCM_date_DaysInPreviousPeriod
 
 # libIGCM_date internal options
-import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
-
-Stack = list()
-
-if TYPE_CHECKING :
-    Options = Literal [ "DefaultCalendar", "Debug", "Trace", "Depth", "Stack" ]
-
-    class T_Options (TypedDict) :
-        DefaultCalendar = 'Gregorian'
-        Debug = bool
-        Trace = bool
-        Depth = -1
-        Stack = list()
-        #DefaultCalendarType = ['Gregorian', 'GREGORIAN', 'leap', 'LEAP', 'Leap', 'gregorian',
-        #                             '360d', '360_day', '360d', '360_days', '360D', '360_DAY', '360D', '360_DAYS', 
-        #                             'noleap', '365_day', '365_days', 'NOLEAP', '365_DAY', '365_DAYS',
-        #                             'all_leap', '366_day', 'allleap', '366_days', '336d', 'ALL_LEAP', '366_DAY', 'ALLLEAP', '366_DAYS', '336D',]
-
-OPTIONS = { 'DefaultCalendar':'Gregorian', 'Debug':False, 'Trace':False, 'Depth':-1, 'Stack':list(), }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,
+            'DefaultCalendar':'Gregorian', }
 
 class set_options :
     """
-    set options for libIGCM_date
+    ! Set options for libIGCM_sys
     """
-    def __init__ (self, **kwargs):
+    def __init__ (self, **kwargs) :
         self.old = {}
-        for k, v in kwargs.items():
+        for k, v in kwargs.items () :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
-        self._apply_update(kwargs)
+        self._apply_update (kwargs)
 
     def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
     def __enter__ (self) : return
     def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
 
-def get_options () -> dict :
+def get_options () :
     """
-    Get options for libIGCM_date
+    ! Get options for libIGCM_sys
 
     See Also
     ----------
     set_options
+
     """
     return OPTIONS
 
 def return_stack () :
-    return Stack
+    return OPTIONS['Stack']
 
-def PushStack (string:str) :
-    OPTIONS['Depth'] += 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '-->libIGCM_date: ', string)
-    Stack.append (string)
-    return
+def push_stack (string:str) :
+    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
+    else                : OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    #
+    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
+    else                : OPTIONS['Stack'] = [string,]
+    #
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
+        else :
+            OPTIONS['t0'] = [ time.time(), ]
 
-def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], '<--libIGCM_date: ', string)
+def pop_stack (string:str) :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
+    else :
+        dt = None
+    if OPTIONS['Trace'] or dt :
+        if dt : 
+            if dt < 1e-3 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            if dt >= 1e-3 and dt < 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+            if dt >= 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+        else : 
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+    #
     OPTIONS['Depth'] -= 1
-    Stack.pop ()
-    return
+    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    #
+
+## ==========================================================================
     
-def GetMonthsLengths ( year, Calendar=OPTIONS['DefaultCalendar'] ) :
+def GetMonthsLengths (year, Calendar=None) :
     '''
     Returns the month lengths for a given year and calendar type
     '''
-    PushStack ( f'GetMonthsLengths ( {year=}, {Calendar=} )' )
-        
+    push_stack ( f'GetMonthsLengths ( {year=}, {Calendar=} )' )
+
+    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    
     if Calendar in Calendar_360d   : zlengths = mth_length360
     if Calendar in Calendar_noleap : zlengths = mth_length365
     if Calendar in Calendar_noleap : zlengths = mth_length366
@@ -135,7 +147,7 @@ def GetMonthsLengths ( year, Calendar=OPTIONS['DefaultCalendar'] ) :
         if IsLeapYear (year, Calendar) : zlengths = mth_length366
         else                           : zlengths = mth_length365
 
-    PopStack ( f'GetMonthsLengths : {zlengths}' )
+    pop_stack ( f'GetMonthsLengths : {zlengths}' )
     return zlengths
 
 def DaysInMonth (yy, mm=None, Calendar=None) :
@@ -145,16 +157,16 @@ def DaysInMonth (yy, mm=None, Calendar=None) :
     Usage:  DaysInMonth ( yyyy    , mm, [Calendar] )
          or DaysInMonth ( yyyymmdd, [Calendar] )
          '''
-    PushStack ( f'DaysInMonth ( {yy=}, {mm=}, {Calendar=} )' )
+    push_stack ( f'DaysInMonth ( {yy=}, {mm=}, {Calendar=} )' )
 
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     if mm : year = int(yy) ; month = int(mm)
     else  : year, month = GetYearMonth (yy)
         
-    length = GetMonthsLengths ( year, Calendar=Calendar )[ np.mod(month-1, 12) ]
+    length = GetMonthsLengths ( year, Calendar=Calendar)[ np.mod(month-1, 12) ]
 
-    PopStack ( f'DaysInMonth : {length}' )
+    pop_stack ( f'DaysInMonth : {length}' )
     return length
     
 def DaysSinceJC (date, Calendar=None) -> int :
@@ -162,7 +174,7 @@ def DaysSinceJC (date, Calendar=None) -> int :
     Calculate the days difference between a date and 00010101
 
     '''
-    PushStack ( f'DaysSinceJC ( {date=}, {Calendar=} )' )
+    push_stack ( f'DaysSinceJC ( {date=}, {Calendar=} )' )
 
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
@@ -192,14 +204,14 @@ def DaysSinceJC (date, Calendar=None) -> int :
             
     ndays = DaysBetweenDate (date, date0) + aux
      
-    PopStack ( f'DaysSinceJC : {ndays}' )
+    pop_stack ( f'DaysSinceJC : {ndays}' )
     return ndays
 
 def IsLeapYear (year : [int, str], Calendar=None) -> bool :
     '''
     True if year is a leap year
     '''
-    PushStack ( f'IsLeapYear ( {year=}, {Calendar=} )' )
+    push_stack ( f'IsLeapYear ( {year=}, {Calendar=} )' )
 
     yy = int ( year )
     zis_leap_year = None
@@ -238,7 +250,7 @@ def IsLeapYear (year : [int, str], Calendar=None) -> bool :
         if not zis_leap_year :
             zis_leap_year = False
 
-    PopStack ( f'IsLeapYear : {zis_leap_year}' )
+    pop_stack ( f'IsLeapYear : {zis_leap_year}' )
     return zis_leap_year
 
 def DateFormat ( date ) -> str :
@@ -248,7 +260,7 @@ def DateFormat ( date ) -> str :
       [yy]yymmdd   is Gregorian
       [yy]yy-mm-dd is Human
     '''
-    PushStack ( f'DateFormat ( {date=} )' )
+    push_stack ( f'DateFormat ( {date=} )' )
         
     if OPTIONS['Debug'] : print ( f'{type(date)=}' )
     zdate_format = None
@@ -257,47 +269,47 @@ def DateFormat ( date ) -> str :
         else           : zdate_format = 'Gregorian'
     if isinstance (date, int) : zdate_format = 'Gregorian'
 
-    PopStack ( f'DateFormat : {zdate_format}' )
+    pop_stack ( f'DateFormat : {zdate_format}' )
     return zdate_format
 
 def PrintDate ( ye, mo, da, pformat ) -> str :
     '''
     Return a date in the requested format
     '''
-    PushStack ( f'PrintDate ( {ye=}, {mo=}, {da=}, {pformat=} )' )
+    push_stack ( f'PrintDate ( {ye=}, {mo=}, {da=}, {pformat=} )' )
 
     zPrintDate = None
     if pformat == 'Human'     : zPrintDate = f'{ye:04d}-{mo:02d}-{da:02d}'
     if pformat == 'Gregorian' : zPrintDate = f'{ye:04d}{mo:02d}{da:02d}'
 
-    PopStack ( f'PrintDate : {zPrintDate}' )
+    pop_stack ( f'PrintDate : {zPrintDate}' )
     return zPrintDate
 
 def ConvertFormatToGregorian ( date ) :
     '''
     From a yyyy-mm-dd or yyymmdd date format returns a yyymmdd date format
     '''
-    PushStack ( f'ConvertFormatToGregorian ( {date=} )' )
+    push_stack ( f'ConvertFormatToGregorian ( {date=} )' )
         
     zz = PrintDate ( *GetYearMonthDay ( date ), 'Gregorian' )
     
-    PopStack ( f'ConvertFormatToGregorian : {zz}' )
+    pop_stack ( f'ConvertFormatToGregorian : {zz}' )
     return zz
 
 def ConvertFormatToHuman ( date ) :
     '''
     From a yyyymmdd or yyymmdd date format returns a yyy-mm-dd date format
     '''
-    PushStack ( f'ConvertFormatToHuman ( {date=} )' )
+    push_stack ( f'ConvertFormatToHuman ( {date=} )' )
     zz = PrintDate ( *GetYearMonthDay ( date ), 'Human' )
-    PopStack ( f'ConvertFormatToHuman : {zz}' )
+    pop_stack ( f'ConvertFormatToHuman : {zz}' )
     return zz
 
 def GetYearMonthDay  ( date ) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm, dd
     '''
-    PushStack ( f'GetYearMonthDay ( {date=} )' )
+    push_stack ( f'GetYearMonthDay ( {date=} )' )
 
     if OPTIONS['Debug'] : print ( f'{date=}' )
     if isinstance (date, str) :
@@ -332,25 +344,25 @@ def GetYearMonthDay  ( date ) :
     if mo : mo = int (mo)
     if da : da = int (da)
 
-    PopStack ( f'GetYearMonthDay : {ye}, {mo}, {da}' )
+    pop_stack ( f'GetYearMonthDay : {ye}, {mo}, {da}' )
     return ye, mo, da
 
 def GetYearMonth ( date ) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm
     '''
-    PushStack ( f'GetYearMonth ( {date=} )' )
+    push_stack ( f'GetYearMonth ( {date=} )' )
 
     ye, mo, da = GetYearMonthDay (date)
     
-    PopStack ( f'GetYearMonth : {ye}, {mo}' )
+    pop_stack ( f'GetYearMonth : {ye}, {mo}' )
     return ye, mo
 
 def DateAddYear ( date, year_inc='1Y' ) :
     '''
     Add year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
-    PushStack ( f'DateAddYear ( {date=}, {year_inc=} )' )
+    push_stack ( f'DateAddYear ( {date=}, {year_inc=} )' )
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
 
@@ -365,14 +377,14 @@ def DateAddYear ( date, year_inc='1Y' ) :
     ye_new = ye + year_inc
     zz = PrintDate ( ye_new, mo, da, zformat)
     
-    PopStack ( f'DateAddYear : {zz}' )
+    pop_stack ( f'DateAddYear : {zz}' )
     return zz
 
 def CorrectYearMonth (ye, mo) :
     '''
     Correct month values outside [1,12]
     '''
-    PushStack ( f'CorrectYearMonth ( {ye=}, {mo=} )' )
+    push_stack ( f'CorrectYearMonth ( {ye=}, {mo=} )' )
 
     mo_new = mo
     ye_new = ye
@@ -385,14 +397,14 @@ def CorrectYearMonth (ye, mo) :
         mo_new = mo_new + 12
         ye_new = ye_new - 1
         
-    PopStack ( 'CorrectYearMonth : {ye_new}, {mo_new}' )
+    pop_stack ( 'CorrectYearMonth : {ye_new}, {mo_new}' )
     return ye_new, mo_new
 
-def CorrectYearMonthDay (ye, mo, da, CalendarNone) :
+def CorrectYearMonthDay (ye, mo, da, Calendar=None) :
     '''
     Correct month values outside [1,12] and day outside month length
     '''
-    PushStack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {CalendarNone=} )' )
+    push_stack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {CalendarNone=} )' )
 
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
@@ -413,14 +425,14 @@ def CorrectYearMonthDay (ye, mo, da, CalendarNone) :
         ye_new, mo_new = CorrectYearMonth ( ye_new, mo_new)
         num_day = DaysInMonth (ye, mo, Calendar)
         
-    PopStack ( f'CorrectYearMonthDay : {ye_new}, {mo_new}, {da_new}' )
+    pop_stack ( f'CorrectYearMonthDay : {ye_new}, {mo_new}, {da_new}' )
     return ye_new, mo_new, da_new
 
 def DateAddMonth (date, month_inc=1, Calendar=None) :
     '''
     Add on year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
-    PushStack ( f'DateAddMonth ( {date=}, {month_inc=}, {Calendar=} )' )
+    push_stack ( f'DateAddMonth ( {date=}, {month_inc=}, {Calendar=} )' )
         
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
@@ -449,14 +461,14 @@ def DateAddMonth (date, month_inc=1, Calendar=None) :
 
     if OPTIONS['Debug'] : print ( f'{ye=} {mo=} {da=} {ye_new=} {mo_new=} {lday1=} {lday2=} {da_new=}' )
 
-    PopStack ( 'DateAddMonth : {ye_new}, {mo_new, {da_new}, {zformat}' )
+    pop_stack ( 'DateAddMonth : {ye_new}, {mo_new, {da_new}, {zformat}' )
     return PrintDate ( ye_new, mo_new, da_new, zformat)
 
 def DateAddPeriod ( date, period='1YE', Calendar=None ) :
     '''
     Add a period to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
-    PushStack ( f'DateAddPeriod ( {date=}, {period=}, {Calendar=} )' )
+    push_stack ( f'DateAddPeriod ( {date=}, {period=}, {Calendar=} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     zformat = DateFormat ( date )
@@ -475,14 +487,14 @@ def DateAddPeriod ( date, period='1YE', Calendar=None ) :
     ye, mo, da = GetYearMonthDay ( new_date )
     zz = PrintDate ( ye, mo, da, zformat )
     
-    PopStack ( f'DateAddPeriod : {zz}' )
+    pop_stack ( f'DateAddPeriod : {zz}' )
     return zz
     
 def SubOneDayToDate (date, Calendar=None) :
     '''
     Substracts one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
-    PushStack ( f'SubOneDayToDate ( {date=}, {Calendar=} )' )
+    push_stack ( f'SubOneDayToDate ( {date=}, {Calendar=} )' )
 
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
@@ -500,14 +512,14 @@ def SubOneDayToDate (date, Calendar=None) :
         da_new, mo_new, ye_new = da - 1, mo, ye
 
     zz = PrintDate ( ye_new, mo_new, da_new, zformat)
-    PopStack ( f'SubOneDayToDate : {zz}' )
+    pop_stack ( f'SubOneDayToDate : {zz}' )
     return zz
 
 def AddOneDayToDate ( date, Calendar=None ) :
     '''
     Add one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
-    PushStack ( f'AddOneDayToDate ( {date=}, {Calendar=} )' )
+    push_stack ( f'AddOneDayToDate ( {date=}, {Calendar=} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     if OPTIONS['Debug'] : print ( f'AddOneDayToDate : {date=}' )
@@ -526,7 +538,7 @@ def AddOneDayToDate ( date, Calendar=None ) :
             ye_new += 1
 
     zz = PrintDate ( ye_new, mo_new, da_new, zformat )
-    PopStack ( 'AddOneDayToDate : {zz}' )
+    pop_stack ( 'AddOneDayToDate : {zz}' )
     return zz
 
 def AddDaysToDate ( date, ndays='1D', Calendar=None ) :
@@ -534,7 +546,7 @@ def AddDaysToDate ( date, ndays='1D', Calendar=None ) :
     Add days to date in format [yy]yymmdd or [yy]yy-mm-dd
     Number of days migth be negative
     '''
-    PushStack ( f'AddDaysToDate ( {date=}, {ndays=}, {Calendar=} )' )
+    push_stack ( f'AddDaysToDate ( {date=}, {ndays=}, {Calendar=} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     zformat = DateFormat ( date )
@@ -562,7 +574,7 @@ def AddDaysToDate ( date, ndays='1D', Calendar=None ) :
     yy, mm, dd = GetYearMonthDay ( zdate0 )
 
     zz = PrintDate ( yy, mm, dd, zformat )
-    PopStack ( f'AddDaysToDate : {zz}' )
+    pop_stack ( f'AddDaysToDate : {zz}' )
     return zz
 
 def AddPeriodToDate ( date, period, Calendar=None ) :
@@ -570,21 +582,21 @@ def AddPeriodToDate ( date, period, Calendar=None ) :
     Add a period to a date.
     period is specified as '1D', '5YE', '3DA', etc ...
     '''
-    PushStack ( f'AddPeriodToDate ( {date=}, {period=}, {Calendar=} )' )
+    push_stack ( f'AddPeriodToDate ( {date=}, {period=}, {Calendar=} )' )
 
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     ndays = DaysInCurrentPeriod ( date, period, Calendar=Calendar)
     new_date = AddDaysToDate ( date, ndays=1, Calendar=Calendar )
 
-    PopStack ( f'AddPeriodToDate : {new_date}' )
+    pop_stack ( f'AddPeriodToDate : {new_date}' )
     return new_date
 
 def DaysInYear (year, Calendar=None ) -> int :
     '''
     Return the number of days in a year
     '''
-    PushStack ( f'DaysInYear ( {year=}, {Calendar=} )' )
+    push_stack ( f'DaysInYear ( {year=}, {Calendar=} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
 
     if Calendar in Calendar_360d :
@@ -602,7 +614,7 @@ def DaysInYear (year, Calendar=None ) -> int :
         else :
             ndays = 365
 
-    PopStack ( 'DaysInYear : {ndays}' )
+    pop_stack ( 'DaysInYear : {ndays}' )
     return ndays
 
 def DaysBetweenDate ( pdate1, pdate2, Calendar=None ) -> int :
@@ -613,7 +625,7 @@ def DaysBetweenDate ( pdate1, pdate2, Calendar=None ) -> int :
   than pdate1 then reverse the arguments. The calculations are done
   and then the sign is reversed.
   '''
-  PushStack ( f'DaysBetweenDate ( {pdate1=}, {pdate2=}, {Calendar=} )' )
+  push_stack ( f'DaysBetweenDate ( {pdate1=}, {pdate2=}, {Calendar=} )' )
   if not Calendar : Calendar=OPTIONS['DefaultCalendar']
     
   if pdate1 < pdate2 :
@@ -638,27 +650,27 @@ def DaysBetweenDate ( pdate1, pdate2, Calendar=None ) -> int :
       res = -res 
 
   # and output the results
-  PopStack ( 'DaysBetweenDate : {res}' )
+  pop_stack ( 'DaysBetweenDate : {res}' )
   return res
 
 def ConvertGregorianDateToJulian (date, Calendar=None) :
     '''
     Convert yyyymmdd to yyyyddd
     '''
-    PushStack ( f'ConvertGregorianDateToJulian ( {date=}, {Calendar} )' )
+    push_stack ( f'ConvertGregorianDateToJulian ( {date=}, {Calendar} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     ye, mo, da = GetYearMonthDay (date)
     ndays = DaysBetweenDate ( PrintDate (ye,mo,da, 'Human'), PrintDate (ye,1,1, 'Human'), Calendar=Calendar )
     zz = int ( f'{ye}{ndays+1:03d}' )
-    if OPTIONS['Stack'] : print ( '--> ConvertGregorianDateToJulian' )
+    pop_stack ( '--> ConvertGregorianDateToJulian' )
     return zz
     
 def ConvertJulianDateToGregorian (date, Calendar=None) : 
     '''
     Convert yyyyddd to yyyymmdd
     '''
-    PushStack ( f'ConvertJulianDateToGregorian ( {date=}, {Calendar} )' )
+    push_stack ( f'ConvertJulianDateToGregorian ( {date=}, {Calendar} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
    
     # Break apart the year and the days
@@ -684,14 +696,14 @@ def ConvertJulianDateToGregorian (date, Calendar=None) :
     # Assemble the results into a gregorian date
     zz = PrintDate ( yy, mm, dd, 'Gregorian')
 
-    PushStack ( f'ConvertJulianDateToGregorian : {zz}' )
+    push_stack ( f'ConvertJulianDateToGregorian : {zz}' )
     return zz
 
 def DaysInCurrentPeriod ( startdate, period, Calendar=None ) :
     ''' 
     Give the numbers of days during the period from startdate date
     '''
-    PushStack ( f'DaysInCurrentPeriod ( {startdate=}, {period=}, {Calendar=} )' )
+    push_stack ( f'DaysInCurrentPeriod ( {startdate=}, {period=}, {Calendar=} )' )
     if not Calendar : Calendar=OPTIONS['DefaultCalendar']
         
     year, month, day = GetYearMonthDay ( startdate )
@@ -722,7 +734,7 @@ def DaysInCurrentPeriod ( startdate, period, Calendar=None ) :
     else :
       Length = None
 
-    PopStack ( 'DaysInCurrentPeriod : {Length}' )
+    pop_stack ( 'DaysInCurrentPeriod : {Length}' )
     return Length
 
 def AnaPeriod (period: str) :
@@ -730,7 +742,7 @@ def AnaPeriod (period: str) :
     Decodes a period definition like '1Y', ''1MO', 'DA', etc ...
     Return period types (string) and period length (integer)
     '''
-    PushStack ( f'AnaPeriod ( {period=} )' )
+    push_stack ( f'AnaPeriod ( {period=} )' )
 
     periodName   = rmDigits  (period)
     periodLength = getDigits (period)
@@ -769,19 +781,19 @@ def AnaPeriod (period: str) :
 
     if Neg : PeriodLength = -PeriodLength
 
-    PopStack ( 'AnaPeriod' )
+    pop_stack ( 'AnaPeriod' )
     return PeriodType, PeriodLength
 
 def getDigits ( s: str ) -> str :
     '''Extract digits in a string'''
-    PushStack ( f'getDigits ( {s=} )' )
+    push_stack ( f'getDigits ( {s=} )' )
     zz = ''.join (i for i in s if i.isdigit())
-    PopStack ( f'getDigits : {zz}' )
+    pop_stack ( f'getDigits : {zz}' )
     return zz
 
 def rmDigits ( s:str ) -> str :
     '''Removes digits from a string'''
-    PushStack ( f'rmDigits ( {s=} )' )
+    push_stack ( f'rmDigits ( {s=} )' )
     zz =  ''.join (i for i in s if not i.isdigit())
-    PopStack ( f'rmDigits : {zz}' )
+    pop_stack ( f'rmDigits : {zz}' )
     return zz

@@ -22,34 +22,22 @@ A few fonctionnalities of the OASIS coupler in Python
 
 olivier.marti@lsce.ipsl.fr
 '''
-import sys, numpy as np, xarray as xr
+
 import time
+import sys, numpy as np, xarray as xr
 
 rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
 
 # OASIS internal options
-import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict
-
-Stack = list()
-
-if TYPE_CHECKING :
-    Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
-    class T_Options (TypedDict) :
-        Debug = bool
-        Trace = bool
-        Depth = int
-        Stack = list()
-
-OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':-1, 'Stack':list() }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None }
 
 class set_options :
     """
     Set options for oasis
     """
-    def __init__ (self, **kwargs):
+    def __init__ (self, **kwargs) :
         self.old = {}
-        for k, v in kwargs.items():
+        for k, v in kwargs.items() :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
@@ -71,23 +59,48 @@ def get_options () -> dict :
     return OPTIONS
 
 def return_stack () :
-    return Stack
+    return OPTIONS['Stack']
 
-def PushStack (string:str) :
-    OPTIONS['Depth'] += 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}:', string)
-    Stack.append (string)
-    return
+def push_stack (string:str) :
+    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
+    else                : OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    #
+    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
+    else                : OPTIONS['Stack'] = [string,]
+    #
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
+        else :
+            OPTIONS['t0'] = [ time.time(), ]
 
-def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}:', string)
+def pop_stack (string:str) :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
+    else :
+        dt = None
+    if OPTIONS['Trace'] or dt :
+        if dt : 
+            if dt < 1e-3 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            if dt >= 1e-3 and dt < 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+            if dt >= 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+        else : 
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+    #
     OPTIONS['Depth'] -= 1
-    Stack.pop ()
-    return
+    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    #
 
 ## ===========================================================================
 def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links) :
-    PushStack ( f'compute_links ( remap_matrix, src_address, dst_address, {src_grid_size=}, {dst_grid_size=}, {num_links=} )' )
+    push_stack ( f'compute_links ( remap_matrix, src_address, dst_address, {src_grid_size=}, {dst_grid_size=}, {num_links=} )' )
     
     src_grid_target     = np.zeros ((src_grid_size,), dtype=int)
     src_grid_weight     = np.zeros ((src_grid_size,))
@@ -101,7 +114,7 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
         dst_grid_target[dst_address[link]] += 1
         dst_grid_weight[dst_address[link]] += remap_matrix [link]
 
-    PopStack ( 'compute_links')
+    pop_stack ( 'compute_links')
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
 def rmp_remap (ptab, d_rmp, sval=np.nan) :
@@ -119,7 +132,7 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
       sval : value of destinations points with no value assigned by the interpolation
     '''
 
-    PushStack ( f'rmp_remap :  Read rmp file')
+    push_stack ( f'rmp_remap :  Read rmp file')
     
     num_links      = d_rmp.sizes ['num_links']
     src_grid_size  = d_rmp.sizes ['src_grid_size']
@@ -190,7 +203,7 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     for attr in ptab.attrs :
         dst_field_2D.attrs [attr] = ptab.attrs [attr]
 
-    PopStack ( "rmp_remap")   
+    pop_stack ( "rmp_remap")   
     return dst_field_2D
 
 def progress (percent=0, width=30) :
@@ -219,7 +232,7 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
       All addresses should be in python/C convention : starting at 0
 
     '''
-    PushStack ( f'remap ( src_field, {src_grid_size=}, {dst_grid_size=}, {num_links=}, src_address, dst_address, remap_matrix, {sval=}' )
+    push_stack ( f'remap ( src_field, {src_grid_size=}, {dst_grid_size=}, {num_links=}, src_address, dst_address, remap_matrix, {sval=}' )
     width=80
     
     src_shape = src_field.shape
@@ -250,7 +263,7 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
         
     dst_field = np.where (np.isnan(dst_mask), sval, dst_field)
 
-    PopStack ( 'remap' )
+    pop_stack ( 'remap' )
     return dst_field
 
 def geo2en (pxx, pyy, pzz, glam, gphi) : 
@@ -261,7 +274,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         pxx, pyy, pzz : components on the geocentric system
         glam, gphi : longitude and latitude of the points
     '''
-    PushStack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
+    push_stack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
     
     gsinlon = np.sin (rad * glam)
     gcoslon = np.cos (rad * glam)
@@ -271,7 +284,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
 
-    PopStack ( 'geo2en' )
+    pop_stack ( 'geo2en' )
     return pte, ptn
 
 def en2geo (pte, ptn, glam, gphi) :
@@ -282,7 +295,7 @@ def en2geo (pte, ptn, glam, gphi) :
         pte, ptn : eastward/northward components
         glam, gphi : longitude and latitude of the points
     '''
-    PushStack ( f'en2geo (pte, ptn, glam, gphi)' )
+    push_stack ( f'en2geo (pte, ptn, glam, gphi)' )
     gsinlon = np.sin (rad * glam)
     gcoslon = np.cos (rad * glam)
     gsinlat = np.sin (rad * gphi)
@@ -292,7 +305,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
     pzz =   ptn * gcoslat
 
-    PopStack ( 'en2geo' )
+    pop_stack ( 'en2geo' )
     return pxx, pyy, pzz
 
 ## Sommes des poids à l'arrivée
@@ -303,7 +316,7 @@ def sum_matrix (rmp) :
     rmp : an xarray dataset corresponding to a rmp file 
           Weight files are at OASIS-MCT format (matching ESMF or CDO weights files format)
     '''
-    PushStack ( f'sum_matrix (rmp)' )
+    push_stack ( f'sum_matrix (rmp)' )
     
     src_sum_matrix = np.zeros ( (rmp.dims['src_grid_size'],) )
     dst_sum_matrix = np.zeros ( (rmp.dims['dst_grid_size'],) )
@@ -313,7 +326,7 @@ def sum_matrix (rmp) :
         src_sum_matrix[src_a-1] += rmp['remap_matrix'][n]
         dst_sum_matrix[dst_a-1] += rmp['remap_matrix'][n]
 
-    PopStack ( 'sum_matrix' )
+    pop_stack ( 'sum_matrix' )
     return src_sum_matrix, dst_sum_matrix
 
 ## ===========================================================================

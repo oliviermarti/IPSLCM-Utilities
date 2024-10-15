@@ -35,6 +35,7 @@ Id       = "$Id: $"
 HeadURL  = "$HeadURL: $"
 '''
 
+import time
 import numpy as np
 import xarray as xr
 
@@ -139,8 +140,7 @@ Ttab.attrs.update ( {'unit':'degrees_celcius', 'long_name':'Temperature'} )
 Stab.attrs.update ( {'unit':'PSU',             'long_name':'Salinity'} )
 
 # nemo internal options
-
-OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':None, 'Stack':None }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,  }
 
 class set_options :
     """
@@ -172,28 +172,143 @@ def get_options () -> dict :
 def return_stack () :
     return OPTIONS['Stack']
 
-def PushStack (string:str) :
+def push_stack (string:str) :
     if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
     else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}.{string}' )
+    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
     if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
     else                : OPTIONS['Stack'] = [string,]
+    #
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
+        else :
+            OPTIONS['t0'] = [ time.time(), ]
 
-def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}.{string}')
+def pop_stack (string:str) :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
+    else :
+        dt = None
+    if OPTIONS['Trace'] or dt :
+        if dt :
+            if dt < 1e-3 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            if dt >= 1e-3 and dt < 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+            if dt >= 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+        else : 
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+    #
     OPTIONS['Depth'] -= 1
     if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
     OPTIONS['Stack'].pop ()
     if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    #
+
 
 ## ===========================================================================
+class Container :
+    ''' 
+    Void class to act as a container
+    Class members can be accessed either with dictionnary or namespace syntax
+       i.e  <Container>['member'] or <Container>.member
+    '''
+    def update (self, dico=None, **kwargs):
+        '''Use a dictionnary to update values'''
+        if dico : 
+            for attr in dico.keys () : super().__setattr__(attr, dico[attr])
+        self.__dict__.update (kwargs)
+    def keys    (self) : return self.__dict__.keys()
+    def values  (self) : return self.__dict__.values()
+    def items   (self) : return self.__dict__.items()
+    def dict    (self) : return self.__dict__
+    ## Hidden functions
+    def __str__     (self) : return str  (self.__dict__)
+    def __repr__    (self) : return repr (self.__dict__)
+    def __name__    (self) : return self.__class__.__name__
+    def __getitem__ (self, attr) : return getattr (self, attr)
+    def __setitem__ (self, attr, value) : setattr (self, attr, value)
+    def __iter__    (self) : return self.__dict__.__iter__()
+    def __next__    (self) : return self.__dict__.__next__()
+    def __len__     (self) : return len (self.__dict__)
+    def __init__ (self, **kwargs) :
+        for attr, value in kwargs.items () :
+            super().__setattr__(attr, value)
+        return None
+
+Regions = Container ()
+
+Regions.regions = Container (
+    NorthAtlantic    = Container (Basin="North Atlantic"         , ColorLine=np.array ([  0, 255,   0])/255, Marker='1' ),
+    SubpolarNorthAtl = Container (Basin="Subpolar North Atlantic", ColorLine=np.array ([  0,   0,   0])/255, Marker='p' ),
+    Labrador         = Container (Basin="Labrador Sea"           , ColorLine=np.array ([112, 160, 205])/255, Marker='s' ),
+    Barents          = Container (Basin="Barents Sea"            , ColorLine=np.array ([196, 121,   0])/255, Marker='^' ),
+    Irminger         = Container (Basin="Irminger Sea"           , ColorLine=np.array ([178, 178, 178])/255, Marker='v' ),
+    NordicSeas       = Container (Basin="Nordic Seas"            , ColorLine=np.array ([  0,  52, 102])/255, Marker='<' ),      
+    Rockal           = Container (Basin="Rockal"                 , ColorLine=np.array ([  0,  79,   0])/255, Marker='>' ),
+    MedWest          = Container (Basin="Mediterranean (west)"   , ColorLine=np.array ([255,   0,   0])/255, Marker='P' ),         
+    MedEast          = Container (Basin="Mediterranean (east)"   , ColorLine=np.array ([0  ,   0, 255])/255, Marker='x' ),      
+    Wedell           = Container (Basin="Wedell Sea"             , ColorLine=np.array ([0  ,   0, 255])/255, Marker='x' ),      
+    Davis            = Container (Basin="Davis Sector"           , ColorLine=np.array ([255,   0,   0])/255, Marker='p' ),
+    Circum           = Container (Basin="Circum Polar"           , ColorLine=np.array ([0  , 255,   0])/255, Marker='p' ),  
+    )
+
+Regions.eORCA1 = Container (
+    NorthAtlantic    = Container (index={'x':slice(226,299), 'y':slice(259,313)} ),
+    SubpolarNorthAtl = Container (index={'x':slice(226,299), 'y':slice(259,281)} ),
+    Labrador         = Container (index={'x':slice(226,249), 'y':slice(260,288)} ),
+    Barents          = Container (index={'x':slice(270,304), 'y':slice(312,330)} ),
+    Irminger         = Container (index={'x':slice(246,267), 'y':slice(260,285)} ),
+    NordicSeas       = Container (index={'x':slice(260,299), 'y':slice(283,313)} ),    
+    Rockal           = Container (index={'x':slice(265,290), 'y':slice(263,283)} ),
+    MedWest          = Container (index={'x':slice(285,303), 'y':slice(235,253)} ),
+    MedEast          = Container (index={'x':slice(302,325), 'y':slice(233,253)} ),
+    Wedell           = Container (index={'x':slice(228,300), 'y':slice( 10,93)} ),
+    Davis            = Container (index={'x':slice(  1, 20), 'y':slice( 60,93)} ),
+    Circum           = Container (index={'x':slice(  1, -1), 'y':slice( 10,93)} ),
+    )
+
+Regions.ORCA2 = Container (
+    NorthAtlantic    = Container (index={'x':slice(111,146), 'y':slice(109,135)} ),
+    SubpolarNorthAtl = Container (index={'x':slice(111,146), 'y':slice(109,123)} ),
+    Labrador         = Container (index={'x':slice(111,122), 'y':slice(112,127)} ),
+    Barents          = Container (index={'x':slice(133,149), 'y':slice(134,160)} ),
+    Irminger         = Container (index={'x':slice(121,131), 'y':slice(112,122)} ),
+    NordicSeas       = Container (index={'x':slice(130,150), 'y':slice(119,135)} ),     
+    Rockal           = Container (index={'x':slice(130,143), 'y':slice(111,121)} ),
+    MedWest          = Container (index={'x':slice(141,153), 'y':slice(100,108)} ),
+    MedEast          = Container (index={'x':slice(153,179), 'y':slice( 95,105)} ),
+    Wedell           = Container (index={'x':slice(112,149), 'y':slice(  2, 25)} ),
+    Davis            = Container (index={'x':slice(  1, 10), 'y':slice( 10, 25)} ),
+    Circum           = Container (index={'x':slice(  1, -1), 'y':slice(  2, 25)} ),)
+        
+
+# Regions.eORCA1 = Container (
+#     SubpolarNorthAtl = Container (index={'x':slice(260,299), 'y':slice(259,281)}, Basin="Subpolar North Atlantic", ColorLine=np.array ([  0,   0,   0])/255, Marker='p' ),
+#     Labrador         = Container (index={'x':slice(226,249), 'y':slice(264,288)}, Basin="Labrador Sea"           , ColorLine=np.array ([112, 160, 205])/255, Marker='s' ),
+#     Barents          = Container (index={'x':slice(270,294), 'y':slice(312,330)}, Basin="Barents Sea"            , ColorLine=np.array ([196, 121,   0])/255, Marker='^' ),
+#     Irminger         = Container (index={'x':slice(246,267), 'y':slice(271,285)}, Basin="Irminger Sea"           , ColorLine=np.array ([178, 178, 178])/255, Marker='v' ),
+#     NordicSeas       = Container (index={'x':slice(260,299), 'y':slice(283,313)}, Basin="Nordic Seas"            , ColorLine=np.array ([  0,  52, 102])/255, Marker='<' ),      
+#     Rockal           = Container (index={'x':slice(260,299), 'y':slice(283,313)}, Basin="Rockal"                 , ColorLine=np.array ([  0,  79,   0])/255, Marker='>' ), )
+
+# Regions.ORCA2 = Container (
+#     SubpolarNorthAtl = Container (index={'x':slice(130,150), 'y':slice(130,140)}, Basin="Subpolar North Atlantic", ColorLine=np.array ([  0,   0,   0])/255, Marker='p' ),
+#     Labrador         = Container (index={'x':slice(113,125), 'y':slice(132,144)}, Basin="Labrador Sea"           , ColorLine=np.array ([112, 160, 205])/255, Marker='s' ),
+#     Barents          = Container (index={'x':slice(135,149), 'y':slice(161,165)}, Basin="Barents Sea"            , ColorLine=np.array ([196, 121,   0])/255, Marker='^' ),
+#     Irminger         = Container (index={'x':slice(123,214), 'y':slice(135,142)}, Basin="Irminger Sea"           , ColorLine=np.array ([178, 178, 178])/255, Marker='v' ),
+#     NordicSeas       = Container (index={'x':slice(130,150), 'y':slice(141,156)}, Basin="Nordic Seas"            , ColorLine=np.array ([  0,  52, 102])/255, Marker='<' ),      
+#     Rockal           = Container (index={'x':slice(130,150), 'y':slice(141,158)}, Basin="Rockal"                 , ColorLine=np.array ([  0,  79,   0])/255, Marker='>' ), )  
+        
 def __mmath__ (ptab, default=None) :
     '''Determines the type of tab : xarray, numpy or numpy.ma object ?
 
     Returns type
     '''
-    PushStack ( f'__mmath__ ( ptab, {default=} )' )
+    push_stack ( f'__mmath__ ( ptab, {default=} )' )
     
     mmath = default
     if isinstance (ptab, xr.core.dataset.Dataset)     : mmath = 'dataset'
@@ -201,7 +316,7 @@ def __mmath__ (ptab, default=None) :
     if isinstance (ptab, np.ndarray)                  : mmath = np
     if isinstance (ptab, np.ma.MaskType)              : mmath = np.ma
 
-    PopStack ( f'__math_ : {mmath}' )
+    pop_stack ( f'__math_ : {mmath}' )
     return mmath
 
 def __guess_nperio__ (jpj:int, jpi:int, nperio=None, out:str='nperio') :
@@ -213,10 +328,10 @@ def __guess_nperio__ (jpj:int, jpi:int, nperio=None, out:str='nperio') :
     jpi    : number of longitudes
     nperio : periodicity parameter
     '''
-    PushStack ( f'__guess_nperio__ ( {jpj=} {jpi=} {nperio=}, {out=} )' )
+    push_stack ( f'__guess_nperio__ ( {jpj=} {jpi=} {nperio=}, {out=} )' )
     if nperio is None :
         nperio = __guess_config__ (jpj, jpi, nperio=None, out=out)
-    PopStack (  f'__guess_nperio__ : {nperio}' )
+    pop_stack (  f'__guess_nperio__ : {nperio}' )
     return nperio
 
 def __guess_config__ (jpj:int, jpi:int, nperio:bool=None, config=None, out='nperio') :
@@ -228,7 +343,7 @@ def __guess_config__ (jpj:int, jpi:int, nperio:bool=None, config=None, out='nper
     jpi    : number of longitudes
     nperio : periodicity parameter
     '''
-    PushStack ( f'__guessConfig__ ( {jpj=}, {jpi=}, {nperio=}, {config=}, {out=}')
+    push_stack ( f'__guessConfig__ ( {jpj=}, {jpi=}, {nperio=}, {config=}, {out=}')
     
     #if OPTIONS['Debug'] : print ( f'__guess_config__ : {jpi=}, {jpj=}' )
     if nperio is None :
@@ -266,17 +381,17 @@ def __guess_config__ (jpj:int, jpi:int, nperio:bool=None, config=None, out='nper
                                 'nemo.py is not ready for this value' )
 
     if out == 'nperio'        :
-        PopStack ( f'__guessConfig__ : {nperio=}' )
+        pop_stack ( f'__guessConfig__ : {nperio=}' )
         return nperio
     if out == 'config'        :
         return config
-        PopStack ( f'__guessConfig__ : {config=}' )
+        pop_stack ( f'__guessConfig__ : {config=}' )
     if out == 'perio'         :
         return iperio, jperio, nfold, nftype
-        PopStack ( f'__guessConfig__ : {iperio=}, {jperio=}, {nfold=}, {nftype=}' )
+        pop_stack ( f'__guessConfig__ : {iperio=}, {jperio=}, {nfold=}, {nftype=}' )
     if out in ['full', 'all'] :
         zdict = {'nperio':nperio, 'iperio':iperio, 'jperio':jperio, 'nfold':nfold, 'nftype':nftype}
-        PopStack ( f'__guessConfig__ : {zdict}' )
+        pop_stack ( f'__guessConfig__ : {zdict}' )
         return zdict
 
 def __guess_point__ (ptab) :
@@ -290,7 +405,7 @@ def __guess_point__ (ptab) :
 
     Credits : who is the original author ?
     '''
-    PushStack ( f'__guess_point__ ( ptab )')
+    push_stack ( f'__guess_point__ ( ptab )')
 
     gp = None
     mmath = __mmath__ (ptab)
@@ -309,10 +424,10 @@ def __guess_point__ (ptab) :
             raise AttributeError ('in nemo module : cd_type not found, and cannot by guessed')
         if OPTIONS['Debug'] : print ( f'Grid set as {gp} deduced from dims {ptab.dims}' )
 
-        PopStack ( f'__guess_point__ : {gp}' )
+        pop_stack ( f'__guess_point__ : {gp}' )
         return gp
     else :
-        PopStack ( f'__guess_point__ : cd_type not found, input is not an xarray data' )
+        pop_stack ( f'__guess_point__ : cd_type not found, input is not an xarray data' )
         raise AttributeError  ('in nemo module : cd_type not found, input is not an xarray data')
 
 def get_shape (ptab) :
@@ -323,29 +438,29 @@ def get_shape (ptab) :
     X is missing for on longitudinal slice
     etc ...
     '''
-    PushStack ( f'get_shape ( ptab )' )
+    push_stack ( f'get_shape ( ptab )' )
     g_shape = ''
     if __find_axis__ (ptab, 'x')[0] : g_shape = 'X'
     if __find_axis__ (ptab, 'y')[0] : g_shape = 'Y' + g_shape
     if __find_axis__ (ptab, 'z')[0] : g_shape = 'Z' + g_shape
     if __find_axis__ (ptab, 't')[0] : g_shape = 'T' + g_shape
         
-    PopStack ( f'get_shape : {g_shape}' )
+    pop_stack ( f'get_shape : {g_shape}' )
     return g_shape
 
 def lbc_diag (nperio:int) :
     '''Useful to switch between field with and without halo'''
-    PushStack ( f'lbc_diag ( {nperio=}' )
+    push_stack ( f'lbc_diag ( {nperio=}' )
     lperio, aperio = nperio, False
     if nperio == 4.2 : lperio, aperio = 4, True
     if nperio == 6.2 : lperio, aperio = 6, True
 
-    PopStack ( f'lbc_diag : {lperio}, {aperio}' )
+    pop_stack ( f'lbc_diag : {lperio}, {aperio}' )
     return lperio, aperio
 
 def __find_axis__ (ptab, axis='z', back:bool=True) :
     '''Returns name and name of the requested axis'''
-    PushStack ( '__find_axis__ ( ptab, {axis=}, {back=}' )
+    push_stack ( '__find_axis__ ( ptab, {axis=}, {back=}' )
     
     mmath = __mmath__ (ptab)
     ax, ix = None, None
@@ -422,16 +537,16 @@ def __find_axis__ (ptab, axis='z', back:bool=True) :
         else :
             ix -= len (ptab.shape)
 
-    PopStack ( f'__find_axis__ : {ax}, {ix}' )
+    pop_stack ( f'__find_axis__ : {ax}, {ix}' )
     return ax, ix
 
 def find_axis (ptab, axis:str='z', back:bool=True) :
     '''Version of find_axis with no __'''
-    PushStack ( f'find_axis ( ptab, {axis=}, {back=}' )
+    push_stack ( f'find_axis ( ptab, {axis=}, {back=}' )
     
     ix, xx = __find_axis__ (ptab, axis=axis, back=back)
     
-    PopStack ( f'find_axis : {xx}, {ix}' )
+    pop_stack ( f'find_axis : {xx}, {ix}' )
     return xx, ix
 
 def fixed_lon (plon, center_lon:float=0.0) :
@@ -443,7 +558,7 @@ def fixed_lon (plon, center_lon:float=0.0) :
     Designed by Phil Pelson.
     See https://gist.github.com/pelson/79cf31ef324774c97ae7
     '''
-    PushStack ( f'fixed_lon ( plon, {center_lon=}' )
+    push_stack ( f'fixed_lon ( plon, {center_lon=}' )
     mmath = __mmath__ (plon)
     ax, ix = __find_axis__ (plon, axis='x', back=True)
     
@@ -465,13 +580,13 @@ def fixed_lon (plon, center_lon:float=0.0) :
     if f_lon.min () < center_lon-360.0 : f_lon +=  360.0
     if f_lon.max () > center_lon+360.0 : f_lon += -360.0
 
-    PopStack ( f'fixed_lon : f_lon' )
+    pop_stack ( f'fixed_lon : f_lon' )
     return f_lon
 
 def bounds_clolon (pbounds_lon, plon, rad:bool=False, deg:bool=True) :
     '''Choose closest to lon0 longitude, adding/substacting 360° if needed
     '''
-    PushStack ( f'bounds_clolon ( pbounds_lon, plon, {rad=}, {deb=}' )
+    push_stack ( f'bounds_clolon ( pbounds_lon, plon, {rad=}, {deb=}' )
     if rad : lon_range = 2.0*np.pi
     if deg : lon_range = 360.0
     b_clolon = pbounds_lon.copy ()
@@ -483,13 +598,13 @@ def bounds_clolon (pbounds_lon, plon, rad:bool=False, deg:bool=True) :
                           b_clolon-lon_range,
                           b_clolon )
 
-    PopStack ( f'bounds_clolon : b_clolon' )
+    pop_stack ( f'bounds_clolon : b_clolon' )
     return b_clolon
 
-def unify_dims ( dd: "DataArray or Dataset", x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'] ) -> "DataArray or Dataset" :
+def unify_dims (dd: "DataArray or Dataset", x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'] ) -> "DataArray or Dataset" :
     '''Rename dimensions to unify them between NEMO versions
     '''
-    PushStack ( f'unify_dims (dd, {x=}, {y=}, {z=}, {t=})' )
+    push_stack ( f'unify_dims (dd, {x=}, {y=}, {z=}, {t=})' )
     for xx in XNAME :
         if xx in dd.dims and xx != x :
             if OPTIONS['Debug'] : print ( f"{xx} renamed to {x}" )
@@ -497,20 +612,20 @@ def unify_dims ( dd: "DataArray or Dataset", x=UDIMS['x'], y=UDIMS['y'], z=UDIMS
 
     for yy in YNAME :
         if yy in dd.dims and yy != y  :
-            if OPTIONS['Debug']  : print ( f"{yy} renamed to {y}" )
+            if OPTIONS['Debug'] : print ( f"{yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
 
     for zz in ZNAME :
         if zz in dd.dims and zz != z :
-            if OPTIONS['Debug']  : print ( f"{zz} renamed to {z}" )
+            if OPTIONS['Debug'] : print ( f"{zz} renamed to {z}" )
             dd = dd.rename ( {zz:z} )
 
     for tt in TNAME  :
         if tt in dd.dims and tt != t :
-            if OPTIONS['Debug']  : print ( f"{tt} renamed to {t}" )
+            if OPTIONS['Debug'] : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
-    PopStack ( f'unify_dims : dd' )
+    pop_stack ( f'unify_dims : dd' )
     return dd
 
 
@@ -522,7 +637,7 @@ if SimpleImputer :
         some parts of the domain, with no ocean points, have no
         values
         '''
-        PushStack ( f'fill_empty ( ptab, {sval=} {transpose=}' )
+        push_stack ( f'fill_empty ( ptab, {sval=} {transpose=}' )
         mmath = __mmath__ (ptab)
 
         imp = SimpleImputer (missing_values=sval, strategy='mean')
@@ -537,7 +652,7 @@ if SimpleImputer :
             ztab = xr.DataArray (ztab, dims=ztab.dims, coords=ztab.coords)
             ztab.attrs.update (ptab.attrs)
 
-        PopStack ( f'fill_empty : ztab' )
+        pop_stack ( f'fill_empty : ztab' )
         return ztab
 
     def fill_latlon (plat, plon, sval=-1) :
@@ -547,7 +662,7 @@ if SimpleImputer :
         some parts of the domain, with no ocean points, have no
         lon/lat values
         '''
-        PushStack ( f'fill_latlon ( plat, plon {sval=}' )
+        push_stack ( f'fill_latlon ( plat, plon {sval=}' )
 
         from sklearn.impute import SimpleImputer
         mmath = __mmath__ (plon)
@@ -566,7 +681,7 @@ if SimpleImputer :
             
         zlon = fixed_lon (zlon)
 
-        PopStack ( f'fixed_lon')
+        pop_stack ( f'fixed_lon')
         return zlat, zlon
     
     def fill_lonlat (plon, plat, sval=-1) :
@@ -576,7 +691,7 @@ if SimpleImputer :
         some parts of the domain, with no ocean points, have no
         lon/lat values
         '''
-        PushStack ( f'fill_lonlat ( plon, plat {sval=}' )
+        push_stack ( f'fill_lonlat ( plon, plat {sval=}' )
         from sklearn.impute import SimpleImputer
         mmath = __mmath__ (plon)
         
@@ -594,7 +709,7 @@ if SimpleImputer :
             
         zlon = fixed_lon (zlon)
 
-        PopStack ( f'fill_lonlat' )
+        pop_stack ( f'fill_lonlat' )
         return zlon, zlat
 
     def fill_bounds_lonlat (pbounds_lon, pbounds_lat, sval=-1) :
@@ -604,7 +719,7 @@ if SimpleImputer :
         some parts of the domain, with no ocean points, as no
         lon/lat values
         '''
-        PushStack ( f'fill_bounds_lonlat (pbounds_lon, pbounds_lat, {sval=}' )
+        push_stack ( f'fill_bounds_lonlat (pbounds_lon, pbounds_lat, {sval=}' )
         mmath = __mmath__ (pbounds_lon)
         
         z_bounds_lon = np.empty_like (pbounds_lon)
@@ -626,7 +741,7 @@ if SimpleImputer :
             z_bounds_lon.attrs.update (pbounds_lat.attrs)
             z_bounds_lat.attrs.update (pbounds_lat.attrs)
 
-        PopStack ( 'fill_bounds_lonlat' )
+        pop_stack ( 'fill_bounds_lonlat' )
         return z_bounds_lon, z_bounds_lat
     
 else : 
@@ -641,13 +756,13 @@ else :
           some parts of the domain, with no ocean points, have no
           values
         '''
-        PushStack ( f'fill_empty [void version] ( ptab, {sval=} {transpose=}' )
+        push_stack ( f'fill_empty [void version] ( ptab, {sval=} {transpose=}' )
 
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
         print ( f'{ptab.shape=} {sval=} {transpose=}' )
-        PopStack ( f'fill_empty [void version]' )
+        pop_stack ( f'fill_empty [void version]' )
         return ptab
 
     def fill_latlon (plat, plon, sval=-1) :
@@ -657,14 +772,14 @@ else :
         some parts of the domain, with no ocean points, have no
         lon/lat values
         '''
-        PushStack ( f'fill_latlon [void_version] ( plat, plon {sval=}' )
+        push_stack ( f'fill_latlon [void_version] ( plat, plon {sval=}' )
 
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
         print ( f'{plat.shape=} {sval=}' )
 
-        PopStack ( f'fixed_lon [void version]')
+        pop_stack ( f'fixed_lon [void version]')
         return plat, plon
         
     def fill_lonlat (plon, plat, sval=-1) :
@@ -674,14 +789,14 @@ else :
         some parts of the domain, with no ocean points, have no
         lon/lat values
         '''
-        PushStack ( f'fill_lonlat [void Version] ( plon, plat {sval=}' )
+        push_stack ( f'fill_lonlat [void Version] ( plon, plat {sval=}' )
 
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
         print ( f'{plat.shape=} {sval=}' )
 
-        PopStack ( f'fill_lonlat [void version]' )
+        pop_stack ( f'fill_lonlat [void version]' )
         return plon, plat
     
     def fill_bounds_lonlat (pbounds_lon, pbounds_lat, sval=-1) :
@@ -691,14 +806,14 @@ else :
         some parts of the domain, with no ocean points, as no
         lon/lat values
         '''
-        PushStack ( f'fill_bounds_lonlat [void version] (pbounds_lon, pbounds_lat, {sval=}' )
+        push_stack ( f'fill_bounds_lonlat [void version] (pbounds_lon, pbounds_lat, {sval=}' )
 
         print ( 'Error : module sklearn.impute.SimpleImputer not found' )
         print ( 'Can not call fill_empty' )
         print ( 'Call arguments where : ' )
         print ( f'{pbounds_lat.shape=} {sval=}' )
 
-        PopStack ( 'fill_bounds_lonlat [void version]' )
+        pop_stack ( 'fill_bounds_lonlat [void version]' )
         return pbounds_lon, pbounds_lat
 
 def jeq (plat) :
@@ -706,14 +821,14 @@ def jeq (plat) :
 
     lat : latitudes of the grid. At least 2D.
     '''
-    PushStack ( f'jeq ( plat ) ' )
+    push_stack ( f'jeq ( plat ) ' )
     mmath = __mmath__ (plat)
     ay, jy = __find_axis__ (plat, 'y')
 
     if mmath == xr : jj = int ( np.mean ( np.argmin (np.abs (np.float64 (plat)), axis=jy) ) )
     else           : jj = np.argmin (np.abs (np.float64 (plat[...,:, 0])))
 
-    PopStack ( f'jeq : {jj}' )
+    pop_stack ( f'jeq : {jj}' )
     return jj
 
 def lon1d (plon, plat=None) :
@@ -722,7 +837,7 @@ def lon1d (plon, plat=None) :
     plon : longitudes of the grid
     plat (optionnal) : latitudes of the grid
     '''
-    PushStack ( f'lon1d ( plon, plat) ' ) 
+    push_stack ( f'lon1d ( plon, plat) ' ) 
     mmath = __mmath__ (plon)
     jpj, jpi  = plon.shape [-2:]
     if np.max (plat) :
@@ -742,7 +857,7 @@ def lon1d (plon, plat=None) :
         lon_1d.attrs['standard_name'] = 'longitude'
         lon_1d.attrs['long_name :']   = 'Longitude'
 
-    PopStack ( 'lon_1d' )
+    pop_stack ( 'lon_1d' )
     return lon_1d
 
 def latreg (plat, diff=0.1) :
@@ -752,7 +867,7 @@ def latreg (plat, diff=0.1) :
     lat : latitudes of the grid (2D)
     diff [optional] : tolerance
     '''
-    PushStack ( f'latreg ( plat, {diff=}' )
+    push_stack ( f'latreg ( plat, {diff=}' )
     #mmath = __mmath__ (plat)
     ax, ix = __find_axis__ (plat, 'x')
     ay, iy = __find_axis__ (plat, 'y')
@@ -772,7 +887,7 @@ def latreg (plat, diff=0.1) :
         jreg   = len (plat)
         lareg = np.max (plat)
         
-    PopStack ( f'latreg : {jreg=}, {lareg=}' )
+    pop_stack ( f'latreg : {jreg=}, {lareg=}' )
     return jreg, lareg
 
 def lat1d (plat) :
@@ -780,7 +895,7 @@ def lat1d (plat) :
 
     plat : latitudes of the grid (2D)
     '''
-    PushStack ( f'lat1d ( plat )' )
+    push_stack ( f'lat1d ( plat )' )
     mmath = __mmath__ (plat)
     ax, ix = __find_axis__ (plat, 'x')
     ay, iy = __find_axis__ (plat, 'y')
@@ -820,7 +935,7 @@ def lat1d (plat) :
         lat_1d.attrs ['standard_name'] = 'latitude'
         lat_1d.attrs ['long_name :']   = 'Latitude'
 
-    PopStack ( f'lat1d' )
+    pop_stack ( f'lat1d' )
     return lat_1d
 
 def latlon1d (plat, plon) :
@@ -828,33 +943,33 @@ def latlon1d (plat, plon) :
 
     plat, plon : latitudes and longitudes of the grid (2D)
     '''
-    PushStack ( f'latlon1d ( plat, plon) ' )
+    push_stack ( f'latlon1d ( plat, plon) ' )
     zla = lat1d (plat)
     zlo = lon1d (plon, plat)
 
-    PopStack ( f'latlon1d' )
+    pop_stack ( f'latlon1d' )
     return zla, zlo
 
 def ff (plat) :
     '''Returns Coriolis factor
     '''
-    PushStack ( 'ff ( plat )' )
+    push_stack ( 'ff ( plat )' )
     zff   = np.sin (RAD * plat) * ROMEGA
-    PopStack ( 'ff' )
+    pop_stack ( 'ff' )
     return zff
 
 def beta (plat) :
     '''Return Beta factor (derivative of Coriolis factor)
     '''
-    PushStack ( 'beta ( plat )' )
+    push_stack ( 'beta ( plat )' )
     zbeta = np.cos (RAD * plat) * ROMEGA / RA
-    PopStack ( 'beta' )
+    pop_stack ( 'beta' )
     return zbeta
 
 def mask_lonlat (ptab, x0, x1, y0, y1, lon, lat, sval=np.nan) :
     '''Returns masked values outside a lat/lon box
     '''
-    PushStack ( f'mask_lonlat  (ptab, {x0=}, {x1=}, {y0=}, {y1=}, lon, lat, {sval=}' )
+    push_stack ( f'mask_lonlat  (ptab, {x0=}, {x1=}, {y0=}, {y1=}, lon, lat, {sval=}' )
     mmath = __mmath__ (ptab)
     if mmath == xr :
         lon = lon.copy().to_masked_array()
@@ -867,7 +982,7 @@ def mask_lonlat (ptab, x0, x1, y0, y1, lon, lat, sval=np.nan) :
                 np.logical_and (lon-360>x0, lon-360<x1)))
     tab = mmath.where (mask, ptab, sval)
 
-    PopStack ( 'mask_lonlat' )
+    pop_stack ( 'mask_lonlat' )
     return tab
 
 def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
@@ -887,7 +1002,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
           the east side of the field
 
     '''
-    PushStack ( f'extend ( ptab, {blon=}, {jplus=}, {jpi=}, {nperio=}' )
+    push_stack ( f'extend ( ptab, {blon=}, {jplus=}, {jpi=}, {nperio=}' )
     mmath = __mmath__ (ptab)
     ix, ax = __find_axis__ (ptab, axis, back)
     
@@ -925,7 +1040,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
                      ptab [..., istart+la:istart+la+jplus]          ),
                      axis=ix)
 
-    PopStack ( 'extend' )
+    pop_stack ( 'extend' )
     return tabex
 
 def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
@@ -939,7 +1054,7 @@ def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
 
       Returns : xarray dataset with rectangular grid. Incorrect above 20°N
     '''
-    PushStack ( f'orca2reg ( dd, {lat_name=}, {lon_name=}, {y_name=}, {x_name=}' )
+    push_stack ( f'orca2reg ( dd, {lat_name=}, {lon_name=}, {y_name=}, {x_name=}' )
     if not x_name : x_name, ix = __find_axis__ (dd, axis='x')
     if not y_name : y_name, jy = __find_axis__ (dd, axis='y')
 
@@ -976,7 +1091,7 @@ def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
 
     zdd = zdd.transpose (*coord_order)
 
-    PopStack ( 'orca2reg' )
+    pop_stack ( 'orca2reg' )
     return zdd
 
 def lbc_init (ptab, nperio=None) :
@@ -993,7 +1108,7 @@ def lbc_init (ptab, nperio=None) :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_init ( ptab, {nperio=}' )
+    push_stack ( f'lbc_init ( ptab, {nperio=}' )
     jpi, jpj = None, None
     ax, ix = __find_axis__ (ptab, 'x')
     ay, jy = __find_axis__ (ptab, 'y')
@@ -1005,7 +1120,7 @@ def lbc_init (ptab, nperio=None) :
     if nperio not in NPERIO_VALID_RANGE :
         raise AttributeError ( f'{nperio=} is not in the valid range {NPERIO_VALID_RANGE}' )
 
-    PopStack ( f'lbc_init : {jpj}, {jpi}, {nperio}' )
+    pop_stack ( f'lbc_init : {jpj}, {jpi}, {nperio}' )
     return jpj, jpi, nperio
 
 def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
@@ -1018,7 +1133,7 @@ def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_init ( ptab, {nperio=}, {cd_type=}, {psgn=}, {nemo_4u_bug=}' )
+    push_stack ( f'lbc_init ( ptab, {nperio=}, {cd_type=}, {psgn=}, {nemo_4u_bug=}' )
 
     jpi, nperio = lbc_init (ptab, nperio)[1:]
     ax     = __find_axis__ (ptab, 'x')[0]
@@ -1106,7 +1221,7 @@ def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
         ztab = xr.DataArray ( ztab, dims=ptab.dims, coords=ptab.coords )
         ztab.attrs = ptab.attrs
 
-    PopStack ( 'lbc' )
+    pop_stack ( 'lbc' )
     return ztab
 
 def lbc_mask (ptab, nperio=None, cd_type='T', sval=np.nan) :
@@ -1118,7 +1233,7 @@ def lbc_mask (ptab, nperio=None, cd_type='T', sval=np.nan) :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_mask (ptab, {nperio=}, {cd_type=}, {sval=}' )
+    push_stack ( f'lbc_mask (ptab, {nperio=}, {cd_type=}, {sval=}' )
     jpi, nperio = lbc_init (ptab, nperio)[1:]
     ax = __find_axis__ (ptab, 'x')[0]
     ay = __find_axis__ (ptab, 'y')[0]
@@ -1183,7 +1298,7 @@ def lbc_mask (ptab, nperio=None, cd_type='T', sval=np.nan) :
                     ztab [..., -1, -1         ] = sval
                     ztab [..., -2, jpi//2+1:-1] = sval
 
-    PopStack ( 'lbc_mask' )
+    pop_stack ( 'lbc_mask' )
     return ztab
 
 def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
@@ -1199,7 +1314,7 @@ def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_plot (ptab, {nperio=}, {cd_type=}, {psgn=}, {sval=}' )
+    push_stack ( f'lbc_plot (ptab, {nperio=}, {cd_type=}, {psgn=}, {sval=}' )
     jpi, nperio = lbc_init (ptab, nperio)[1:]
     ax = __find_axis__ (ptab, 'x')[0]
     ay = __find_axis__ (ptab, 'y')[0]
@@ -1261,7 +1376,7 @@ def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
                     ztab [..., -1, :          ] = sval
                     ztab [..., -2, jpi//2+1:-1] = sval
 
-    PopStack ( 'lbc_plot' )
+    pop_stack ( 'lbc_plot' )
     return ztab
 
 def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
@@ -1277,7 +1392,7 @@ def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_add ( ptab, {nperio=}, {cd_type=}, {psgn=} )' )
+    push_stack ( f'lbc_add ( ptab, {nperio=}, {cd_type=}, {psgn=} )' )
     mmath = __mmath__ (ptab)
     nperio = lbc_init (ptab, nperio)[-1]
     lshape = get_shape (ptab)
@@ -1323,7 +1438,7 @@ def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
 
     else : ptab_ext = lbc (ptab, nperio=nperio, cd_type=cd_type, psgn=psgn)
 
-    PopStack ( 'lbc_add' )
+    pop_stack ( 'lbc_add' )
     return ptab_ext
 
 def lbc_del (ptab, nperio=None, cd_type='T', psgn=1) :
@@ -1338,7 +1453,7 @@ def lbc_del (ptab, nperio=None, cd_type='T', psgn=1) :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_del (ptab, {nperio=}, {cd_type=}, {psgn=}' )
+    push_stack ( f'lbc_del (ptab, {nperio=}, {cd_type=}, {psgn=}' )
     nperio = lbc_init (ptab, nperio)[-1]
     #lshape = get_shape (ptab)
     ax = __find_axis__ (ptab, 'x')[0]
@@ -1353,7 +1468,7 @@ def lbc_del (ptab, nperio=None, cd_type='T', psgn=1) :
         else : ztab = ptab
     else : ztab = ptab
 
-    PopStack ( 'lbc_del' )
+    pop_stack ( 'lbc_del' )
     return ztab
 
 def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
@@ -1367,7 +1482,7 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
 
     See NEMO documentation for further details
     '''
-    PushStack ( f'lbc_index ( {jj=}, {ii=}, {jpj=}, {jpi=}, {nperio=}, {cd_type=} )' )
+    push_stack ( f'lbc_index ( {jj=}, {ii=}, {jpj=}, {jpi=}, {nperio=}, {cd_type=} )' )
     if nperio is None :
         nperio = __guess_nperio__ (jpj, jpi, nperio)
 
@@ -1389,10 +1504,10 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
 
     #
     def mod_ij (cond, jy_new, ix_new) :
-        PushStack ( f'mod_ij (cond, jy_new, ix_new)' )
+        push_stack ( f'mod_ij (cond, jy_new, ix_new)' )
         jy_r = mmath.where (cond, jy_new, jy)
         ix_r = mmath.where (cond, ix_new, ix)
-        PopStack ( 'mod_ij' )
+        pop_stack ( 'mod_ij' )
         return jy_r, ix_r
     #
     #> North-South boundary conditions
@@ -1448,7 +1563,7 @@ def lbc_index (jj, ii, jpj, jpi, nperio=None, cd_type='T') :
     if isinstance (jj, int) : jy = jy.item ()
     if isinstance (ii, int) : ix = ix.item ()
 
-    PopStack ( f'lbc_index = {jy}, {ix}' )
+    pop_stack ( f'lbc_index = {jy}, {ix}' )
     return jy, ix
 
 def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates=False, out=None) :
@@ -1466,7 +1581,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates=F
 
     Note : may work with 1D lon_data/lat_data (?)
     '''
-    PushStack ( f'find_ji ( lat_data, lon_data, lat_grid, lon_grid, mask, {drop_duplicates=}, {out=} ) ')
+    push_stack ( f'find_ji ( lat_data, lon_data, lat_grid, lon_grid, mask, {drop_duplicates=}, {out=} ) ')
     # Get grid dimensions
     if len (lon_grid.shape) == 2 : jpi = lon_grid.shape[-1]
     else                         : jpi = len(lon_grid)
@@ -1525,7 +1640,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates=F
         jmin = zz[:,-2]
         imin = zz[:,-1]
 
-    PopStack ( 'find_ji' )
+    pop_stack ( 'find_ji' )
     if   out=='dict'                     :
         zdict = {UDIMS['y']:jmin, UDIMS['x']:imin}
         return zdict
@@ -1549,7 +1664,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates=F
 def curl (tx, ty, e1f, e2f, nperio=None) :
     '''Returns curl of a vector field
     '''
-    PushStack ( f'curl ( tx, ty, e1f, e2f, {nperio=} )' )
+    push_stack ( f'curl ( tx, ty, e1f, e2f, {nperio=} )' )
     ax = __find_axis__ (tx, 'x')[0]
     ay = __find_axis__ (ty, 'y')[0]
 
@@ -1574,13 +1689,13 @@ def curl (tx, ty, e1f, e2f, nperio=None) :
     zcurl = lbc_del (zcurl, nperio=nperio, cd_type='F', psgn=1)
     zcurl = lbc (zcurl, nperio=nperio, cd_type='F', psgn=1)
 
-    PopStack ( 'curl' )
+    pop_stack ( 'curl' )
     return zcurl
 
 def div (ux, uy, e1t, e2t, nperio=None) :
     '''Returns divergence of a vector field
     '''
-    PushStack ( f'div  (ux, uy, e1t, e2t, {nperio=}' )
+    push_stack ( f'div  (ux, uy, e1t, e2t, {nperio=}' )
     ax = __find_axis__ (ux, 'x')[0]
     ay = __find_axis__ (ux, 'y')[0]
 
@@ -1605,7 +1720,7 @@ def div (ux, uy, e1t, e2t, nperio=None) :
     zdiv = lbc_del (zdiv, nperio=nperio, cd_type='T', psgn=1)
     zdiv = lbc (zdiv, nperio=nperio, cd_type='T', psgn=1)
 
-    PopStack ( 'zdiv' )
+    pop_stack ( 'zdiv' )
     return zdiv
 
 def geo2en (pxx, pyy, pzz, glam, gphi) :
@@ -1615,7 +1730,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         pxx, pyy, pzz : components on the geocentric system
         glam, gphi : longitude and latitude of the points
     '''
-    PushStack ( 'geo2en (pxx, pyy, pzz, glam, gphi)' )
+    push_stack ( 'geo2en (pxx, pyy, pzz, glam, gphi)' )
     gsinlon = np.sin (RAD * glam)
     gcoslon = np.cos (RAD * glam)
     gsinlat = np.sin (RAD * gphi)
@@ -1624,7 +1739,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
 
-    PopStack ( geo2en )
+    pop_stack ( geo2en )
     return pte, ptn
 
 def en2geo (pte, ptn, glam, gphi) :
@@ -1634,7 +1749,7 @@ def en2geo (pte, ptn, glam, gphi) :
         pte, ptn   : eastward/northward components
         glam, gphi : longitude and latitude of the points
     '''
-    PushStack ( 'en2geo ( pte, ptn, glam, gphi )' )
+    push_stack ( 'en2geo ( pte, ptn, glam, gphi )' )
     
     gsinlon = np.sin (RAD * glam)
     gcoslon = np.cos (RAD * glam)
@@ -1645,7 +1760,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
     pzz =   ptn * gcoslat
 
-    PopStack ( 'en2geo' )
+    pop_stack ( 'en2geo' )
     return pxx, pyy, pzz
 
 
@@ -1653,7 +1768,7 @@ def clo_lon (lon, lon0=0., rad=False, deg=True) :
     '''Choose closest to lon0 longitude, adding/substacting 360°
     if needed
     '''
-    PushStack ( f'clo_lon (lon, {lon0=}, {rad=}, {deg=} )' )
+    push_stack ( f'clo_lon (lon, {lon0=}, {rad=}, {deg=} )' )
     if rad and deg :
         raise 
     mmath = __mmath__ (lon, np)
@@ -1668,7 +1783,7 @@ def clo_lon (lon, lon0=0., rad=False, deg=True) :
     if mmath == xr :
         if lon.attrs : c_lon.attrs.update (lon.attrs)
 
-    PopStack ( 'clo_lon' )
+    pop_stack ( 'clo_lon' )
     return c_lon
 
 def index2depth (pk, gdept_0) :
@@ -1884,7 +1999,7 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     '''Computes sinus and cosinus of model line direction with
     respect to east
     '''
-    PushStack ( f'angle_full ( glamt, gphit, glamu, gphiu, glamv, gphiv, glamf, gphif, {nperio=} )') 
+    push_stack ( f'angle_full ( glamt, gphit, glamu, gphiu, glamv, gphiv, glamf, gphif, {nperio=} )') 
     mmath = __mmath__ (glamt)
     ax, ix = __find_axis__ (glamt, 'x')
     ay, iy = __find_axis__ (glamt, 'y')
@@ -1996,14 +2111,14 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
         gsinf = gsinf.assign_coords ( glamf.coords )
         gcosf = gcosf.assign_coords ( glamf.coords )
 
-    PopStack ( 'angle_full' )
+    pop_stack ( 'angle_full' )
     return gsint, gcost, gsinu, gcosu, gsinv, gcosv, gsinf, gcosf
 
 def angle (glam, gphi, nperio, cd_type='T') :
     '''Computes sinus and cosinus of model line direction with
     respect to east
     '''
-    PushStack ( f'angle (glam, gphi, {nperio=}, {cd_type=} ) ')
+    push_stack ( f'angle (glam, gphi, {nperio=}, {cd_type=} ) ')
     mmath = __mmath__ (glam)
     ax, ix = __find_axis__ (glam, 'x')
     ay, iy = __find_axis__ (glam, 'y')
@@ -2038,7 +2153,7 @@ def angle (glam, gphi, nperio, cd_type='T') :
         gsin = gsin.assign_coords ( glam.coords )
         gcos = gcos.assign_coords ( glam.coords )
 
-    PopStack ( 'angle' )
+    pop_stack ( 'angle' )
     return gsin, gcos
 
 def rot_en2ij ( u_e, v_n, gsin, gcos, nperio, cd_type='T' ) :
@@ -2047,14 +2162,14 @@ def rot_en2ij ( u_e, v_n, gsin, gcos, nperio, cd_type='T' ) :
 
     All components are on the same grid (T, U, V or F)
     '''
-    PushStack ( f'rot_en2ij ( u_e, v_n, gsin, gcos, nperio, {cd_type=} )' )
+    push_stack ( f'rot_en2ij ( u_e, v_n, gsin, gcos, nperio, {cd_type=} )' )
     u_i = + u_e * gcos + v_n * gsin
     v_j = - u_e * gsin + v_n * gcos
 
     u_i = lbc (u_i, nperio=nperio, cd_type=cd_type, psgn=-1.0)
     v_j = lbc (v_j, nperio=nperio, cd_type=cd_type, psgn=-1.0)
 
-    PopStack ( 'rot_en2ij' )
+    pop_stack ( 'rot_en2ij' )
     return u_i, v_j
 
 def rot_ij2en ( u_i, v_j, gsin, gcos, nperio, cd_type='T' ) :
@@ -2063,14 +2178,14 @@ def rot_ij2en ( u_i, v_j, gsin, gcos, nperio, cd_type='T' ) :
 
     All components are on the same grid (T, U, V or F)
     '''
-    PushStack ( f'rot_ij2en ( u_i, v_j, gsin, gcos, {nperio=}, {cd_type=} )' )
+    push_stack ( f'rot_ij2en ( u_i, v_j, gsin, gcos, {nperio=}, {cd_type=} )' )
     u_e = + u_i * gcos - v_j * gsin
     v_n = + u_i * gsin + v_j * gcos
 
     u_e = lbc (u_e, nperio=nperio, cd_type=cd_type, psgn=1.0)
     v_n = lbc (v_n, nperio=nperio, cd_type=cd_type, psgn=1.0)
 
-    PopStack ( 'rot_ij2en' )
+    pop_stack ( 'rot_ij2en' )
     return u_e, v_n
 
 def rot_uv2en ( uo, vo, gsint, gcost, nperio, zdim=None ) :
@@ -2082,7 +2197,7 @@ def rot_uv2en ( uo, vo, gsint, gcost, nperio, zdim=None ) :
     
     Returns east-north components on the T grid point
     '''
-    PushStack ( f'rot_uv2en ( uo, vo, gsint, gcost, {nperio=}, {zdim=} )' )
+    push_stack ( f'rot_uv2en ( uo, vo, gsint, gcost, {nperio=}, {zdim=} )' )
     ut = u2t (uo, nperio=nperio, psgn=-1.0, zdim=zdim)
     vt = v2t (vo, nperio=nperio, psgn=-1.0, zdim=zdim)
 
@@ -2092,7 +2207,7 @@ def rot_uv2en ( uo, vo, gsint, gcost, nperio, zdim=None ) :
     u_e = lbc (u_e, nperio=nperio, cd_type='T', psgn=1.0)
     v_n = lbc (v_n, nperio=nperio, cd_type='T', psgn=1.0)
 
-    PopStack ( 'rot_uv2en' )
+    pop_stack ( 'rot_uv2en' )
     return u_e, v_n
 
 def rot_uv2enf ( uo, vo, gsinf, gcosf, nperio, zdim=None ) :
@@ -2104,7 +2219,7 @@ def rot_uv2enf ( uo, vo, gsinf, gcosf, nperio, zdim=None ) :
     
     Returns east-north components on the F grid point
     '''
-    PushStack ( f'rot_uv2enf ( uo, vo, gsint, gcost, {nperio=}, {zdim=} )' )
+    push_stack ( f'rot_uv2enf ( uo, vo, gsint, gcost, {nperio=}, {zdim=} )' )
     uf = u2f (uo, nperio=nperio, psgn=-1.0, zdim=zdim)
     vf = v2f (vo, nperio=nperio, psgn=-1.0, zdim=zdim)
 
@@ -2114,13 +2229,13 @@ def rot_uv2enf ( uo, vo, gsinf, gcosf, nperio, zdim=None ) :
     u_e = lbc (u_e, nperio=nperio, cd_type='F', psgn= 1.0)
     v_n = lbc (v_n, nperio=nperio, cd_type='F', psgn= 1.0)
 
-    PopStack ( 'rot_uv2enf' )
+    pop_stack ( 'rot_uv2enf' )
     return u_e, v_n
 
 def u2t (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     '''Interpolates an array from U grid to T grid (i-mean)
     '''
-    PushStack ( f'u2t (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'u2t (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (utab)
     utab_0 = mmath.where ( np.isnan(utab), 0., utab)
     #lperio, aperio = lbc_diag (nperio)
@@ -2148,13 +2263,13 @@ def u2t (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
             if az != zdim :
                 ttab = ttab.rename( {az:zdim})
                 
-    PopStack ( 'u2t' )
+    pop_stack ( 'u2t' )
     return ttab
 
 def v2t (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     '''Interpolates an array from V grid to T grid (j-mean)
     '''
-    PushStack ( f'v2t (vtab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'v2t (vtab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (vtab)
     #lperio, aperio = lbc_diag (nperio)
     vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
@@ -2181,13 +2296,13 @@ def v2t (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
             if az != zdim :
                 ttab = ttab.rename( {az:zdim})
                 
-    PopStack ( 'v2t' )
+    pop_stack ( 'v2t' )
     return ttab
 
 def f2t (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     '''Interpolates an array from F grid to T grid (i- and j- means)
     '''
-    PushStack ( f'f2t (ftab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'f2t (ftab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (ftab)
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
@@ -2196,13 +2311,13 @@ def f2t (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
 
     ttab = lbc_del (ttab, nperio=nperio, cd_type='T', psgn=psgn)
     
-    PopStack ( 'f2t' )
+    pop_stack ( 'f2t' )
     return ttab
 
 def t2u (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     '''Interpolates an array from T grid to U grid (i-mean)
     '''
-    PushStack ( f't2u (ttab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f't2u (ttab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
 
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
@@ -2229,13 +2344,13 @@ def t2u (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
             if az != zdim :
                 utab = utab.rename( {az:zdim})
 
-    PopStack ( 't2u' )
+    pop_stack ( 't2u' )
     return utab
 
 def t2v (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     '''Interpolates an array from T grid to V grid (j-mean)
     '''
-    PushStack ( f't2v (ttab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f't2v (ttab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , nperio=nperio, cd_type='T', psgn=psgn)
@@ -2261,13 +2376,13 @@ def t2v (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
             if az != zdim :
                 vtab = vtab.rename( {az:zdim})
  
-    PopStack ( 't2v' )
+    pop_stack ( 't2v' )
     return vtab
 
 def v2f (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     '''Interpolates an array from V grid to F grid (i-mean)
     '''
-    PushStack ( f'v2f (vtab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'v2f (vtab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (vtab)
     vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0 , nperio=nperio, cd_type='V', psgn=psgn)
@@ -2295,13 +2410,13 @@ def v2f (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
 
     ftab = lbc_del (ftab, nperio=nperio, cd_type='F', psgn=psgn)
     
-    PopStack ( 'v2f' )
+    pop_stack ( 'v2f' )
     return ftab
 
 def u2f (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     '''Interpolates an array from U grid to F grid i-mean)
     '''
-    PushStack ( f'u2f (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'u2f (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (utab)
     utab_0 = mmath.where ( np.isnan(utab), 0., utab)
     utab_0 = lbc_add (utab_0 , nperio=nperio, cd_type='U', psgn=psgn)
@@ -2327,13 +2442,13 @@ def u2f (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
             if az != zdim :
                 ftab = ftab.rename( {az:zdim})
     
-    PopStack ( 'u2f' )
+    pop_stack ( 'u2f' )
     return ftab
 
 def t2f (ttab, nperio=None, psgn=1.0, zdim=None, action='mean') :
     '''Interpolates an array on T grid to F grid (i- and j- means)
     '''
-    PushStack ( f't2f (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f't2f (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , nperio=nperio, cd_type='T', psgn=psgn)
@@ -2342,13 +2457,13 @@ def t2f (ttab, nperio=None, psgn=1.0, zdim=None, action='mean') :
 
     ftab = lbc_del (ftab, nperio=nperio, cd_type='F', psgn=psgn) 
 
-    PopStack ( 'v2f' )
+    pop_stack ( 'v2f' )
     return ftab
 
 def f2u (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     '''Interpolates an array on F grid to U grid (j-mean)
     '''
-    PushStack ( f'f2u (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'f2u (utab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (ftab)
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
@@ -2372,13 +2487,13 @@ def f2u (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
         if zdim and az and az != zdim :
             utab = utab.rename( {az:zdim})
 
-    PopStack ( 'f2u' )
+    pop_stack ( 'f2u' )
     return utab
 
 def f2v (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     '''Interpolates an array from F grid to V grid (i-mean)
     '''
-    PushStack ( f'f2v (ftab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
+    push_stack ( f'f2v (ftab, {nperio=}, {psgn=}, {zdim=}, {action=} )' )
     mmath = __mmath__ (ftab)
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
@@ -2403,7 +2518,7 @@ def f2v (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
             if az != zdim :
                 vtab = vtab.rename( {az:zdim})
 
-    PopStack ( 'f2v' )
+    pop_stack ( 'f2v' )
     return vtab
 
 def w2t (wtab, zcoord=None, zdim=None, sval=np.nan) :
@@ -2411,7 +2526,7 @@ def w2t (wtab, zcoord=None, zdim=None, sval=np.nan) :
 
     sval is the bottom value
     '''
-    PushStack ( f'w2t (wtab, {zcoord=}, {zdim=}, {sval=} )' )
+    push_stack ( f'w2t (wtab, {zcoord=}, {zdim=}, {sval=} )' )
     mmath = __mmath__ (wtab)
     wtab_0 = mmath.where ( np.isnan(wtab), 0., wtab)
 
@@ -2432,7 +2547,7 @@ def w2t (wtab, zcoord=None, zdim=None, sval=np.nan) :
     else :
         ttab[..., -1, :, :] = sval
 
-    PopStack ( 'w2t' )
+    pop_stack ( 'w2t' )
     return ttab
 
 def t2w (ttab, zcoord=None, zdim=None, sval=np.nan, extrap_surf=False) :
@@ -2441,7 +2556,7 @@ def t2w (ttab, zcoord=None, zdim=None, sval=np.nan, extrap_surf=False) :
     sval is the surface value
     if extrap_surf==True, surface value is taken from 1st level value.
     '''
-    PushStack ( f't2w (utab, {zcoord=}, {zdim=}, {sval=}, {extrap_surf=} )' )
+    push_stack ( f't2w (utab, {zcoord=}, {zdim=}, {sval=}, {extrap_surf=} )' )
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     az, kz = __find_axis__ (ttab_0, 'z')
@@ -2466,7 +2581,7 @@ def t2w (ttab, zcoord=None, zdim=None, sval=np.nan, extrap_surf=False) :
         else :
             wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz])+1.} )
 
-    PopStack ( 't2w' )
+    pop_stack ( 't2w' )
     return wtab
 
 def fill (ptab, nperio, cd_type='T', npass=1, sval=np.nan) :
@@ -2476,7 +2591,7 @@ def fill (ptab, nperio, cd_type='T', npass=1, sval=np.nan) :
        ptab : input field to fill
        nperio, cd_type : periodicity characteristics
     '''
-    PushStack ( f'fill (ptab, {perio=}, {cd_type=}, {npass=}, {sval=} ) ')
+    push_stack ( f'fill (ptab, {perio=}, {cd_type=}, {npass=}, {sval=} ) ')
     mmath = __mmath__ (ptab)
     ax, ix = __find_axis__ (ptab, 'x')
     ay, jy = __find_axis__ (ptab, 'y')
@@ -2529,7 +2644,7 @@ def fill (ptab, nperio, cd_type='T', npass=1, sval=np.nan) :
     if do_perio :
         ztab = lbc_del (ztab, nperio=lperio)
 
-    PopStack ( 'fill' )
+    pop_stack ( 'fill' )
     return ztab
 
 def correct_uv (u, v, lat) :
@@ -2549,7 +2664,7 @@ def correct_uv (u, v, lat) :
     Outputs :
        modified eastward/nothward components to have correct polar projections in cartopy
     '''
-    PushStack (f' correct_uv (u, v, lat)')
+    push_stack (f' correct_uv (u, v, lat)')
     uv = np.sqrt (u*u + v*v)           # Original modulus
     zu = u
     zv = v * np.cos (RAD*lat)
@@ -2557,13 +2672,13 @@ def correct_uv (u, v, lat) :
     uc = zu*uv/zz
     vc = zv*uv/zz      # Final corrected values
 
-    PopStack ( 'correct_uv' )
+    pop_stack ( 'correct_uv' )
     return uc, vc
 
 def norm_uv (u, v) :
     '''Returns norm of a 2 components vector
     '''
-    PushStack ( 'norm_uv (u, v)' )
+    push_stack ( 'norm_uv (u, v)' )
     zz = np.sqrt (u*u + v*v)
     Poptack ( 'norm_uv' )
     return zz
@@ -2571,45 +2686,77 @@ def norm_uv (u, v) :
 def normalize_uv (u, v) :
     '''Normalizes 2 components vector
     '''
-    PushStack ( 'normalize_uv (u, v)' )
+    push_stack ( 'normalize_uv (u, v)' )
     uv = norm_uv (u, v)
     uu = u/uv
     vv = v/uv
-    PopStack ( 'normalize_uv' )
+    pop_stack ( 'normalize_uv' )
     return uu, vv
 
-def msf (vv, e1v_e3v, plat1d, depthw) :
+
+def zonmean (var, bb, plat1d, ldims=UDIMS) :
+    '''Computes the meridonal stream function
+
+    var : var
+    bb  : volume
+    '''
+    push_stack ( 'zonmean (vv, bb, plat1d)' )
+
+    ax, ix = __find_axis__ (var, 'x')
+    ay, jy = __find_axis__ (var, 'y')
+    az, kz = __find_axis__ (var, 'z')
+    
+    new_az = UDIMS['z']
+
+    if OPTIONS['Debug'] : print ('zonal mean of volume')
+    zon_bb  = unify_dims (bb, **ldims).sum(dim=ldims['x'], keep_attrs=True)
+    if OPTIONS['Debug'] : print ('zonal mean of variable')
+    zon_var = (unify_dims(var,**ldims)*unify_dims(bb,**ldims)).sum(dim=ldims['x'], keep_attrs=True) / zon_bb
+
+    if OPTIONS['Debug'] : print ( 'Change coords')
+    zon_var = zon_var.assign_coords ( {ldims['y']:(ldims['y'], plat1d.values)} )
+    #zon_var = zon_var.rename ( {ldims['y']:'lat'} )
+
+    zon_var = zon_var.rename ({ay:'lat'})
+    if az != new_az : zon_var = zon_var.rename ({az:new_az})
+
+    zon_var.attrs.update (var.attrs)
+    zon_var.attrs ['long_name'] = zon_var.attrs ['standard_name'] + ' - zonal mean'
+    zon_var.lat.attrs = plat1d.attrs
+
+    pop_stack ( 'zon' )
+    return zon_var
+
+def msf (vv, e1v_e3v, plat1d, depthw, south=None, ldims=UDIMS) :
     '''Computes the meridonal stream function
 
     vv : meridional_velocity
-    e1v_e3v : prodcut of scale factors e1v*e3v
+    e1v_e3v : product of scale factors e1v*e3v
     '''
-    PushStack ( 'msf (vv, e1v_e3v, plat1d, depthw)' )
-    v_e1v_e3v = vv * e1v_e3v
+    push_stack ( 'msf (vv, e1v_e3v, plat1d, depthw)' )
+    v_e1v_e3v = unify_dims(vv, **ldims) * unify_dims(e1v_e3v, **ldims)
     v_e1v_e3v.attrs = vv.attrs
 
     ax, ix = __find_axis__ (v_e1v_e3v, 'x')
     az, kz = __find_axis__ (v_e1v_e3v, 'z')
-    if az == 'olevel' : new_az = 'olevel'
-    else              : new_az = 'depthw'
 
     zomsf = -v_e1v_e3v.cumsum (dim=az, keep_attrs=True).sum (dim=ax, keep_attrs=True)*1.E-6
-    zomsf = zomsf - zomsf.isel ( { az:-1} )
+    zomsf = zomsf - zomsf.isel ({ az:-1})
 
     ay = __find_axis__ (zomsf, 'y' )[0]
-    zomsf = zomsf.assign_coords ( {az:depthw.values, ay:plat1d.values})
-
-    zomsf = zomsf.rename ( {ay:'lat'})
-    if az != new_az :
-        zomsf = zomsf.rename ( {az:new_az} )
+    zomsf = zomsf.assign_coords ({az:depthw.values, ay:plat1d.values})
+    zomsf = zomsf.rename ({ay:'lat'})
     
     zomsf.attrs ['standard_name'] = 'Meridional stream function'
-    zomsf.attrs ['long_name'] = 'Meridional stream function'
-    zomsf.attrs ['units'] = 'Sv'
-    zomsf [new_az].attrs  = depthw.attrs
-    zomsf.lat.attrs=plat1d.attrs
+    zomsf.attrs ['long_name']     = 'Meridional stream function'
+    zomsf.attrs ['units']         = 'Sv'
+    zomsf [az].attrs  = depthw.attrs
+    zomsf.lat.attrs = plat1d.attrs
 
-    PopStack ( 'msf' )
+    if south :
+        zomsf = zomsf.where (zomsf.lat > south, np.nan)
+
+    pop_stack ( 'msf' )
     return zomsf
 
 def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None) :
@@ -2618,7 +2765,7 @@ def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None) :
     
     Known case (name) : nadw, aabw, npdw, deacon
     '''
-    PushStack ( f'zmsf_index (zmsf, {name=}, {latname=}, lat)' )
+    push_stack ( f'zmsf_index (zmsf, {name=}, {latname=}, lat)' )
 
     if name == "nadw"   :
         zlim = slice( 500,4000) ; ylim = slice( 11, 55) ; long_name = 'North Atlantic Deep Water'
@@ -2649,7 +2796,7 @@ def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None) :
     index_ocean.name = f'{name}_ocean'
     index_ocean.attrs.update (zmsf.attrs)
     index_ocean.attrs.update ({'long_name':long_name})
-    PopStack ('zmsf_index')
+    pop_stack ('zmsf_index')
     return index_ocean
 
 def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
@@ -2661,7 +2808,7 @@ def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
     (ex: bsf0={'x':3, 'y':120} for orca2,
          bsf0={'x':5, 'y':300} for eORCA1
     '''
-    PushStack ( f'bsf (uu, e2u_e3u, mask, {nperio=}, {bsf0=} )' )
+    push_stack ( f'bsf (uu, e2u_e3u, mask, {nperio=}, {bsf0=} )' )
     
     u_e2u_e3u       = uu * e2u_e3u
     u_e2u_e3u.attrs = uu.attrs
@@ -2682,7 +2829,7 @@ def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
     zbsf.attrs['units']         = 'Sv'
     zbsf = lbc (zbsf, nperio=nperio, cd_type='F')
 
-    PopStack ( 'bsf' )
+    pop_stack ( 'bsf' )
     return zbsf
 
 if f90nml :
@@ -2699,7 +2846,7 @@ if f90nml :
         flat : only for dict output. Output a flat dictionary with all values.
 
         '''
-        PushStack ( f'namelist_read (ref, cfg, {out=}, {flat=})' )
+        push_stack ( f'namelist_read (ref, cfg, {out=}, {flat=})' )
         if ref :
             if isinstance (ref, str) :
                 nml_ref = f90nml.read (ref)
@@ -2750,7 +2897,7 @@ if f90nml :
                             xr_namelist[value] = nml[nam][value]
                         if OPTIONS['Debug'] : print (nam, ':', value, ':', nml[nam][value])
 
-        PopStack ( 'namelist_read' )
+        pop_stack ( 'namelist_read' )
         if out == 'dict' :
             return dict_namelist
         if out == 'xr'   :
@@ -2762,26 +2909,26 @@ else :
         namelist_read : 
         Read NEMO namelist(s) and return either a dictionnary or an xarray dataset
         '''
-        PushStack ( f'namelist_read [void version] (ref, cfg, {out=}, {flat=})' )
+        push_stack ( f'namelist_read [void version] (ref, cfg, {out=}, {flat=})' )
 
         print ( 'Error : module f90nml not found' )
         print ( 'Cannot call namelist_read' )
         print ( 'Call parameters where : ')
         print ( f'{err=} {ref=} {cfg=} {out=} {flat=}' )
-        PopStack ( 'namelist_read [void version]' )
+        pop_stack ( 'namelist_read [void version]' )
 
 def fill_closed_seas (imask, nperio=None,  cd_type='T') :
     '''Fill closed seas with image processing library
 
     imask : mask, 1 on ocean, 0 on land
     '''
-    PushStack ( f'fill_closed_seas (imask, {nperio=}, {cd_type=} )' )
+    push_stack ( f'fill_closed_seas (imask, {nperio=}, {cd_type=} )' )
     from scipy import ndimage
 
     imask_filled = ndimage.binary_fill_holes ( lbc (imask, nperio=nperio, cd_type=cd_type))
     imask_filled = lbc ( imask_filled, nperio=nperio, cd_type=cd_type)
 
-    PopStack ( 'fill_closed_seas' )
+    pop_stack ( 'fill_closed_seas' )
     return imask_filled
 
 # ======================================================
@@ -2850,7 +2997,7 @@ def rhop (ptemp, psal) :
 
     Computation from NEMO code
     '''
-    PushStack ( 'rhop ( ptemp, psal )' )
+    push_stack ( 'rhop ( ptemp, psal )' )
     zt      = ptemp * R1_T0                                  # Temperature (°C)
     zs      = np.sqrt ( np.abs( psal + RDELTAS ) * R1_S0 )   # Square root of salinity (PSS)
     #
@@ -2863,15 +3010,15 @@ def rhop (ptemp, psal) :
          + ((((EOS510*zs + EOS410)*zs + EOS310)*zs + EOS210)*zs + EOS110)*zs + EOS010)*zt
          + (((((EOS600*zs+ EOS500)*zs + EOS400)*zs + EOS300)*zs + EOS200)*zs + EOS100)*zs + EOS000 )
     #
-    PopStack ( 'rhop' )
+    pop_stack ( 'rhop' )
     return prhop
 
-def rho ( pdep, ptemp, psal ) :
+def rho (pdep, ptemp, psal) :
     '''Returns in situ density
 
     Computation from NEMO code
     '''
-    PushStack ( 'rho ( ptemp, psal) ' )
+    push_stack ( 'rho ( ptemp, psal) ' )
     zh      = pdep  * R1_Z0                                  # Depth (m)
     zt      = ptemp * R1_T0                                  # Temperature (°C)
     zs      = np.sqrt ( np.abs( psal + RDELTAS ) * R1_S0 )   # Square root salinity (PSS)
@@ -2899,7 +3046,7 @@ def rho ( pdep, ptemp, psal ) :
     #
     prho  = ( ( zn3 * zh + zn2 ) * zh + zn1 ) * zh + zn0
     #
-    PopStack ( 'rho' )
+    pop_stack ( 'rho' )
     return prho
 
 ## ===========================================================================

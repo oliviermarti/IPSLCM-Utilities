@@ -90,21 +90,7 @@ CLENGTH  = [ 16002, ]
 ZLENGTH  = [ 39, 59, 79, ]
 
 # lmdz internal options
-#import warnings
-#from typing import TYPE_CHECKING, Literal, TypedDict
-
-#Stack = list()
-
-# if TYPE_CHECKING :
-#     Options = Literal [ "Debug", "Trace", "Depth", "Stack" ]
-
-#     class T_Options (TypedDict) :
-#         Debug = bool
-#         Trace = bool
-#         Depth = int
-#         Stack = list()
-
-OPTIONS = { 'Debug':False, 'Trace':False, 'Depth':None, 'Stack':None }
+OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,  }
 
 class set_options :
     """
@@ -141,20 +127,44 @@ def get_options () -> dict :
 def return_stack () :
     return OPTIONS['Stack']
 
-def PushStack (string:str) :
+def push_stack (string:str) :
     if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
     else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'-->{__name__}.{string}' )
+    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
     if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
     else                : OPTIONS['Stack'] = [string,]
+    #
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
+        else :
+            OPTIONS['t0'] = [ time.time(), ]
 
-def PopStack (string:str) :
-    if OPTIONS['Trace'] : print ( '  '*OPTIONS['Depth'], f'<--{__name__}.{string}')
+def pop_stack (string:str) :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
+    else :
+        dt = None
+    if OPTIONS['Trace'] or dt :
+        if dt : 
+            if dt < 1e-3 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            if dt >= 1e-3 and dt < 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+            if dt >= 1 : 
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+        else : 
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+    #
     OPTIONS['Depth'] -= 1
     if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
     OPTIONS['Stack'].pop ()
     if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    #
+
+## ==========================================================================
 
 def __mmath__ (ptab, default=None) :
     '''
@@ -162,18 +172,18 @@ def __mmath__ (ptab, default=None) :
 
     Returns type : xr, np or np.ma
     '''
-    PushStack ( f'__mmath__ ( ptab, {default=} )' )
+    push_stack ( f'__mmath__ ( ptab, {default=} )' )
     mmath = default
     if isinstance (ptab, xr.core.dataarray.DataArray) : mmath = xr
     if isinstance (ptab, np.ndarray)                  : mmath = np
     if isinstance (ptab, np.ma.MaskType)              : mmath = np.ma
         
-    PopStack ( f'__math_ : {mmath}' )
+    pop_stack ( f'__math_ : {mmath}' )
     return mmath
 
 def __find_axis__ (ptab, axis='z', back=True) :
     '''Returns name and name of the requested axis'''
-    PushStack ( f'__find_axis__ ( ptab, {axis=} {back=} )' )
+    push_stack ( f'__find_axis__ ( ptab, {axis=} {back=} )' )
 
     mmath = __mmath__ (ptab)
     ax, ix = None, None
@@ -244,14 +254,14 @@ def __find_axis__ (ptab, axis='z', back=True) :
     if ix and back :
         ix -= len(ptab.shape)
 
-    PopStack ( f'__find_axis__ ( {ax=} {ix=} )' )
+    pop_stack ( f'__find_axis__ ( {ax=} {ix=} )' )
     return ax, ix
 
 def find_axis ( ptab, axis='z', back=True ) :
     '''Version of find_axis with no __'''
-    PushStack ( f'find_axis__ ( ptab {axis=} {back=} )' )
+    push_stack ( f'find_axis__ ( ptab {axis=} {back=} )' )
     ix, xx = __find_axis__ (ptab, axis, back, verbose)
-    PopStack ( f'find_axis ( {ax=} {ix=} )' )
+    pop_stack ( f'find_axis ( {ax=} {ix=} )' )
     return xx, ix
 
 def get_shape ( ptab ) :
@@ -262,7 +272,7 @@ def get_shape ( ptab ) :
     X is missing for on longitudinal slice
     etc ...
     '''
-    PushStack ( f'get_shape ( ptab) ' )
+    push_stack ( f'get_shape ( ptab) ' )
 
     g_shape = ''
     if __find_axis__ (ptab, 'x')[0] : g_shape = 'X'
@@ -271,7 +281,7 @@ def get_shape ( ptab ) :
     if __find_axis__ (ptab, 'z')[0] : g_shape = 'Z' + g_shape
     if __find_axis__ (ptab, 't')[0] : g_shape = 'T' + g_shape
 
-    PushStack ( f'get_shape : {g_shape=} ' )
+    push_stack ( f'get_shape : {g_shape=} ' )
     return g_shape
 
 #
@@ -286,7 +296,7 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
         size of the field != jpi (avoid to extend several times)
     jplus (optional, default=25) : number of points added on the east side of the field
     '''
-    PushStack ( f'extend (tab, {Lon=}, {jplus=}, {jpi=}, {lonplus=})' )
+    push_stack ( f'extend (tab, {Lon=}, {jplus=}, {jpi=}, {lonplus=})' )
 
     math = __mmath__ (tab)
     if tab.shape[-1] == 1 :
@@ -318,7 +328,7 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
                 ztab = np.concatenate ((tab    [..., istart:istart+le],
                                         tab    [..., istart+la:jplus]+xplus  ), axis=-1)
 
-    PopStack ( f'extend ' )
+    pop_stack ( f'extend ' )
     return ztab
 
 def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
@@ -340,7 +350,7 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
 
            Warning : xp should be decreasing values along zdim axis
     '''
-    PushStack ( f'interp1d (x, xp, yp, {zdim=}, {units=}, {method=})' )
+    push_stack ( f'interp1d (x, xp, yp, {zdim=}, {units=}, {method=})' )
 
     # Get the number of dimension with dim==zdim in input array
     axis = list (yp.dims).index(zdim)
@@ -399,7 +409,7 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
     def __interp (x, xp, yp, pdim='presnivs') :
         # Interpolate
         # Find index of the just above level
-        PushStack ( f'interp1d.__interp (x, xp, yp, {pdim=})' )
+        push_stack ( f'interp1d.__interp (x, xp, yp, {pdim=})' )
 
         #if OPTIONS['Debug'] :
         #    print ( f'{x.shape=} {x.dims=} {xp.shape=} {yp.shape=}' )
@@ -431,7 +441,7 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
         if 'nearest' in method :
             result = xr.where ( dx2>=dx1, y1, y2)
 
-        PopStack ( f'interp1d.__interp' )
+        pop_stack ( f'interp1d.__interp' )
         return result
 
     for k in np.arange (nk_ou) :
@@ -441,7 +451,7 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
         # Put result in the final array
         ou_tab [{pdim:k}] = result
 
-    PopStack ( f'interp1d' )
+    pop_stack ( f'interp1d' )
     return ou_tab.squeeze()
 
 def correct_uv (u, v, lon, lat) :
@@ -461,7 +471,7 @@ def correct_uv (u, v, lon, lat) :
     Outputs :
        modified eastward/nothward components to have correct polar projections in cartopy
     '''
-    PushStack ( f'correct_uv (u, v, lon, lat)' )
+    push_stack ( f'correct_uv (u, v, lon, lat)' )
     
     uv = np.sqrt (u*u + v*v)           # Original modulus
     zu = u
@@ -476,7 +486,7 @@ def correct_uv (u, v, lon, lat) :
     vc[..., -1, :] = np.nan #np.nan
     # Keep only one value at poles
 
-    PopStack ( f'correct_uv' )
+    pop_stack ( f'correct_uv' )
     return uc, vc
 
 def fixed_lon (lon, center_lon=0.0) :
@@ -487,7 +497,7 @@ def fixed_lon (lon, center_lon=0.0) :
 
     Designed by Phil Pelson. See https://gist.github.com/pelson/79cf31ef324774c97ae7
     '''
-    PushStack ( f'fixed_lon (lon {center_lon=})' )
+    push_stack ( f'fixed_lon (lon {center_lon=})' )
 
     mmath = __mmath__ (lon)
 
@@ -499,23 +509,23 @@ def fixed_lon (lon, center_lon=0.0) :
     start = np.argmax (np.abs (np.diff (zfixed_lon, axis=-1)) > 180., axis=-1)
     zfixed_lon [start+1:] += 360.
 
-    PopStack ( f'fixed_lon' )
+    pop_stack ( f'fixed_lon' )
     return zfixed_lon
 
 def nord2sud (p2d) :
     '''
     Swap north to south a 2D field
     '''
-    PopStack ( f'nord2sud (p2d)' )
+    pop_stack ( f'nord2sud (p2d)' )
     z2d_inv = p2d[..., -1::-1, : ]
-    PopStack ( f'nord2sud' )
+    pop_stack ( f'nord2sud' )
     return z2d_inv 
 
 def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell' ) :
     '''
     Rename dimensions to unify them between LMDZ versions
     '''
-    PushStack ( f'unify_dims ( dd, {x=}, {y=}, {z=}, {t=}, {c=} )' )
+    push_stack ( f'unify_dims ( dd, {x=}, {y=}, {z=}, {t=}, {c=} )' )
 
     for xx in XNAME :
         if xx in dd.dims and xx != x :
@@ -542,7 +552,7 @@ def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell' ) :
             if OPTIONS['Debug'] : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
-    PopStack ( f'unify_dims' )
+    pop_stack ( f'unify_dims' )
     return dd
 
 def add_cyclic (ptab, x, y, axis=-1, cyclic=360, precision=0.0001) :
@@ -553,7 +563,7 @@ def add_cyclic (ptab, x, y, axis=-1, cyclic=360, precision=0.0001) :
 
     Use cartopy.util.add_cyclic
     '''
-    PushStack ( f'add_cyclic ({ptab.shape=} {axis=} {cyclic=} {precision=} )' )
+    push_stack ( f'add_cyclic ({ptab.shape=} {axis=} {cyclic=} {precision=} )' )
 
     #yy1, xx1 = xr.broadcast (y, x)
     xx1=x
@@ -571,7 +581,7 @@ def add_cyclic (ptab, x, y, axis=-1, cyclic=360, precision=0.0001) :
 
     ztab = xr.DataArray (ztab, dims=ptab.dims, coords=new_coords)
 
-    PopStack ( f'add_cyclic' )
+    pop_stack ( f'add_cyclic' )
     return ztab, xx, yy
 
 def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, lon_name=None, lat_name=None) :
@@ -583,7 +593,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
     if lon/lat is True, add longitude/latitude values (regular grid), with name lon_name (or 'lon' if lon_name not defined)
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
-    PushStack ( f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}, {lon_name=}, {lat_name=}) ' )
+    push_stack ( f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}, {lon_name=}, {lat_name=}) ' )
     
     math = __mmath__ (p1d)
 
@@ -688,7 +698,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
             if __mmath__ (lat) == xr : p2d[lon_name].attrs.update ( lat.attrs )
             else                     : p2d[lat_name].attrs.update ( { 'units':'degrees_north', 'long_name':'Latitude' , 'standard_name':'latitude' , 'axis':'Y' }  )
 
-    PopStack ( f'point2geo')
+    pop_stack ( f'point2geo')
     return p2d
 
 def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=None, share_pole=False, lon_name=None, lat_name=None, lev_name=None) :
@@ -700,7 +710,7 @@ def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=Non
     if lon/lat is True, add longitude/latitude values (regular grid), with name lon_name (or 'lon' if lon_name not defined)
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
-    PushStack ( f'point3geo (p1d, {lon=}, {lat=}, {lev=}, {jpi=}, {jpj=}, {jpk=}, {share_pole=}, {lon_name=}, {lat_name=}, {lev_name=}) ' )
+    push_stack ( f'point3geo (p1d, {lon=}, {lat=}, {lev=}, {jpi=}, {jpj=}, {jpk=}, {share_pole=}, {lon_name=}, {lat_name=}, {lev_name=}) ' )
     math = __mmath__ (p1d)
 
     # Get the horizontal dimension
@@ -765,14 +775,14 @@ def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=Non
             #else : 
             #    p2d[lon_name].attrs.update ( { 'units':'degrees_east' , 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' } )
 
-    PushStack ( f'point3geo')
+    push_stack ( f'point3geo')
     return p3d
 
 def geo2point ( p2d, cumul_poles=False, dim1d='points_physiques' ) :
     '''
     From 2D [..., lat, lon] to 1D [..., points_phyiques]
     '''
-    PushStack ( f'geo2point ( p2d, {cumul_poles=}, {dim1d=} )' )
+    push_stack ( f'geo2point ( p2d, {cumul_poles=}, {dim1d=} )' )
     math = __mmath__ (p2d)
     #
     # Get the horizontal dimensions
@@ -806,7 +816,7 @@ def geo2point ( p2d, cumul_poles=False, dim1d='points_physiques' ) :
                 p1d = p1d.assign_coords ( {p1d.dims[idim] :p2d.coords[dim].values} )
         p1d = p1d.rename ( {p1d.dims[-1]:dim1d} )
 
-    PopStack ( f'geo2point' )
+    pop_stack ( f'geo2point' )
     return p1d
 
 def geo2en (pxx, pyy, pzz, glam, gphi) :
@@ -817,7 +827,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         pxx, pyy, pzz : components on the geocentric system
         glam, gphi : longitude and latitude of the points
     '''
-    PushStack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
+    push_stack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
     gsinlon = np.sin (RAD * glam)
     gcoslon = np.cos (RAD * glam)
     gsinlat = np.sin (RAD * gphi)
@@ -826,7 +836,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
 
-    PopStack ( f'geo2en ')
+    pop_stack ( f'geo2en ')
     return pte, ptn
 
 def en2geo (pte, ptn, glam, gphi) :
@@ -837,7 +847,7 @@ def en2geo (pte, ptn, glam, gphi) :
         pte, ptn : eastward/northward components
         glam, gphi : longitude and latitude of the points
     '''
-    PushStack ( f'en2geo (pte, ptn, glam, gphi)' )
+    push_stack ( f'en2geo (pte, ptn, glam, gphi)' )
     gsinlon = np.sin (RAD * glam)
     gcoslon = np.cos (RAD * glam)
     gsinlat = np.sin (RAD * gphi)
@@ -847,7 +857,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
     pzz =   ptn * gcoslat
 
-    PopStack ( 'geo2en')
+    pop_stack ( 'geo2en')
     return pxx, pyy, pzz
 
 def limit_blon (blon, clon, lon_cen=0) :
@@ -855,7 +865,7 @@ def limit_blon (blon, clon, lon_cen=0) :
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
     '''
-    PushStack ( f'limit_blon (blon, clon, {lon_cen=})' )
+    push_stack ( f'limit_blon (blon, clon, {lon_cen=})' )
     lon_min = lon_cen-180. ; lon_max = lon_cen+180.
     
     clon  = (clon+360.*10.)%360
@@ -870,7 +880,7 @@ def limit_blon (blon, clon, lon_cen=0) :
     blon = np.where (np.greater(abs(blon-clon1), abs(blon+360. -clon1)), blon+360., blon)
     blon = np.where (np.greater(abs(blon-clon1), abs(blon-360. -clon1)), blon-360., blon)
 
-    PopStack ( 'limit_blon' )
+    pop_stack ( 'limit_blon' )
     return blon, clon
 
 def limit_lon (clon, lon_cen=0) :
@@ -878,7 +888,7 @@ def limit_lon (clon, lon_cen=0) :
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
     '''
-    PushStack ( f'limit_lon (clon, {lon_cen})' )
+    push_stack ( f'limit_lon (clon, {lon_cen})' )
     lon_min = lon_cen-180. ; lon_max = lon_cen+180.
     
     clon  = (clon+360.*10.)%360
