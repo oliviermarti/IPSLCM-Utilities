@@ -33,14 +33,37 @@ Color.ShadingHexa = list ( map ( lambda x: color2hex (*x), Color.Shading ) )
 
 # Lines
 Color.Line = [
-    np.array ([  0,   0,   0])/255, 
-    np.array ([112, 160, 205])/255, 
-    np.array ([196, 121,   0])/255, 
-    np.array ([178, 178, 178])/255, 
+    np.array ([  0,   0,   0])/255,
+    np.array ([112, 160, 205])/255,
+    np.array ([196, 121,   0])/255,
+    np.array ([178, 178, 178])/255,
+    np.array ([  0,  52, 102])/255,
+    np.array ([  0,  79,   0])/255,
+    np.array ([  0,   0,   0])/255,
+    np.array ([112, 160, 205])/255,
+    np.array ([196, 121,   0])/255,
+    np.array ([178, 178, 178])/255,
     np.array ([  0,  52, 102])/255,
     np.array ([  0,  79,   0])/255 ]
 
+
 Color.LineHexa = list ( map ( lambda x: color2hex (*x), Color.Line ) )
+
+# Markers
+Marker = [
+    {"marker":"p", "fillstyle":"full"},
+    {"marker":"s", "fillstyle":"full"},
+    {"marker":"^", "fillstyle":"full"},
+    {"marker":"v", "fillstyle":"full"},
+    {"marker":"<", "fillstyle":"full"},
+    {"marker":">", "fillstyle":"full"},
+    {"marker":"p", "fillstyle":"none"},
+    {"marker":"s", "fillstyle":"none"},
+    {"marker":"^", "fillstyle":"none"},
+    {"marker":"v", "fillstyle":"none"},
+    {"marker":"<", "fillstyle":"none"},
+    {"marker":">", "fillstyle":"none"}, ]
+
 
 # RCPs
 RCP = types.SimpleNamespace ()

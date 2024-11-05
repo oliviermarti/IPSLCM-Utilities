@@ -28,6 +28,71 @@ import sys, numpy as np, xarray as xr
 
 rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
 
+class Container :
+    ''' 
+    Void class to act as a container
+    Class members can be accessed either with dictionnary or namespace syntax
+       i.e  <Container>['member'] or <Container>.member
+    '''
+    def update (self, dico=None, **kwargs):
+        '''Use a dictionnary to update values'''
+        if dico : 
+            for attr in dico.keys () : super().__setattr__(attr, dico[attr])
+        self.__dict__.update (kwargs)
+    def keys    (self) : return self.__dict__.keys()
+    def values  (self) : return self.__dict__.values()
+    def items   (self) : return self.__dict__.items()
+    def dict    (self) : return self.__dict__
+    ## Hidden functions
+    def __str__     (self) : return str  (self.__dict__)
+    def __repr__    (self) : return repr (self.__dict__)
+    def __name__    (self) : return self.__class__.__name__
+    def __getitem__ (self, attr) : return getattr (self, attr)
+    def __setitem__ (self, attr, value) : setattr (self, attr, value)
+    def __iter__    (self) : return self.__dict__.__iter__()
+    def __next__    (self) : return self.__dict__.__next__()
+    def __len__     (self) : return len (self.__dict__)
+    def __init__ (self, **kwargs) :
+        for attr, value in kwargs.items () :
+            super().__setattr__(attr, value)
+
+# Variables exchanged between ocean and atmosphere in IPSL coupled model
+o2a = [
+    ['O_SSTSST' , 'SISUTESW'] ,
+    ['OIceFrc'  , 'SIICECOV'] ,
+    ['O_TepIce' , 'SIICTEMW'] ,
+    ['O_AlbIce' , 'SIICEALW'] ,
+    ['O_OCurx1' , 'CURRENTX'] ,
+    ['O_OCury1' , 'CURRENTY'] ,
+    ['O_OCurz1' , 'CURRENTZ'] ]
+a2o = [
+    ['COTAUXXU' , 'O_OTaux1'] ,
+    ['COTAUYYU' , 'O_OTauy1'] ,
+    ['COTAUZZU' , 'O_OTauz1'] ,
+    ['COTAUXXV' , 'O_OTaux2'] ,
+    ['COTAUYYV' , 'O_OTauy2'] ,
+    ['COTAUZZV' , 'O_OTauz2'] ,
+    ['COWINDSP' , 'O_Wind10'] ,
+    ['COTOTRAI' , 'OTotRain'] ,
+    ['COTOTSNO' , 'OTotSnow'] ,
+    ['COTOTEVA' , 'OTotEvap'] ,
+    ['COICEVAP' , 'OIceEvap'] ,
+    ['COQSRMIX' , 'O_QsrMix'] ,
+    ['COQNSMIX' , 'O_QnsMix'] ,
+    ['COSHFICE' , 'O_QsrIce'] ,
+    ['CONSFICE' , 'O_QnsIce'] ]
+
+# Build dictionnaries for correspondance between ocean and atmosphere variables.
+a2o_d = Container () ; a2o_r = Container ()
+for avar, ovar in a2o :
+    a2o_d.update ({avar:ovar})
+    a2o_r.update ({ovar:avar})
+
+o2a_d = {} ; o2a_r = {}
+for ovar, avar in o2a :
+    o2a_d.update ({ovar:avar})
+    o2a_r.update ({avar:ovar})
+
 # OASIS internal options
 OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None }
 

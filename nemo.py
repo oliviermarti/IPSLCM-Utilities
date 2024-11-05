@@ -38,6 +38,10 @@ HeadURL  = "$HeadURL: $"
 import time
 import numpy as np
 import xarray as xr
+try :
+    import xcdat as xc
+except :
+    xc = None
 
 try :
     from sklearn.impute import SimpleImputer
@@ -106,16 +110,17 @@ LATNAME=['nav_lat', 'nav_lat_T', 'nav_lat_U', 'nav_lat_V', 'nav_lat_F', 'nav_lat
              'nav_lat_grid_T', 'nav_lat_grid_U', 'nav_lat_grid_V', 'nav_lat_grid_F', 'nav_lat_grid_W']
 
 ## All possibles names of dimensions in Nemo files
-XNAME = [ 'x', 'X', 'X1', 'xx', 'XX',
-              'x_grid_T', 'x_grid_U', 'x_grid_V', 'x_grid_F', 'x_grid_W',
-              'lon', 'nav_lon', 'longitude', 'X1', 'x_c', 'x_f']
-YNAME = [ 'y', 'Y', 'Y1', 'yy', 'YY',
-              'y_grid_T', 'y_grid_U', 'y_grid_V', 'y_grid_F', 'y_grid_W',
-              'lat', 'nav_lat', 'latitude' , 'Y1', 'y_c', 'y_f']
+XNAME = [ 'x_grid_W', 'x_grid_T', 'x_grid_U', 'x_grid_V', 'x_grid_F',
+          'lon', 'nav_lon', 'longitude', 'X1', 'x_c', 'x_f', 'x', 'X', 'X1', 'xx', 'XX',]
+YNAME = [ 'y_grid_W', 'y_grid_T', 'y_grid_U', 'y_grid_V', 'y_grid_F',
+          'lat', 'nav_lat', 'latitude' , 'Y1', 'y_c', 'y_f', 'y', 'Y', 'Y1', 'yy', 'YY',]
 ZNAME = [ 'z', 'Z', 'Z1', 'zz', 'ZZ', 'depth', 'tdepth', 'udepth',
-              'vdepth', 'wdepth', 'fdepth', 'deptht', 'depthu',
-              'depthv', 'depthw', 'depthf', 'olevel', 'z_c', 'z_f', ]
+          'vdepth', 'wdepth', 'fdepth', 'deptht', 'depthu',
+          'depthv', 'depthw', 'depthf', 'olevel', 'z_c', 'z_f',
+          'rho', 'rhop', 'Rho', 'Rhop', 'RHO', 'RHOP', 'sigma', 'Sigma', 'SIGMA']
 TNAME = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'time', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
+
+BNAME = [ 'bnd', 'bnds', 'bound', 'bounds' ]
 
 ## All possibles name of units of dimensions in NEMO files
 XUNIT = [ 'degrees_east', ]
@@ -129,12 +134,12 @@ YLENGTH   = [ 148, 149, 331, 332 ]
 ZLENGTH   = [ 31, 75]
 XYZLENGTH = [ [180,148,31], [182,149,31], [360,331,75], [362,332,75] ]
 
-## T, S array to plot TS diagrams
+## T, S arrays to plot TS diagrams
 Ttab = np.linspace (-2, 40, 100)
 Stab = np.linspace ( 0, 40, 100)
 
-Ttab = xr.DataArray ( Ttab, dims=('Temperature',), coords=(Ttab,) )
-Stab = xr.DataArray ( Stab, dims=('Salinity'   ,), coords=(Stab,) )
+Ttab = xr.DataArray (Ttab, dims=('Temperature',), coords=(Ttab,))
+Stab = xr.DataArray (Stab, dims=('Salinity'   ,), coords=(Stab,))
 
 Ttab.attrs.update ( {'unit':'degrees_celcius', 'long_name':'Temperature'} )
 Stab.attrs.update ( {'unit':'PSU',             'long_name':'Salinity'} )
@@ -248,11 +253,11 @@ Regions.regions = Container (
     Labrador         = Container (Basin="Labrador Sea"           , ColorLine=np.array ([112, 160, 205])/255, Marker='s' ),
     Barents          = Container (Basin="Barents Sea"            , ColorLine=np.array ([196, 121,   0])/255, Marker='^' ),
     Irminger         = Container (Basin="Irminger Sea"           , ColorLine=np.array ([178, 178, 178])/255, Marker='v' ),
-    NordicSeas       = Container (Basin="Nordic Seas"            , ColorLine=np.array ([  0,  52, 102])/255, Marker='<' ),      
+    NordicSeas       = Container (Basin="Nordic Seas"            , ColorLine=np.array ([  0,  52, 102])/255, Marker='<' ),     
     Rockal           = Container (Basin="Rockal"                 , ColorLine=np.array ([  0,  79,   0])/255, Marker='>' ),
-    MedWest          = Container (Basin="Mediterranean (west)"   , ColorLine=np.array ([255,   0,   0])/255, Marker='P' ),         
-    MedEast          = Container (Basin="Mediterranean (east)"   , ColorLine=np.array ([0  ,   0, 255])/255, Marker='x' ),      
-    Wedell           = Container (Basin="Wedell Sea"             , ColorLine=np.array ([0  ,   0, 255])/255, Marker='x' ),      
+    MedWest          = Container (Basin="Mediterranean (west)"   , ColorLine=np.array ([255,   0,   0])/255, Marker='P' ),        
+    MedEast          = Container (Basin="Mediterranean (east)"   , ColorLine=np.array ([0  ,   0, 255])/255, Marker='x' ),     
+    Wedell           = Container (Basin="Wedell Sea"             , ColorLine=np.array ([0  ,   0, 255])/255, Marker='x' ),     
     Davis            = Container (Basin="Davis Sector"           , ColorLine=np.array ([255,   0,   0])/255, Marker='p' ),
     Circum           = Container (Basin="Circum Polar"           , ColorLine=np.array ([0  , 255,   0])/255, Marker='p' ),  
     )
@@ -263,7 +268,7 @@ Regions.eORCA1 = Container (
     Labrador         = Container (index={'x':slice(226,249), 'y':slice(260,288)} ),
     Barents          = Container (index={'x':slice(270,304), 'y':slice(312,330)} ),
     Irminger         = Container (index={'x':slice(246,267), 'y':slice(260,285)} ),
-    NordicSeas       = Container (index={'x':slice(260,299), 'y':slice(283,313)} ),    
+    NordicSeas       = Container (index={'x':slice(260,299), 'y':slice(283,313)} ),
     Rockal           = Container (index={'x':slice(265,290), 'y':slice(263,283)} ),
     MedWest          = Container (index={'x':slice(285,303), 'y':slice(235,253)} ),
     MedEast          = Container (index={'x':slice(302,325), 'y':slice(233,253)} ),
@@ -278,7 +283,7 @@ Regions.ORCA2 = Container (
     Labrador         = Container (index={'x':slice(111,122), 'y':slice(112,127)} ),
     Barents          = Container (index={'x':slice(133,149), 'y':slice(134,160)} ),
     Irminger         = Container (index={'x':slice(121,131), 'y':slice(112,122)} ),
-    NordicSeas       = Container (index={'x':slice(130,150), 'y':slice(119,135)} ),     
+    NordicSeas       = Container (index={'x':slice(130,150), 'y':slice(119,135)} ),
     Rockal           = Container (index={'x':slice(130,143), 'y':slice(111,121)} ),
     MedWest          = Container (index={'x':slice(141,153), 'y':slice(100,108)} ),
     MedEast          = Container (index={'x':slice(153,179), 'y':slice( 95,105)} ),
@@ -440,10 +445,10 @@ def get_shape (ptab) :
     '''
     push_stack ( f'get_shape ( ptab )' )
     g_shape = ''
-    if __find_axis__ (ptab, 'x')[0] : g_shape = 'X'
-    if __find_axis__ (ptab, 'y')[0] : g_shape = 'Y' + g_shape
-    if __find_axis__ (ptab, 'z')[0] : g_shape = 'Z' + g_shape
-    if __find_axis__ (ptab, 't')[0] : g_shape = 'T' + g_shape
+    if find_axis (ptab, 'x')[0] : g_shape = 'X'
+    if find_axis (ptab, 'y')[0] : g_shape = 'Y' + g_shape
+    if find_axis (ptab, 'z')[0] : g_shape = 'Z' + g_shape
+    if find_axis (ptab, 't')[0] : g_shape = 'T' + g_shape
         
     pop_stack ( f'get_shape : {g_shape}' )
     return g_shape
@@ -458,68 +463,85 @@ def lbc_diag (nperio:int) :
     pop_stack ( f'lbc_diag : {lperio}, {aperio}' )
     return lperio, aperio
 
-def __find_axis__ (ptab, axis='z', back:bool=True) :
+def find_axis (ptab, axis='z', back:bool=True) :
     '''Returns name and name of the requested axis'''
-    push_stack ( '__find_axis__ ( ptab, {axis=}, {back=}' )
+    push_stack ( f'find_axis ( ptab, {axis=}, {back=}' )
     
     mmath = __mmath__ (ptab)
     ax, ix = None, None
 
+    ax_name   = axis
+    unit_list = None
+    length    = None
+    
     if axis in XNAME :
-        ax_name, unit_list, length = XNAME, XUNIT, XLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
+        ax_name   = XNAME
+        unit_list = XUNIT
+        length    = XLENGTH
+        #if OPTIONS['Debug'] : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in YNAME :
-        ax_name, unit_list, length = YNAME, YUNIT, YLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
+        ax_name   = YNAME
+        unit_list = YUNIT
+        length    = YLENGTH
+        #if OPTIONS['Debug'] : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in ZNAME :
-        ax_name, unit_list, length = ZNAME, ZUNIT, ZLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
+        ax_name   = ZNAME
+        unit_list = ZUNIT
+        length    = ZLENGTH
+        #if OPTIONS['Debug'] : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in TNAME :
+        ax_name   = TNAME
+        unit_list = TUNIT
+        length    = None
         ax_name, unit_list, length = TNAME, TUNIT, None
-        if OPTIONS['Debug'] : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
+        #if OPTIONS['Debug'] : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
 
-    if OPTIONS['Debug'] : print ( f'{ax_name=} {unit_list=} {length=}' )
+    if OPTIONS['Debug'] :
+        print ( f'{ax_name=}')
+        print ( f'{unit_list=}')
+        print ( f'{length=}' )
             
-    if mmath in [xr, 'dataset' ]: 
-        # Try by name
-        for i, dim in enumerate (ptab.dims) :
-            if OPTIONS['Debug'] : print ( f'{i=} {dim=}' )
-            if dim in ax_name :
-                if OPTIONS['Debug'] : print ( f'Rule 2 : {dim=} axis found by name : {XNAME=}' )
-                ix, ax = i, dim
-
-        # If not found, try by axis attributes
-        if not ix :
-            if OPTIONS['Debug'] : print ( 'ix not found - 1' )
-            for i, dim in enumerate (ptab.dims) :
-                if OPTIONS['Debug'] : print ( f'{i=} {dim=}' )
+    if mmath in [xr, 'dataset'] :
+        # Try by axis attributes
+        if ix is None :
+            #if OPTIONS['Debug'] : print ( 'ix not found - 1' )
+            for ii, dim in enumerate (ptab.dims) :
+                #if OPTIONS['Debug'] : print ( f'{ii=} {dim=}' )
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
-                    if OPTIONS['Debug'] : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
+                    #if OPTIONS['Debug'] : print ( f'Rule 1 : Trying {ii=} {dim=} {l_axis=}' )
                     if l_axis in ax_name and l_axis == 'X' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                        #if OPTIONS['Debug'] : print ( f'Rule 1 : xaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'Y' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                        #if OPTIONS['Debug'] : print ( f'Rule 1 : yaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'Z' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                        #if OPTIONS['Debug'] : print ( f'Rule 1 : zaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'T' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                        #if OPTIONS['Debug'] : print ( f'Rule 1 : taxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
 
+        # Try by name
+        if ix is None :
+            for ii, dim in enumerate (ptab.dims) :
+                #if OPTIONS['Debug'] : print ( f'{ii=} {dim=}' )
+                if dim in ax_name :
+                    #if OPTIONS['Debug'] : print ( f'Rule 2 : {dim=} axis found by name in : {ax_name=}' )
+                    ix, ax = ii, dim
+
+ 
         # If not found, try by units
-        if not ix :
-            for i, dim in enumerate (ptab.dims) :
-                if 'units' in ptab.coords[dim].attrs.keys() :
+        if ix is None :
+            for ii, dim in enumerate (ptab.dims) :
+                if 'units' in ptab.coords[dim].attrs.keys() and unit_list :
                     for name in unit_list :
                         if name in ptab.coords[dim].attrs['units'] :
-                            if OPTIONS['Debug'] : print ( f'Rule 4 : {name=} found by unit : {axis=} : {unit_list=} {i=} {dim=}' )
-                            ix, ax = i, dim
+                            #if OPTIONS['Debug'] : print ( f'Rule 3 : {name=} found by unit : {axis=} : {unit_list=} {ii=} {dim=}' )
+                            ix, ax = ii, dim
 
     # If numpy array or dimension not found, try by length
-    
     if mmath not in [xr, 'dataset'] or not ix :
         if length :
             if mmath in [xr, 'dataset'] :
@@ -529,7 +551,7 @@ def __find_axis__ (ptab, axis='z', back:bool=True) :
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
                     ix = nn ; ax = None
-                    if OPTIONS['Debug'] : print ( f'Rule 5 : {ax_name=} axis found by length : {axis=} : {XNAME=} {ix=} {ax=}' )
+                    #if OPTIONS['Debug'] : print ( f'Rule 4 : {ax_name=} axis found by length : {axis=} : {XNAME=} {ix=} {ax=}' )
 
     if ix and back :
         if mmath in [xr, 'dataset'] :
@@ -537,17 +559,95 @@ def __find_axis__ (ptab, axis='z', back:bool=True) :
         else :
             ix -= len (ptab.shape)
 
-    pop_stack ( f'__find_axis__ : {ax}, {ix}' )
+    pop_stack ( f'find_axis : {ax}, {ix}' )
     return ax, ix
 
-def find_axis (ptab, axis:str='z', back:bool=True) :
-    '''Version of find_axis with no __'''
-    push_stack ( f'find_axis ( ptab, {axis=}, {back=}' )
+def find_axis_bounds (ds, axis='z') :
+    '''
+    Find axis and associated bounds
+    '''
+    push_stack ( f'find_axis_bounds ( ds, {axis=}' )
+
+    ax, ix = find_axis (ds, axis)
+    if OPTIONS['Debug'] : print ( f'{ax=} {ix=}' )
+
+    ab    = None
+    bdim = None
+    for bname in BNAME :
+        zname = f'{ax}_{bname}'
+        if OPTIONS['Debug'] : print ( f'{zname=}' )
+        for ii, var in enumerate (ds.variables) :
+            if zname == var :
+                ab = zname
+                ib = ii
+
+    if ab :
+        for dim in ds[ab].dims :
+            if dim != ax :               
+                bdim = dim
+                
+    pop_stack ( f'find_axis_bounds : {ax=}, {ab=} {bdim=}' )
+
+    return ax, ab, bdim
+
+def build_bounds1d (ds, axis='z') :
+    '''
+    Build bounds variable at the XGCM format
+    '''
+    push_stack ( f'build_bounds ( ds, {axis=}' )
+
+    depth_bnds1d = None
     
-    ix, xx = __find_axis__ (ptab, axis=axis, back=back)
+    var, var_bnds1d, bdim = find_axis_bounds (ds, axis)
+    if bdim : 
+        az, kz = find_axis ( ds[var], axis)
+        ab, kb = find_axis ( ds[var_bnds1d], bdim)
+        
+        if OPTIONS['Debug'] : print (var, var_bnds1d, bdim, az, kz, ab, kb )
+        
+        lshape = list(ds[var].shape)
+        lshape[kz] = lshape[kz]+1
+        ldims=list(ds[var].dims)
+        ldims[kz] = ldims[kz] + '_bnds1d'
+        
+        depth_bnds1d = xr.DataArray (np.empty (lshape), dims=ldims)
+        depth_bnds1d[{ldims[kz]:slice(0,-1)}] = ds[var_bnds1d].isel({bdim:0}).values
+        depth_bnds1d[{ldims[kz]:-1}]          = ds[var_bnds1d].isel({az:-1, bdim:1}).values
+
+    pop_stack ( 'build_bounds1d' )
+
+    return depth_bnds1d
+
+def add_bounds1d (ds) :
+    '''
+    Add bounds variable for T and Z axis, at the XGCM format
+    '''
+    push_stack ( f'add_bounds1d ( ds )' )
+
+    az, ik = find_axis (ds, 'z')
+    at, il = find_axis (ds, 't')
+    z_bnds = build_bounds1d (ds, 'z')
+    t_bnds = build_bounds1d (ds, 't')
+
+    if OPTIONS['Debug'] :
+        print ( f'{az=} {ik=} {at=} {il=}' )
     
-    pop_stack ( f'find_axis : {xx}, {ix}' )
-    return xx, ix
+    if not z_bnds is None : ds = ds.merge ({f'{az}_bnds1d':z_bnds})
+    if not t_bnds is None : ds = ds.merge ({f'{at}_bnds1d':t_bnds})
+
+    pop_stack ('add_bounds1d : ds')
+    return ds
+
+# if xc : 
+#     def grid (ds:
+#         ds = add_bounds1d (ds)
+#         az, kz = find_axis (ds, 'z')
+#         at, kt = find_axis (ds, 't')
+#         grid = xc.regridder.xgcm.Grid (ds, coords={az:{'center':az,'outer':f'{az}_bnds1d'},
+#                                                    at:{'center':at, 'outer':f'{at}_bnds1d'}},
+#                                        periodic=False)
+        
+#         return grid
 
 def fixed_lon (plon, center_lon:float=0.0) :
     '''Returns corrected longitudes for nicer plots
@@ -560,7 +660,7 @@ def fixed_lon (plon, center_lon:float=0.0) :
     '''
     push_stack ( f'fixed_lon ( plon, {center_lon=}' )
     mmath = __mmath__ (plon)
-    ax, ix = __find_axis__ (plon, axis='x', back=True)
+    ax, ix = find_axis (plon, axis='x', back=True)
     
     f_lon = plon.copy ()
 
@@ -586,7 +686,7 @@ def fixed_lon (plon, center_lon:float=0.0) :
 def bounds_clolon (pbounds_lon, plon, rad:bool=False, deg:bool=True) :
     '''Choose closest to lon0 longitude, adding/substacting 360° if needed
     '''
-    push_stack ( f'bounds_clolon ( pbounds_lon, plon, {rad=}, {deb=}' )
+    push_stack ( f'bounds_clolon (pbounds_lon, plon, {rad=}, {deb=})' )
     if rad : lon_range = 2.0*np.pi
     if deg : lon_range = 360.0
     b_clolon = pbounds_lon.copy ()
@@ -601,33 +701,138 @@ def bounds_clolon (pbounds_lon, plon, rad:bool=False, deg:bool=True) :
     pop_stack ( f'bounds_clolon : b_clolon' )
     return b_clolon
 
-def unify_dims (dd: "DataArray or Dataset", x=UDIMS['x'], y=UDIMS['y'], z=UDIMS['z'], t=UDIMS['t'] ) -> "DataArray or Dataset" :
+def unify_dims (dd: "DataArray or Dataset", x=None, y=None, z=None, t=None, xgrid=None, xgcm=None ) -> "DataArray or Dataset" :
     '''Rename dimensions to unify them between NEMO versions
+    If grid is set, force to xgcm standard
     '''
     push_stack ( f'unify_dims (dd, {x=}, {y=}, {z=}, {t=})' )
-    for xx in XNAME :
-        if xx in dd.dims and xx != x :
-            if OPTIONS['Debug'] : print ( f"{xx} renamed to {x}" )
-            dd = dd.rename ( {xx:x})
 
-    for yy in YNAME :
-        if yy in dd.dims and yy != y  :
-            if OPTIONS['Debug'] : print ( f"{yy} renamed to {y}" )
+    if xgrid :
+        match xgrid.upper() :
+            case 'T' :
+                x='x_c' ; y='y_c'; z='z_c'
+            case 'U' :
+                x='x_f' ; y='y_c'; z='z_c'
+            case 'V' :
+                x='x_c' ; y='y_f'; z='z_c'
+            case 'F' :
+                x='x_f' ; y='y_f'; z='z_c'
+            case 'W' :
+                x='x_c' ; y='y_c'; z='z_f'
+
+    if xgcm :
+        if 'x_grid_T' in dd.dims :
+            dd = dd.rename ({'x_grid_T':'x_c'})
+            if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_c'])) + 1
+                x = None
+        if 'x_grid_U' in dd.dims :
+            dd = dd.rename ({'x_grid_U':'x_f'})
+            if 'x_c' not in dd.coords :
+                dd['x_c']  = np.arange (len(dd['x_f'])) + 0.5
+                dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
+                x = None
+        if 'x_grid_V' in dd.dims :
+            dd = dd.rename ({'x_grid_V':'x_c'})
+            if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_c'])) + 1
+                x = None
+        if 'x_grid_F' in dd.dims :
+            dd = dd.rename ({'x_grid_F':'x_f'})
+            if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_f'])) + 0.5
+                x = None
+        if 'x_grid_W' in dd.dims :
+            dd = dd.rename ({'x_grid_W':'x_c'})
+            if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_c'])) + 1
+                x = None
+        if 'y_grid_T' in dd.dims :
+            dd = dd.rename ({'y_grid_T':'y_c'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_c'])) + 1
+                y = None
+        if 'y_grid_U' in dd.dims :
+            dd = dd.rename ({'y_grid_U':'y_f'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_f'])) + 0.5
+                dd.y_f.attrs.update({'c_grid_axis_shift':0.5})
+                y = None
+        if 'y_grid_V' in dd.dims :
+            dd = dd.rename ({'y_grid_V':'y_c'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_c'])) + 1
+                y = None
+        if 'y_grid_F' in dd.dims :
+            dd = dd.rename ({'y_grid_F':'y_f'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_f'])) + 0.5
+                y = None
+        if 'y_grid_W' in dd.dims :
+            dd = dd.rename ({'y_grid_W':'y_c'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_c'])) + 1
+                y = None
+         
+    if x :
+        if OPTIONS['Debug'] : print ( f"unify_dims : working on {x=}" )
+
+        xx, ii = find_axis (dd, 'x')
+        if xx and xx != x :
+            if OPTIONS['Debug'] : print ( f"unify_dims : {xx} renamed to {x}" )
+            dd = dd.rename ({xx:x})
+            dd[x].attrs.update ({'axis':'X', 'name':x})
+            if x == 'x_f' : dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
+        if xgrid :
+            if x == 'x_c' and 'x_c' in dd.dims and 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd[x])) + 1
+            if x == 'x_f' and 'x_f' in dd.dims and 'x_f' not in dd.coords :
+                dd['x_f'] = np.arange (len(dd[x])) + 0.5
+
+    if y :                    
+        yy, jj = find_axis (dd, 'y')
+        if yy and yy != y  :
+            if OPTIONS['Debug'] : print ( f"unify_dims : {yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
+            dd[y].attrs.update ({'axis':'Y', 'name':y})
+            if y == 'y_f' : dd.y_f.attrs.update ({'c_grid_axis_shift':0.5})
+        if xgrid :
+            if y == 'y_c' and 'y_c' in dd.dims and 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd[y])) + 1
+            if y == 'y_f' and 'y_f' in dd.dims and 'y_f' not in dd.coords :
+                dd['y_f'] = np.arange (len(dd[y])) + 0.5
 
-    for zz in ZNAME :
-        if zz in dd.dims and zz != z :
-            if OPTIONS['Debug'] : print ( f"{zz} renamed to {z}" )
-            dd = dd.rename ( {zz:z} )
+    if z : 
+        zz, kk = find_axis (dd, 'z')
+        if zz and zz != z :
+            if OPTIONS['Debug'] : print ( f"unify_dims : {zz} renamed to {z}" )
+            dd = dd.rename ({zz:z})
+            dd[z].attrs.update ({'axis':'Z', 'name':z})
+            if z == 'z_f' : dd.z_f.attrs.update ({'c_grid_axis_shift':0.5})
+        if isinstance (dd, xr.core.dataset.Dataset) and z in dd.variables and 'bounds' in dd[z].attrs :
+            bound_var =  dd[z].attrs['bounds']
+            if bound_var in dd.variables :
+                new_bv = bound_var.replace (zz, z)
+                if new_bv != bound_var : 
+                    dd = dd.rename ({bound_var:new_bv})
+                    dd[z].attrs['bounds'] = new_bv
 
-    for tt in TNAME  :
-        if tt in dd.dims and tt != t :
-            if OPTIONS['Debug'] : print ( f"{tt} renamed to {t}" )
-            dd = dd.rename ( {tt:t} )
-
+    if t : 
+        tt, ll = find_axis (dd, 't')
+        if tt and tt != t :
+            if OPTIONS['Debug'] : print ( f"unify_dims : {tt} renamed to {t}" )
+            dd = dd.rename ({tt:t})
+            dd[t].attrs.update ({'axis':'T', 'name':t})
+        if isinstance (dd, xr.core.dataset.Dataset) and t in dd.variables and 'bounds' in dd[t].attrs :
+            bound_var =  dd[t].attrs['bounds']
+            if bound_var in dd.variables :
+                new_bv = bound_var.replace (tt, t)
+                if new_bv != bound_var : 
+                    dd = dd.rename ({bound_var:new_bv})
+                    dd[t].attrs['bounds'] = new_bv
+            
     pop_stack ( f'unify_dims : dd' )
     return dd
-
 
 if SimpleImputer : 
     def fill_empty (ptab, sval:float=np.nan, transpose:bool=False) :
@@ -821,9 +1026,9 @@ def jeq (plat) :
 
     lat : latitudes of the grid. At least 2D.
     '''
-    push_stack ( f'jeq ( plat ) ' )
+    push_stack ( f'jeq (plat) ' )
     mmath = __mmath__ (plat)
-    ay, jy = __find_axis__ (plat, 'y')
+    ay, jy = find_axis (plat, 'y')
 
     if mmath == xr : jj = int ( np.mean ( np.argmin (np.abs (np.float64 (plat)), axis=jy) ) )
     else           : jj = np.argmin (np.abs (np.float64 (plat[...,:, 0])))
@@ -869,8 +1074,9 @@ def latreg (plat, diff=0.1) :
     '''
     push_stack ( f'latreg ( plat, {diff=}' )
     #mmath = __mmath__ (plat)
-    ax, ix = __find_axis__ (plat, 'x')
-    ay, iy = __find_axis__ (plat, 'y')
+    ax, ix = find_axis (plat, 'x')
+    ay, iy = find_axis (plat, 'y')
+    if OPTIONS['Debug'] : print ( f'Found axis : {ax=} {ix=} {ay=} {iy=}' )
 
     if diff is None :
         dy = np.float64 (np.mean (np.abs (plat -
@@ -879,12 +1085,16 @@ def latreg (plat, diff=0.1) :
         diff = dy/100.
 
     je = jeq (plat)
+    if OPTIONS['Debug'] : print ( f'{je=}')
     if ix : 
-        jreg   = np.where (plat[...,je:,:].max(axis=ix) -
-                           plat[...,je:,:].min(axis=ix)  < diff)[-1][-1] + je
-        lareg  = np.float64 (plat[...,jreg,:].mean(axis=ix))
+        #jreg   = np.where (plat[...,je:,:].max(axis=ix) -
+        #                   plat[...,je:,:].min(axis=ix)  < diff)[-1][-1] + je
+        #lareg  = np.float64 (plat[...,jreg,:].mean(axis=ix))
+        jreg   = np.count_nonzero  (plat.isel({ay:slice(je,None)}).max(dim=ax) -
+                           plat.isel({ay:slice(je,None)}).min(dim=ax)  < diff) + je
+        lareg  = np.float64 (plat.isel({ay:jreg}).mean(dim=ax))
     else : 
-        jreg   = len (plat)
+        jreg  = len (plat)
         lareg = np.max (plat)
         
     pop_stack ( f'latreg : {jreg=}, {lareg=}' )
@@ -897,8 +1107,8 @@ def lat1d (plat) :
     '''
     push_stack ( f'lat1d ( plat )' )
     mmath = __mmath__ (plat)
-    ax, ix = __find_axis__ (plat, 'x')
-    ay, iy = __find_axis__ (plat, 'y')
+    ax, ix = find_axis (plat, 'x')
+    ay, iy = find_axis (plat, 'y')
     jpj = plat.shape[iy]
 
     dy     = np.float64 (np.mean (np.abs (plat - np.roll (plat, shift=1, axis=iy))))
@@ -1004,7 +1214,7 @@ def extend (ptab, blon=False, jplus=25, jpi=None, nperio=4) :
     '''
     push_stack ( f'extend ( ptab, {blon=}, {jplus=}, {jpi=}, {nperio=}' )
     mmath = __mmath__ (ptab)
-    ix, ax = __find_axis__ (ptab, axis, back)
+    ix, ax = find_axis (ptab, axis, back)
     
     if ptab.shape[-1] == 1 : tabex = ptab
 
@@ -1055,8 +1265,8 @@ def orca2reg (dd, lat_name=None, lon_name=None, y_name=None, x_name=None) :
       Returns : xarray dataset with rectangular grid. Incorrect above 20°N
     '''
     push_stack ( f'orca2reg ( dd, {lat_name=}, {lon_name=}, {y_name=}, {x_name=}' )
-    if not x_name : x_name, ix = __find_axis__ (dd, axis='x')
-    if not y_name : y_name, jy = __find_axis__ (dd, axis='y')
+    if not x_name : x_name, ix = find_axis (dd, axis='x')
+    if not y_name : y_name, jy = find_axis (dd, axis='y')
 
     if not lon_name :
         for xn in LONNAME :
@@ -1110,8 +1320,8 @@ def lbc_init (ptab, nperio=None) :
     '''
     push_stack ( f'lbc_init ( ptab, {nperio=}' )
     jpi, jpj = None, None
-    ax, ix = __find_axis__ (ptab, 'x')
-    ay, jy = __find_axis__ (ptab, 'y')
+    ax, ix = find_axis (ptab, 'x')
+    ay, jy = find_axis (ptab, 'y')
     if ax : jpi = ptab.shape[ix]
     if ay : jpj = ptab.shape[jy]
 
@@ -1136,8 +1346,8 @@ def lbc (ptab, nperio=None, cd_type='T', psgn=1.0, nemo_4u_bug=False) :
     push_stack ( f'lbc_init ( ptab, {nperio=}, {cd_type=}, {psgn=}, {nemo_4u_bug=}' )
 
     jpi, nperio = lbc_init (ptab, nperio)[1:]
-    ax     = __find_axis__ (ptab, 'x')[0]
-    ay     = __find_axis__ (ptab, 'y')[0]
+    ax     = find_axis (ptab, 'x')[0]
+    ay     = find_axis (ptab, 'y')[0]
     psgn   = ptab.dtype.type (psgn)
     mmath  = __mmath__ (ptab)
 
@@ -1235,8 +1445,8 @@ def lbc_mask (ptab, nperio=None, cd_type='T', sval=np.nan) :
     '''
     push_stack ( f'lbc_mask (ptab, {nperio=}, {cd_type=}, {sval=}' )
     jpi, nperio = lbc_init (ptab, nperio)[1:]
-    ax = __find_axis__ (ptab, 'x')[0]
-    ay = __find_axis__ (ptab, 'y')[0]
+    ax = find_axis (ptab, 'x')[0]
+    ay = find_axis (ptab, 'y')[0]
     ztab = ptab.copy ()
 
     if ax :
@@ -1316,8 +1526,8 @@ def lbc_plot (ptab, nperio=None, cd_type='T', psgn=1.0, sval=np.nan) :
     '''
     push_stack ( f'lbc_plot (ptab, {nperio=}, {cd_type=}, {psgn=}, {sval=}' )
     jpi, nperio = lbc_init (ptab, nperio)[1:]
-    ax = __find_axis__ (ptab, 'x')[0]
-    ay = __find_axis__ (ptab, 'y')[0]
+    ax = find_axis (ptab, 'x')[0]
+    ay = find_axis (ptab, 'y')[0]
     psgn   = ptab.dtype.type (psgn)
     ztab   = ptab.copy ()
 
@@ -1396,8 +1606,8 @@ def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
     mmath = __mmath__ (ptab)
     nperio = lbc_init (ptab, nperio)[-1]
     lshape = get_shape (ptab)
-    ix = __find_axis__ (ptab, 'x')[-1]
-    jy = __find_axis__ (ptab, 'y')[-1]
+    ix = find_axis (ptab, 'x')[-1]
+    jy = find_axis (ptab, 'y')[-1]
 
     t_shape = np.array (ptab.shape)
 
@@ -1431,8 +1641,8 @@ def lbc_add (ptab, nperio=None, cd_type=None, psgn=1) :
 
         if mmath == xr :
             ptab_ext.attrs = ptab.attrs
-            az = __find_axis__ (ptab, 'z')[0]
-            at = __find_axis__ (ptab, 't')[0]
+            az = find_axis (ptab, 'z')[0]
+            at = find_axis (ptab, 't')[0]
             if az : ptab_ext = ptab_ext.assign_coords ( {az:ptab.coords[az]} )
             if at : ptab_ext = ptab_ext.assign_coords ( {at:ptab.coords[at]} )
 
@@ -1456,8 +1666,8 @@ def lbc_del (ptab, nperio=None, cd_type='T', psgn=1) :
     push_stack ( f'lbc_del (ptab, {nperio=}, {cd_type=}, {psgn=}' )
     nperio = lbc_init (ptab, nperio)[-1]
     #lshape = get_shape (ptab)
-    ax = __find_axis__ (ptab, 'x')[0]
-    ay = __find_axis__ (ptab, 'y')[0]
+    ax = find_axis (ptab, 'x')[0]
+    ay = find_axis (ptab, 'y')[0]
 
     if nperio in [4.2, 6.2] :
         if ax or ay :
@@ -1665,8 +1875,8 @@ def curl (tx, ty, e1f, e2f, nperio=None) :
     '''Returns curl of a vector field
     '''
     push_stack ( f'curl ( tx, ty, e1f, e2f, {nperio=} )' )
-    ax = __find_axis__ (tx, 'x')[0]
-    ay = __find_axis__ (ty, 'y')[0]
+    ax = find_axis (tx, 'x')[0]
+    ay = find_axis (ty, 'y')[0]
 
     tx_0  = lbc_add (tx , nperio=nperio, cd_type='U', psgn=-1)
     ty_0  = lbc_add (ty , nperio=nperio, cd_type='V', psgn=-1)
@@ -1696,8 +1906,8 @@ def div (ux, uy, e1t, e2t, nperio=None) :
     '''Returns divergence of a vector field
     '''
     push_stack ( f'div  (ux, uy, e1t, e2t, {nperio=}' )
-    ax = __find_axis__ (ux, 'x')[0]
-    ay = __find_axis__ (ux, 'y')[0]
+    ax = find_axis (ux, 'x')[0]
+    ay = find_axis (ux, 'y')[0]
 
     ux_0  = lbc_add (ux , nperio=nperio, cd_type='U', psgn=-1)
     uy_0  = lbc_add (uy , nperio=nperio, cd_type='V', psgn=-1)
@@ -1791,8 +2001,7 @@ def index2depth (pk, gdept_0) :
 
     Needed to use transforms in Matplotlib
     '''
-    # No stack here, to avoid problem in Matplotlib
-    
+    # No stack, debug or timing here, to avoid problem in Matplotlib
     jpk = gdept_0.shape[0]
     kk = xr.DataArray(pk)
     k  = np.maximum (0, np.minimum (jpk-1, kk    ))
@@ -2001,8 +2210,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     '''
     push_stack ( f'angle_full ( glamt, gphit, glamu, gphiu, glamv, gphiv, glamf, gphif, {nperio=} )') 
     mmath = __mmath__ (glamt)
-    ax, ix = __find_axis__ (glamt, 'x')
-    ay, iy = __find_axis__ (glamt, 'y')
+    ax, ix = find_axis (glamt, 'x')
+    ay, iy = find_axis (glamt, 'y')
 
     zlamt = lbc_add (glamt, nperio, 'T', 1.)
     zphit = lbc_add (gphit, nperio, 'T', 1.)
@@ -2120,8 +2329,8 @@ def angle (glam, gphi, nperio, cd_type='T') :
     '''
     push_stack ( f'angle (glam, gphi, {nperio=}, {cd_type=} ) ')
     mmath = __mmath__ (glam)
-    ax, ix = __find_axis__ (glam, 'x')
-    ay, iy = __find_axis__ (glam, 'y')
+    ax, ix = find_axis (glam, 'x')
+    ay, iy = find_axis (glam, 'y')
     
     zlam = lbc_add (glam, nperio, cd_type, 1.)
     zphi = lbc_add (gphi, nperio, cd_type, 1.)
@@ -2240,8 +2449,8 @@ def u2t (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     utab_0 = mmath.where ( np.isnan(utab), 0., utab)
     #lperio, aperio = lbc_diag (nperio)
     utab_0 = lbc_add (utab_0, nperio=nperio, cd_type='U', psgn=psgn)
-    ax, ix = __find_axis__ (utab_0, 'x')
-    az, iz = __find_axis__ (utab_0, 'z')
+    ax, ix = find_axis (utab_0, 'x')
+    az, iz = find_axis (utab_0, 'z')
 
     if ax :
         if action == 'ave' :
@@ -2274,8 +2483,8 @@ def v2t (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     #lperio, aperio = lbc_diag (nperio)
     vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0, nperio=nperio, cd_type='V', psgn=psgn)
-    ay, jy = __find_axis__ (vtab_0, 'y')
-    az, iz = __find_axis__ (vtab_0, 'z')
+    ay, jy = find_axis (vtab_0, 'y')
+    az, iz = find_axis (vtab_0, 'z')
     if ay :
         if action == 'ave'  :
             ttab = 0.5 *      (vtab_0 + np.roll (vtab_0, axis=jy, shift=1))
@@ -2322,8 +2531,8 @@ def t2u (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , nperio=nperio, cd_type='T', psgn=psgn)
-    ax, ix = __find_axis__ (ttab_0, 'x')
-    az, iz = __find_axis__ (ttab_0, 'z')
+    ax, ix = find_axis (ttab_0, 'x')
+    az, iz = find_axis (ttab_0, 'z')
     if ix :
         if action == 'ave'  :
             utab = 0.5 *      (ttab_0 + np.roll (ttab_0, axis=ix, shift=-1))
@@ -2354,8 +2563,8 @@ def t2v (ttab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , nperio=nperio, cd_type='T', psgn=psgn)
-    ay, jy = __find_axis__ (ttab_0, 'y')
-    az, jz = __find_axis__ (ttab_0, 'z')
+    ay, jy = find_axis (ttab_0, 'y')
+    az, jz = find_axis (ttab_0, 'z')
     if jy :
         if action == 'ave'  :
             vtab = 0.5 *      (ttab_0 + np.roll (ttab_0, axis=jy, shift=-1))
@@ -2386,8 +2595,8 @@ def v2f (vtab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     mmath = __mmath__ (vtab)
     vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0 , nperio=nperio, cd_type='V', psgn=psgn)
-    ax, ix = __find_axis__ (vtab_0, 'x')
-    az, jz = __find_axis__ (vtab_0, 'z')
+    ax, ix = find_axis (vtab_0, 'x')
+    az, jz = find_axis (vtab_0, 'z')
     if ix :
         if action == 'ave'  :
             ftab = 0.5 *      (vtab_0 + np.roll (vtab_0, axis=ix, shift=-1))
@@ -2420,8 +2629,8 @@ def u2f (utab, nperio=None, psgn=-1.0, zdim=None, action='ave') :
     mmath = __mmath__ (utab)
     utab_0 = mmath.where ( np.isnan(utab), 0., utab)
     utab_0 = lbc_add (utab_0 , nperio=nperio, cd_type='U', psgn=psgn)
-    ay, jy = __find_axis__ (utab_0, 'y')
-    az, kz = __find_axis__ (utab_0, 'z')
+    ay, jy = find_axis (utab_0, 'y')
+    az, kz = find_axis (utab_0, 'z')
     if jy :
         if action == 'ave'  :
             ftab = 0.5 *      (utab_0 + np.roll (utab_0, axis=jy, shift=-1))
@@ -2467,8 +2676,8 @@ def f2u (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     mmath = __mmath__ (ftab)
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
-    ay, jy = __find_axis__ (ftab_0, 'y')
-    az, kz = __find_axis__ (ftab_0, 'z')
+    ay, jy = find_axis (ftab_0, 'y')
+    az, kz = find_axis (ftab_0, 'z')
     if jy :
         if action == 'ave'  :
             utab = 0.5 *      (ftab_0 + np.roll (ftab_0, axis=jy, shift=-1))
@@ -2497,8 +2706,8 @@ def f2v (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
     mmath = __mmath__ (ftab)
     ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , nperio=nperio, cd_type='F', psgn=psgn)
-    ax, ix = __find_axis__ (ftab_0, 'x')
-    az, kz = __find_axis__ (ftab_0, 'z')
+    ax, ix = find_axis (ftab_0, 'x')
+    az, kz = find_axis (ftab_0, 'z')
     if ix :
         if action == 'ave'  :
             vtab = 0.5 *      (ftab_0 + np.roll (ftab_0, axis=ix, shift=-1))
@@ -2523,14 +2732,13 @@ def f2v (ftab, nperio=None, psgn=1.0, zdim=None, action='ave') :
 
 def w2t (wtab, zcoord=None, zdim=None, sval=np.nan) :
     '''Interpolates an array on W grid to T grid (k-mean)
-
     sval is the bottom value
     '''
     push_stack ( f'w2t (wtab, {zcoord=}, {zdim=}, {sval=} )' )
     mmath = __mmath__ (wtab)
     wtab_0 = mmath.where ( np.isnan(wtab), 0., wtab)
 
-    az, kz = __find_axis__ (wtab_0, 'z')
+    az, kz = find_axis (wtab_0, 'z')
 
     if kz :
         ttab = 0.5 * ( wtab_0 + np.roll (wtab_0, axis=kz, shift=-1) )
@@ -2559,7 +2767,7 @@ def t2w (ttab, zcoord=None, zdim=None, sval=np.nan, extrap_surf=False) :
     push_stack ( f't2w (utab, {zcoord=}, {zdim=}, {sval=}, {extrap_surf=} )' )
     mmath = __mmath__ (ttab)
     ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
-    az, kz = __find_axis__ (ttab_0, 'z')
+    az, kz = find_axis (ttab_0, 'z')
     wtab = 0.5 * ( ttab_0 + np.roll (ttab_0, axis=kz, shift=1) )
 
     if mmath == xr :
@@ -2593,8 +2801,8 @@ def fill (ptab, nperio, cd_type='T', npass=1, sval=np.nan) :
     '''
     push_stack ( f'fill (ptab, {perio=}, {cd_type=}, {npass=}, {sval=} ) ')
     mmath = __mmath__ (ptab)
-    ax, ix = __find_axis__ (ptab, 'x')
-    ay, jy = __find_axis__ (ptab, 'y')
+    ax, ix = find_axis (ptab, 'x')
+    ay, jy = find_axis (ptab, 'y')
     
     do_perio  = False
     lperio    = nperio
@@ -2693,8 +2901,7 @@ def normalize_uv (u, v) :
     pop_stack ( 'normalize_uv' )
     return uu, vv
 
-
-def zonmean (var, bb, plat1d, ldims=UDIMS) :
+def zonmean (var, bb, plat1d) :
     '''Computes the meridonal stream function
 
     var : var
@@ -2702,58 +2909,78 @@ def zonmean (var, bb, plat1d, ldims=UDIMS) :
     '''
     push_stack ( 'zonmean (vv, bb, plat1d)' )
 
-    ax, ix = __find_axis__ (var, 'x')
-    ay, jy = __find_axis__ (var, 'y')
-    az, kz = __find_axis__ (var, 'z')
+    if OPTIONS['Debug'] :
+        print ( f'{bb.dims = } {bb.shape=}' )
+        print ( f'{var.dims = } {var.shape}' )
+
+    ax, ix = find_axis (var, 'x')
+    ay, jy = find_axis (var, 'y')
+    az, kz = find_axis (var, 'z')
+
+    ldims = UDIMS.copy()
+    ldims.update ({'x':ax, 'y':ay, 'z':az})
+
+    if OPTIONS['Debug'] : print ( f'zonmean : {ldims=}' )
     
-    new_az = UDIMS['z']
-
-    if OPTIONS['Debug'] : print ('zonal mean of volume')
-    zon_bb  = unify_dims (bb, **ldims).sum(dim=ldims['x'], keep_attrs=True)
-    if OPTIONS['Debug'] : print ('zonal mean of variable')
-    zon_var = (unify_dims(var,**ldims)*unify_dims(bb,**ldims)).sum(dim=ldims['x'], keep_attrs=True) / zon_bb
-
-    if OPTIONS['Debug'] : print ( 'Change coords')
+    if OPTIONS['Debug'] : print ('zonmean : zonal mean of volume')
+    zon_bb  = unify_dims (bb, **ldims).sum(dim=ldims['x'], min_count=1, keep_attrs=True)
+    zon_bb  = zon_bb.where (zon_bb>0., np.nan)
+    if OPTIONS['Debug'] : print ( f'zonmean : {zon_bb.dims = }' )
+    if OPTIONS['Debug'] : print ('zonmean : zonal mean of variable')
+    zon_var = (var * unify_dims (bb, **ldims)).sum(dim=ldims['x'], min_count=1, keep_attrs=True) / zon_bb
+    zon_var = zon_var.where ( np.logical_not(np.isnan(zon_bb)), np.nan)
+    if OPTIONS['Debug'] : print ( f'zonmean : {zon_var.dims = }' )
+    
+    if OPTIONS['Debug'] : print ( 'zonmean : Change coords')
     zon_var = zon_var.assign_coords ( {ldims['y']:(ldims['y'], plat1d.values)} )
-    #zon_var = zon_var.rename ( {ldims['y']:'lat'} )
-
-    zon_var = zon_var.rename ({ay:'lat'})
-    if az != new_az : zon_var = zon_var.rename ({az:new_az})
+    zon_var = zon_var.rename ( {ldims['y']:'lat'} )
 
     zon_var.attrs.update (var.attrs)
-    zon_var.attrs ['long_name'] = zon_var.attrs ['standard_name'] + ' - zonal mean'
+    if 'standard_name' in zon_var.attrs :
+        zon_var.attrs ['long_name'] = zon_var.attrs ['standard_name'] + ' - zonal mean'
     zon_var.lat.attrs = plat1d.attrs
 
     pop_stack ( 'zon' )
     return zon_var
 
-def msf (vv, e1v_e3v, plat1d, depthw, south=None, ldims=UDIMS) :
+def msf (vv, e1v_e3v, plat1d, depthw, south=None) :
     '''Computes the meridonal stream function
 
     vv : meridional_velocity
     e1v_e3v : product of scale factors e1v*e3v
     '''
     push_stack ( 'msf (vv, e1v_e3v, plat1d, depthw)' )
-    v_e1v_e3v = unify_dims(vv, **ldims) * unify_dims(e1v_e3v, **ldims)
+
+    ax, ix = find_axis (vv, 'x')
+    ay, jy = find_axis (vv, 'y')
+    az, kz = find_axis (vv, 'z')
+
+    ldims = UDIMS.copy()
+    ldims.update ({'x':ax, 'y':ay, 'z':az})
+    
+    v_e1v_e3v = vv * unify_dims(e1v_e3v, **ldims)
     v_e1v_e3v.attrs = vv.attrs
 
-    ax, ix = __find_axis__ (v_e1v_e3v, 'x')
-    az, kz = __find_axis__ (v_e1v_e3v, 'z')
+    mm = e1v_e3v.sum (dim=ax, keep_attrs=True, min_count=1)
+    
+    zomsf = -v_e1v_e3v.cumsum (dim=az, keep_attrs=True).sum (dim=ax, min_count=1, keep_attrs=True)
+    zomsf = zomsf - zomsf.isel ({az:-1})
+    zomsf = zomsf.where (mm>0, np.nan)
 
-    zomsf = -v_e1v_e3v.cumsum (dim=az, keep_attrs=True).sum (dim=ax, keep_attrs=True)*1.E-6
-    zomsf = zomsf - zomsf.isel ({ az:-1})
-
-    ay = __find_axis__ (zomsf, 'y' )[0]
-    zomsf = zomsf.assign_coords ({az:depthw.values, ay:plat1d.values})
+    ay = find_axis (zomsf, 'y' )[0]
+    #zomsf = zomsf.assign_coords ({az:depthw.values, ay:plat1d.values})
+    zomsf = zomsf.assign_coords ({ay:plat1d.values})
     zomsf = zomsf.rename ({ay:'lat'})
     
-    zomsf.attrs ['standard_name'] = 'Meridional stream function'
-    zomsf.attrs ['long_name']     = 'Meridional stream function'
-    zomsf.attrs ['units']         = 'Sv'
-    zomsf [az].attrs  = depthw.attrs
+    zomsf.attrs ['standard_name'] = 'stfmmcgo'
+    zomsf.attrs ['long_name']     = 'ocean_meridional_overturning_streamfunction'
+    zomsf.attrs ['units']         = 'm3s-1'
     zomsf.lat.attrs = plat1d.attrs
 
+    if south == True : south = -30
+    
     if south :
+        if OPTIONS['Debug'] : print ( f'Masque south of {south}')
         zomsf = zomsf.where (zomsf.lat > south, np.nan)
 
     pop_stack ( 'msf' )
@@ -2812,21 +3039,25 @@ def bsf (uu, e2u_e3u, mask, nperio=None, bsf0=None ) :
     
     u_e2u_e3u       = uu * e2u_e3u
     u_e2u_e3u.attrs = uu.attrs
+    if OPTIONS['Debug'] : print ( f'{u_e2u_e3u.dims=} {mask.dims=}' )
 
-    ay, jy = __find_axis__ (u_e2u_e3u, 'y')
-    az, kz = __find_axis__ (u_e2u_e3u, 'z')
 
-    zbsf = -u_e2u_e3u.cumsum ( dim=ay, keep_attrs=True )
-    zbsf = zbsf.sum (dim=az, keep_attrs=True)*1.E-6
+    ay, jy = find_axis (u_e2u_e3u, 'y')
+    az, kz = find_axis (u_e2u_e3u, 'z')
 
-    if bsf0 :
+    zbsf = -u_e2u_e3u.cumsum (dim=ay, keep_attrs=True )
+    if OPTIONS['Debug'] : print ( f'1 - {zbsf.dims=}' )
+    zbsf = zbsf.sum (dim=az, keep_attrs=True)
+    if OPTIONS['Debug'] : print ( f'2 - {zbsf.dims=}' )
+    if bsf0 : 
         zbsf = zbsf - zbsf.isel (bsf0)
 
     zbsf = zbsf.where (mask !=0, np.nan)
+    if OPTIONS['Debug'] : print ( f'3 - {zbsf.dims=}' )
     zbsf.attrs.update (uu.attrs)
-    zbsf.attrs['standard_name'] = 'barotropic_stream_function'
-    zbsf.attrs['long_name']     = 'Barotropic stream function'
-    zbsf.attrs['units']         = 'Sv'
+    zbsf.attrs['standard_name'] = 'stfbaro'
+    zbsf.attrs['long_name']     = 'ocean_barotropic_stream_function'
+    zbsf.attrs['units']         = 'm3s-1'
     zbsf = lbc (zbsf, nperio=nperio, cd_type='F')
 
     pop_stack ( 'bsf' )
