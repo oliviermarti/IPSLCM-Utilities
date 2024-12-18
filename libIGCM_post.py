@@ -3,13 +3,12 @@
 This library provide some utilities for post processing
 '''
 
-# libIGCM_post internal options
 import os, sys, re
-import numpy as np
 import json
 
+from Utils import Container
 import libIGCM_sys
-from libIGCM_sys import OPTIONS, Container, push_stack, pop_stack, set_options, get_options
+from libIGCM_sys import OPTIONS, push_stack, pop_stack, set_options, get_options
     
 class Config (libIGCM_sys.Config) :
     '''
@@ -25,16 +24,16 @@ class Config (libIGCM_sys.Config) :
                         IGCM_Catalog=None, **kwargs) :
 
         ### ===========================================================================================
-        ## Read catalog of know simulations
+        ## Read catalog of known simulations
         push_stack ( '__init__')
 
-        if not IGCM_Catalog : IGCM_Catalog=OPTIONS['IGCM_Catalog']
+        if not IGCM_Catalog : IGCM_Catalog = OPTIONS.IGCM_Catalog
         
-        if OPTIONS['Debug'] : print ( f'{IGCM_Catalog=}' )
+        if OPTIONS.Debug : print ( f'{IGCM_Catalog=}' )
 
         if IGCM_Catalog : 
             if os.path.isfile (IGCM_Catalog) :
-                if OPTIONS['Debug'] : print ( f'Catalog file : {IGCM_Catalog=}' )
+                if OPTIONS.Debug : print ( f'Catalog file : {IGCM_Catalog=}' )
                 exp_file = open (IGCM_Catalog)
                 Experiments = json.load (exp_file)
             else : 
@@ -42,7 +41,7 @@ class Config (libIGCM_sys.Config) :
 
             if JobName in Experiments.keys () :
                 exp = Experiments[JobName]
-                if OPTIONS['Debug'] : print ( f'Read catalog file for {JobName=}' )
+                if OPTIONS.Debug : print ( f'Read catalog file for {JobName=}' )
 
                 if not SpaceName       :
                     if 'SpaceName'     in exp.keys() : SpaceName      = exp['SpaceName']
@@ -85,7 +84,7 @@ class Config (libIGCM_sys.Config) :
                 if not OCE             :
                     if 'OCE'           in exp.keys() : OCE            = exp['OCE']
                 if not ATM             :
-                    if 'ATM'           in exp.keys() : ATM            = exp['OCE'] 
+                    if 'ATM'           in exp.keys() : ATM            = exp['ATM'] 
 
         libIGCM_sys.Config.__init__ (self, JobName=JobName, SpaceName=SpaceName, TagName=TagName, ShortName=ShortName, Comment=Comment,
                                            ExperimentName=ExperimentName, ModelName=ModelName,

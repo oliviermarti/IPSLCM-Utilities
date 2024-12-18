@@ -37,13 +37,17 @@ olivier.marti@lsce.ipsl.fr
 
 import os, subprocess, configparser, types, sys, time
 import numpy as np
+from Utils import Container
 import libIGCM_date
 
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
 
+
+## ============================================================================
 def Mach (long:bool=False) -> str :
-    '''Find the computer we are on
+    '''
+    Find the computer we are on
 
     On Irene, Mach returns Irene, Irene-Next, Rome or Rome-Prev if long==True
 
@@ -111,26 +115,27 @@ if isinstance (IGCM_Catalog_list, list) :
             IGCM_Catalog = os.path.join (file, 'IGCM_Catalog.json')
             break
 
-OPTIONS = {'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,
-            'TGCC_User'           : 'p86mart',
-            'TGCC_Group'          : 'gen12006',
-            'IDRIS_User'          : 'rces009',
-            'IDRIS_Group'         : 'ces',
-            'TGCC_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-            'TGCC_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
-            'IDRIS_DapPrefix'     : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-            'IDRIS_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
-            'DapPrefix'           : None,
-            'ThreddsPrefix'       : None,
-            'IGCM_Catalog'        : IGCM_Catalog,
-            }
+OPTIONS = Container (
+            Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None,
+            TGCC_User           = 'p86mart',
+            TGCC_Group          = 'gen12006',
+            IDRIS_User          = 'rces009',
+            IDRIS_Group         = 'ces',
+            TGCC_DapPrefix      = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+            TGCC_ThreddsPrefix  = 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
+            IDRIS_DapPrefix     = 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+            IDRIS_ThreddsPrefix = 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
+            DapPrefix           = None,
+            ThreddsPrefix       = None,
+            IGCM_Catalog        = IGCM_Catalog,
+            )
    
 class set_options :
-    """
+    '''
     ! Set options for libIGCM_sys
-    """
+    '''
     def __init__ (self, **kwargs) :
-        self.old = {}
+        self.old = Container ()
         for k, v in kwargs.items () :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -142,14 +147,14 @@ class set_options :
     def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
 
 def get_options () :
-    """
+    '''
     ! Get options for libIGCM_sys
 
     See Also
     ----------
     set_options
 
-    """
+    '''
     return OPTIONS
 
 def return_stack () :
@@ -192,37 +197,6 @@ def pop_stack (string:str) :
     if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
     #
 
-## ==========================================================================
-        
-class Container :
-    ''' 
-    Void class to act as a container
-    Class members can be accessed either with dictionnary or namespace syntax
-       i.e  <Container>['member'] or <Container>.member
-    '''
-    def update (self, dico=None, **kwargs):
-        '''Use a dictionnary to update values'''
-        if dico : 
-            for attr in dico.keys () : super().__setattr__(attr, dico[attr])
-        self.__dict__.update (kwargs)
-    def keys    (self) : return self.__dict__.keys()
-    def values  (self) : return self.__dict__.values()
-    def items   (self) : return self.__dict__.items()
-    def dict    (self) : return self.__dict__()
-    ## Hidden functions
-    def __str__     (self) : return str  (self.__dict__)
-    def __repr__    (self) : return repr (self.__dict__)
-    def __name__    (self) : return self.__class__.__name__
-    def __getitem__ (self, attr) : return getattr (self, attr)
-    def __setitem__ (self, attr, value) : setattr (self, attr, value)
-    def __iter__    (self) : return self.__dict__.__iter__()
-    def __next__    (self) : return self.__dict__.__next__()
-    def __len__     (self) : return len (self.__dict__)
-    def __init__ (self, **kwargs) :
-        for attr, value in kwargs.items () :
-            super().__setattr__(attr, value)
-        return None
-                
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
 
@@ -276,17 +250,17 @@ class Config :
                   OCE=None, ATM=None,
                   CMIP6_BUF=None, Custom=None ) :
    
-        if not Debug               : Debug               = OPTIONS['Debug']
-        if not TGCC_User           : TGCC_User           = OPTIONS['TGCC_User']
-        if not TGCC_Group          : TGCC_Group          = OPTIONS['TGCC_Group']
-        if not IDRIS_User          : IDRIS_User          = OPTIONS['IDRIS_User']
-        if not IDRIS_Group         : IDRIS_Group         = OPTIONS['IDRIS_Group']
-        if not TGCC_ThreddsPrefix  : TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix']
-        if not TGCC_DapPrefix      : TGCC_DapPrefix      = OPTIONS['TGCC_DapPrefix']
-        if not IDRIS_ThreddsPrefix : IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
-        if not IDRIS_DapPrefix     : IDRIS_DapPrefix     = OPTIONS['IDRIS_DapPrefix']
-        if not ThreddsPrefix       : ThreddsPrefix       = OPTIONS['ThreddsPrefix']
-        if not DapPrefix           : DapPrefix           = OPTIONS['DapPrefix']
+        if not Debug               : Debug               = OPTIONS.Debug
+        if not TGCC_User           : TGCC_User           = OPTIONS.TGCC_User
+        if not TGCC_Group          : TGCC_Group          = OPTIONS.TGCC_Group
+        if not IDRIS_User          : IDRIS_User          = OPTIONS.IDRIS_User
+        if not IDRIS_Group         : IDRIS_Group         = OPTIONS.IDRIS_Group
+        if not TGCC_ThreddsPrefix  : TGCC_ThreddsPrefix  = OPTIONS.TGCC_ThreddsPrefix
+        if not TGCC_DapPrefix      : TGCC_DapPrefix      = OPTIONS.TGCC_DapPrefix
+        if not IDRIS_ThreddsPrefix : IDRIS_ThreddsPrefix = OPTIONS.IDRIS_ThreddsPrefix
+        if not IDRIS_DapPrefix     : IDRIS_DapPrefix     = OPTIONS.IDRIS_DapPrefix
+        if not ThreddsPrefix       : ThreddsPrefix       = OPTIONS.ThreddsPrefix
+        if not DapPrefix           : DapPrefix           = OPTIONS.DapPrefix
 
         if not MASTER : MASTER = Mach (long=False)
         if not MASTER : MASTER = 'Unknown'
@@ -350,8 +324,8 @@ class Config :
             if not User  and TGCC_User  : User  = TGCC_User
             if not Group and TGCC_Group : Group = TGCC_Group
                 
-            if not ThreddsPrefix : ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix']
-            if not DapPrefix     : DapPrefix     = OPTIONS['TGCC_DapPrefix']
+            if not ThreddsPrefix : ThreddsPrefix = OPTIONS.TGCC_ThreddsPrefix
+            if not DapPrefix     : DapPrefix     = OPTIONS.TGCC_DapPrefix
                
             if not ARCHIVE : ARCHIVE = f'{DapPrefix}/store/{TGCC_User}'
             if not R_FIG   : R_FIG   = f'{DapPrefix}/work/{TGCC_User}'
@@ -363,8 +337,8 @@ class Config :
             if not User  and IDRIS_User  : User  = IDRIS_User
             if not Group and IDRIS_Group : Group = IDRIS_Group
                 
-            if not ThreddsPrefix : ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
-            if not DapPrefix     : DapPrefix     = OPTIONS['IDRIS_DapPrefix']
+            if not ThreddsPrefix : ThreddsPrefix = OPTIONS.IDRIS_ThreddsPrefix
+            if not DapPrefix     : DapPrefix     = OPTIONS.IDRIS_DapPrefix
                 
             if not ARCHIVE : ARCHIVE = f'{DapPrefix}/store/{IDRIS_User}'
             if not R_FIG   : R_FIG   = f'{DapPrefix}/work/{IDRIS_User}'
@@ -545,7 +519,7 @@ class Config :
 
         ### =========
         if not ColorLine is None :
-            if OPTIONS['Debug'] : print ( f'{type(ColorLine) = } - {ColorLine =}' )
+            if OPTIONS.Debug : print ( f'{type(ColorLine) = } - {ColorLine =}' )
             if isinstance (ColorLine, list) :
                 ColorLine = np.array (ColorLine)
             if isinstance (ColorLine, np.ndarray) :
@@ -630,7 +604,7 @@ class Config :
         ## Add custom attributes
         return None
         
-### ===========================================================================================
+### ===========================================================================
 def Dap2Thredds (file, mm=None) :
     '''
     ! Convert a Dap URL to http URL

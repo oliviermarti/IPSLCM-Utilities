@@ -9,7 +9,7 @@ Dates format
  - Gregorian format : yymmdd
  - Julian format    : yyddd
 
-  Types of avalaible calendars :
+  Types of available calendars :
 
   - leap|gregorian|standard (other name leap) :
       The normal calendar. The time origin for the
@@ -33,6 +33,7 @@ Dates format
 import time
 import numpy as np
 import cftime
+from Utils import Container
 
 # Characteristics of the gregorian calender
 mth_length = np.array ( [31, 28, 31,  30,  31,  30,  31,  31,  30,  31,  30,  31] )
@@ -60,17 +61,17 @@ DA_name = [ 'DA', 'DAYS'  , 'Days'  , 'days'  , 'DAY'  , 'Day'  , 'day'  , 'DA',
 # function IGCM_date_DaysInPreviousPeriod
 
 # libIGCM_date internal options
-OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,
-            'DefaultCalendar':'Gregorian', }
+OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None,
+                     Stack=None, DefaultCalendar='Gregorian')
 
 class set_options :
     """
     ! Set options for libIGCM_sys
     """
     def __init__ (self, **kwargs) :
-        self.old = {}
+        self.old = Container ()
         for k, v in kwargs.items () :
-            if k not in OPTIONS:
+            if k not in OPTIONS :
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
         self._apply_update (kwargs)
@@ -91,43 +92,43 @@ def get_options () :
     return OPTIONS
 
 def return_stack () :
-    return OPTIONS['Stack']
+    return OPTIONS.Stack
 
 def push_stack (string:str) :
-    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
-    else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    if OPTIONS.Depth : OPTIONS.Depth += 1
+    else             : OPTIONS.Depth = 1
+    if OPTIONS.Trace : print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
-    else                : OPTIONS['Stack'] = [string,]
+    if OPTIONS.Stack : OPTIONS.Stack.append (string)
+    else             : OPTIONS.Stack = [string,]
     #
-    if OPTIONS['Timing'] :
-        if OPTIONS['t0'] :
-            OPTIONS['t0'].append ( time.time() )
+    if OPTIONS.Timing :
+        if OPTIONS.t0 :
+            OPTIONS.t0.append ( time.time() )
         else :
-            OPTIONS['t0'] = [ time.time(), ]
+            OPTIONS.t0 = [ time.time(), ]
 
 def pop_stack (string:str) :
-    if OPTIONS['Timing'] :
-        dt = time.time() - OPTIONS['t0'][-1]
-        OPTIONS['t0'].pop()
+    if OPTIONS.Timing :
+        dt = time.time() - OPTIONS.t0[-1]
+        OPTIONS.t0.pop()
     else :
         dt = None
-    if OPTIONS['Trace'] or dt :
+    if OPTIONS.Trace or dt :
         if dt : 
             if dt < 1e-3 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
             if dt >= 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string}')
     #
-    OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    OPTIONS.Depth -= 1
+    if OPTIONS.Depth == 0 : OPTIONS.Depth = None
+    OPTIONS.Stack.pop ()
+    if OPTIONS.Stack == list () : OPTIONS.Stack = None
     #
 
 ## ==========================================================================
@@ -138,7 +139,7 @@ def GetMonthsLengths (year, Calendar=None) :
     '''
     push_stack ( f'GetMonthsLengths ( {year=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
     
     if Calendar in Calendar_360d   : zlengths = mth_length360
     if Calendar in Calendar_noleap : zlengths = mth_length365
@@ -159,7 +160,7 @@ def DaysInMonth (yy, mm=None, Calendar=None) :
          '''
     push_stack ( f'DaysInMonth ( {yy=}, {mm=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     if mm : year = int(yy) ; month = int(mm)
     else  : year, month = GetYearMonth (yy)
@@ -176,7 +177,7 @@ def DaysSinceJC (date, Calendar=None) -> int :
     '''
     push_stack ( f'DaysSinceJC ( {date=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     yy, mo, da = GetYearMonthDay (date)
     
@@ -215,22 +216,22 @@ def IsLeapYear (year : [int, str], Calendar=None) -> bool :
 
     yy = int ( year )
     zis_leap_year = None
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
 
-    if OPTIONS['Debug'] : print ( f'{year=} {Calendar=}' )
+    if OPTIONS.Debug : print ( f'{year=} {Calendar=}' )
     
     # What is the Calendar :
     if Calendar in Calendar_360d      :
-        if OPTIONS['Debug'] : print ( f'{Calendar=} 360d' )
+        if OPTIONS.Debug : print ( f'{Calendar=} 360d' )
         zis_leap_year = False
     if Calendar in Calendar_noleap    :
-        if OPTIONS['Debug'] : print ( f'{Calendar=} noleap' )
+        if OPTIONS.Debug : print ( f'{Calendar=} noleap' )
         zis_leap_year = False
     if Calendar in Calendar_allleap   :
-        if OPTIONS['Debug'] : print ( f'{Calendar=} allleap' )
+        if OPTIONS.Debug : print ( f'{Calendar=} allleap' )
         zis_leap_year = True
     if Calendar in Calendar_gregorian :
-        if OPTIONS['Debug'] : print ( f'{Calendar=} gregorian' )
+        if OPTIONS.Debug : print ( f'{Calendar=} gregorian' )
         # A year is a leap year if it is even divisible by 4
         # but not evenly divisible by 100
         # unless it is evenly divisible by 400
@@ -262,7 +263,7 @@ def DateFormat ( date ) -> str :
     '''
     push_stack ( f'DateFormat ( {date=} )' )
         
-    if OPTIONS['Debug'] : print ( f'{type(date)=}' )
+    if OPTIONS.Debug : print ( f'{type(date)=}' )
     zdate_format = None
     if isinstance (date, str) :
         if '-' in date : zdate_format = 'Human'
@@ -311,11 +312,11 @@ def GetYearMonthDay  ( date ) :
     '''
     push_stack ( f'GetYearMonthDay ( {date=} )' )
 
-    if OPTIONS['Debug'] : print ( f'{date=}' )
+    if OPTIONS.Debug : print ( f'{date=}' )
     if isinstance (date, str) :
         if '-' in date :
             zz = date.split ('-')
-            if OPTIONS['Debug'] : print ( f'Date splitted : {zz=}' )
+            if OPTIONS.Debug : print ( f'Date splitted : {zz=}' )
             if len(zz) == 3 :
                 ye, mo, da = zz
             if len(zz) == 2 :
@@ -406,7 +407,7 @@ def CorrectYearMonthDay (ye, mo, da, Calendar=None) :
     '''
     push_stack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {CalendarNone=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     ye_new, mo_new = CorrectYearMonth ( ye, mo)
     da_new = da
@@ -434,7 +435,7 @@ def DateAddMonth (date, month_inc=1, Calendar=None) :
     '''
     push_stack ( f'DateAddMonth ( {date=}, {month_inc=}, {Calendar=} )' )
         
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
@@ -454,12 +455,12 @@ def DateAddMonth (date, month_inc=1, Calendar=None) :
     ye_new, mo_new = CorrectYearMonth (ye_new, mo_new)
     lday1 = DaysInMonth ( ye    , mo    , Calendar=Calendar )
     lday2 = DaysInMonth ( ye_new, mo_new, Calendar=Calendar )
-    if OPTIONS['Debug'] : print ( f'{ye=} {mo=} {da=} {ye_inc=} {month_inc=} {ye_new=} {mo_new=} {lday1=} {lday2=}' )
+    if OPTIONS.Debug : print ( f'{ye=} {mo=} {da=} {ye_inc=} {month_inc=} {ye_new=} {mo_new=} {lday1=} {lday2=}' )
     da_new = da
     if da == lday1 : da_new = lday2
     da_new = np.minimum ( da_new, lday2)
 
-    if OPTIONS['Debug'] : print ( f'{ye=} {mo=} {da=} {ye_new=} {mo_new=} {lday1=} {lday2=} {da_new=}' )
+    if OPTIONS.Debug : print ( f'{ye=} {mo=} {da=} {ye_new=} {mo_new=} {lday1=} {lday2=} {da_new=}' )
 
     pop_stack ( 'DateAddMonth : {ye_new}, {mo_new, {da_new}, {zformat}' )
     return PrintDate ( ye_new, mo_new, da_new, zformat)
@@ -469,7 +470,7 @@ def DateAddPeriod ( date, period='1YE', Calendar=None ) :
     Add a period to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
     push_stack ( f'DateAddPeriod ( {date=}, {period=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     zformat = DateFormat ( date )
    
@@ -478,9 +479,9 @@ def DateAddPeriod ( date, period='1YE', Calendar=None ) :
     if PeriodType == YE_name[0] :
         new_date = DateAddYear ( date, year_inc=period )
     if PeriodType == MO_name[0] :
-        new_date = DateAddMonth ( date, month_inc=period, Calendar=OPTIONS['DefaultCalendar'] )
+        new_date = DateAddMonth ( date, month_inc=period, Calendar=OPTIONS.DefaultCalendar )
     if PeriodType == DA_name[0] :
-        new_date = AddDaysToDate ( date, ndays=period, Calendar=OPTIONS['DefaultCalendar'] )
+        new_date = AddDaysToDate ( date, ndays=period, Calendar=OPTIONS.DefaultCalendar )
     if PeriodType == 'Unknown' :
         raise AttributeError ( f"DateAddPeriod : period syntax {period=} not understood" )
 
@@ -496,7 +497,7 @@ def SubOneDayToDate (date, Calendar=None) :
     '''
     push_stack ( f'SubOneDayToDate ( {date=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
@@ -520,9 +521,9 @@ def AddOneDayToDate ( date, Calendar=None ) :
     Add one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
     push_stack ( f'AddOneDayToDate ( {date=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
-    if OPTIONS['Debug'] : print ( f'AddOneDayToDate : {date=}' )
+    if OPTIONS.Debug : print ( f'AddOneDayToDate : {date=}' )
     zformat = DateFormat ( date )
     ye, mo, da = GetYearMonthDay ( date )
     zlength = GetMonthsLengths ( ye, Calendar )
@@ -547,7 +548,7 @@ def AddDaysToDate ( date, ndays='1D', Calendar=None ) :
     Number of days migth be negative
     '''
     push_stack ( f'AddDaysToDate ( {date=}, {ndays=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     zformat = DateFormat ( date )
      
@@ -584,7 +585,7 @@ def AddPeriodToDate ( date, period, Calendar=None ) :
     '''
     push_stack ( f'AddPeriodToDate ( {date=}, {period=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     ndays = DaysInCurrentPeriod ( date, period, Calendar=Calendar)
     new_date = AddDaysToDate ( date, ndays=1, Calendar=Calendar )
@@ -597,7 +598,7 @@ def DaysInYear (year, Calendar=None ) -> int :
     Return the number of days in a year
     '''
     push_stack ( f'DaysInYear ( {year=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
 
     if Calendar in Calendar_360d :
         ndays = 360
@@ -626,7 +627,7 @@ def DaysBetweenDate ( pdate1, pdate2, Calendar=None ) -> int :
   and then the sign is reversed.
   '''
   push_stack ( f'DaysBetweenDate ( {pdate1=}, {pdate2=}, {Calendar=} )' )
-  if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+  if not Calendar : Calendar=OPTIONS.DefaultCalendar
     
   if pdate1 < pdate2 :
     date1=pdate2 ; date2=pdate1
@@ -658,7 +659,7 @@ def ConvertGregorianDateToJulian (date, Calendar=None) :
     Convert yyyymmdd to yyyyddd
     '''
     push_stack ( f'ConvertGregorianDateToJulian ( {date=}, {Calendar} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     ye, mo, da = GetYearMonthDay (date)
     ndays = DaysBetweenDate ( PrintDate (ye,mo,da, 'Human'), PrintDate (ye,1,1, 'Human'), Calendar=Calendar )
@@ -671,7 +672,7 @@ def ConvertJulianDateToGregorian (date, Calendar=None) :
     Convert yyyyddd to yyyymmdd
     '''
     push_stack ( f'ConvertJulianDateToGregorian ( {date=}, {Calendar} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
    
     # Break apart the year and the days
     zdate = int (date)
@@ -704,7 +705,7 @@ def DaysInCurrentPeriod ( startdate, period, Calendar=None ) :
     Give the numbers of days during the period from startdate date
     '''
     push_stack ( f'DaysInCurrentPeriod ( {startdate=}, {period=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar']
+    if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
     year, month, day = GetYearMonthDay ( startdate )
     PeriodType, PeriodLength = AnaPeriod ( period )

@@ -14,6 +14,7 @@ Details for exact computation : https://www.imcce.fr/en/grandpublic/systeme/prom
 import time
 import numpy as np, xarray as xr
 import cftime
+from Utils import Container
 
 deg2rad = np.deg2rad (1.0)
 rad2deg = np.rad2deg (1.0)
@@ -57,14 +58,14 @@ SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice(1,None,12), 'MAR':slice(2,None,1
 SOLAR = 1365.0          # Solar constant (W/m^2)   
 
 # Ephemerides internal options
-OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,  }
+OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
 
 class set_options :
     """
     Set options for Ephemerides
     """
     def __init__ (self, **kwargs):
-        self.old = {}
+        self.old = Container ()
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -126,7 +127,7 @@ def pop_stack (string:str) :
     if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
     #
 
-## ==========================================================================
+## ============================================================================
 def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
     '''
     Convert a cftime time variable in to Year before present values
@@ -202,6 +203,29 @@ def equation_temps (day) :
     '''
     push_stack ( 'equation_temps (day)' )
     M = np.mod (357.0 + day2deg*day, 360.)
+    C = 1.914 * np.sin (deg2rad*M) + 0.02 * np.sin (2.0 * deg2rad*M)
+    L = np.mod (280.0 + C + day2deg*day, 360.)
+    R = -2.466 * np.sin (2.0 * deg2rad*L) + 0.053 * np.sin (4.0 * deg2rad*L)
+    equation_temps = (C + R) * 4.0
+        
+    if isinstance (equation_temps, xr.core.dataarray.DataArray) :
+        equation_temps.attrs.update ( {'units':'minutes', 'standard_name':'equation_du_temps', 'long_name':'Equation du temps',
+                                          'comment':'Time between 12:00 GMT and the passage of the Sun at the Greenwich meridian'} )
+    push_stack ( 'equation_temps' )
+    return equation_temps
+
+def equation_temps_smooth (day) :
+    '''
+    Computes equation of time (minutes)
+    Time between 12:00 GMT and the passage of the Sun at the Greenwich meridian
+
+    Input : 
+    day : number of the day of the year. Maybe > 366
+
+    This version takes a real version of day 1.0 is day 1, 0h, 1.5 is day 1, 12h, etc ....
+    '''
+    push_stack ( 'equation_temps (day)' )
+    M = np.mod (357.0 + day2deg*(day-0.5), 360.)
     C = 1.914 * np.sin (deg2rad*M) + 0.02 * np.sin (2.0 * deg2rad*M)
     L = np.mod (280.0 + C + day2deg*day, 360.)
     R = -2.466 * np.sin (2.0 * deg2rad*L) + 0.053 * np.sin (4.0 * deg2rad*L)
@@ -402,9 +426,32 @@ def SunSetLocal (day, lat) :
     pop_stack ( 'SunSetLocal' )
     return zval
 
-def date2day (pdate, t0) :
+def date2day (pdate, t0=np.datetime64 ('1955-01-01T00:00:00')) :
     '''
     Gives day from a date in np.datetime64 format : integer
+
+    Input
+    pdate : date in np.datetime64, or string
+    t0    : reference date in np.datetime64 01-JAN of any year, time 00:00
+    '''
+    push_stack ( f'date2day (pdate, {t0=})' )
+
+    if isinstance (t0, str) :
+        zdate = np.datetime64 (pdate)
+    else :
+        zdate = pdate
+
+    ts = (zdate - t0) / np.timedelta64 (1, 'D')
+    day = np.floor (ts%365) + 1
+    
+    if isinstance (pdate, xr.core.dataarray.DataArray) :
+        day.attrs.update ( {'units':'days'} )
+    pop_stack ( 'date2day' )
+    return day
+
+def date2daydec (pdate, t0=np.datetime64 ('1955-01-01T00:00:00'), out_int=True) :
+    '''
+    Gives day from a date in np.datetime64 format : day and  fraction of day
 
     Input
     pdate : date in np.datetime64
@@ -412,14 +459,15 @@ def date2day (pdate, t0) :
     '''
     push_stack ( f'date2day (pdate, {t0=})' )
 
-    ts = (pdate - t0) / np.timedelta64 (1, 'h')
-    day = np.fix ( np.mod (ts/24, 365) ) + 1
+    ts = (pdate - t0) / np.timedelta64 (1, 'D')
+    day = ts%365 + 1
+    
     if isinstance (pdate, xr.core.dataarray.DataArray) :
         day.attrs.update ( {'units':'days'} )
     pop_stack ( 'date2day' )
     return day
 
-def date2hour (pdate, t0) :
+def date2hour (pdate, t0=np.datetime64 ('1955-01-01T00:00:00'), out='int') :
     '''
     Gives hour from a date in np.datetime64, format : integer
 
@@ -429,7 +477,7 @@ def date2hour (pdate, t0) :
     '''
     push_stack ( f'date2hour (pdate, {t0=})' )
     ts   = (pdate - t0) / np.timedelta64 (1, 'h')
-    hour = np.fix ( np.mod (ts, 24))
+    hour = np.floor (ts%24)
     if isinstance (pdate, xr.core.dataarray.DataArray) :
         hour.attrs.update ( {'units':'hours' } )
     pop_stack (date2hour)
@@ -445,7 +493,7 @@ def date2hourdec (pdate, t0) :
     '''
     push_stack ( f'date2hourdec (pdate, {t0=})' )
     ts = (pdate - t0) / np.timedelta64 (1, 'h')
-    hourdec = np.mod (ts, 24)
+    hourdec = ts%24
     if isinstance (pdate, xr.core.dataarray.DataArray) :
         hourdec.attrs.update ( {'units':'hours'} )
     pop_stack ( 'date2hourdec' )
@@ -460,6 +508,8 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
     day       = date2day     (ptime, t0)
     hourGMT   = date2hourdec (ptime, t0)
     hour      = np.mod (hourGMT + lon/15.0, 24.0)
+
+    if OPTIONS.Debug : print ( f'{day=}' )
 
     if isinstance (ptime, xr.core.dataarray.DataArray) : math = xr
     else : math = np

@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-## ===========================================================================
-##
-##  This software is governed by the CeCILL  license under French law and
-##  abiding by the rules of distribution of free software.  You can  use,
-##  modify and/ or redistribute the software under the terms of the CeCILL
-##  license as circulated by CEA, CNRS and INRIA at the following URL
-##  "http://www.cecill.info".
-##
-##  Warning, to install, configure, run, use any of Olivier Marti's
-##  software or to read the associated documentation you'll need at least
-##  one (1) brain in a reasonably working order. Lack of this implement
-##  will void any warranties (either express or implied).
-##  O. Marti assumes no responsability for errors, omissions,
-##  data loss, or any other consequences caused directly or indirectly by
-##  the usage of his software by incorrectly or partially configured
-##  personal.
-##
-## ===========================================================================
+## ============================================================================
+##                                                                             
+##  This software is governed by the CeCILL  license under French law and      
+##  abiding by the rules of distribution of free software.  You can  use,      
+##  modify and/ or redistribute the software under the terms of the CeCILL     
+##  license as circulated by CEA, CNRS and INRIA at the following URL          
+##  "http://www.cecill.info".                                                  
+##                                                                             
+##  Warning, to install, configure, run, use any of Olivier Marti's            
+##  software or to read the associated documentation you'll need at least      
+##  one (1) brain in a reasonably working order. Lack of this implement        
+##  will void any warranties (either express or implied).                      
+##  O. Marti assumes no responsability for errors, omissions,                  
+##  data loss, or any other consequences caused directly or indirectly by      
+##  the usage of his software by incorrectly or partially configured           
+##  personal.                                                                  
+##                                                                             
+## ============================================================================
 '''
 A few fonctionnalities of the OASIS coupler in Python
 
@@ -25,83 +25,69 @@ olivier.marti@lsce.ipsl.fr
 
 import time
 import sys, numpy as np, xarray as xr
+from Utils import Container ()
 
-rpi = np.pi ; rad = np.deg2rad (1.0) ; dar = np.rad2deg (1.0)
+## Variables exchanged between ocean and atmosphere in IPSL coupled model      
+o2a_hf = [
+    ['O_SSTSST', 'SISUTESW'],
+    ['OIceFrc' , 'SIICECOV'],
+    ['O_TepIce', 'SIICTEMW'],
+    ['O_AlbIce', 'SIICEALW'],
+    ['O_OCurx1', 'CURRENTX'],
+    ['O_OCury1', 'CURRENTY'],
+    ['O_OCurz1', 'CURRENTZ']]
+o2a_day = []
+o2a     = o2a_hf + o2a_day
 
-class Container :
-    ''' 
-    Void class to act as a container
-    Class members can be accessed either with dictionnary or namespace syntax
-       i.e  <Container>['member'] or <Container>.member
-    '''
-    def update (self, dico=None, **kwargs):
-        '''Use a dictionnary to update values'''
-        if dico : 
-            for attr in dico.keys () : super().__setattr__(attr, dico[attr])
-        self.__dict__.update (kwargs)
-    def keys    (self) : return self.__dict__.keys()
-    def values  (self) : return self.__dict__.values()
-    def items   (self) : return self.__dict__.items()
-    def dict    (self) : return self.__dict__
-    ## Hidden functions
-    def __str__     (self) : return str  (self.__dict__)
-    def __repr__    (self) : return repr (self.__dict__)
-    def __name__    (self) : return self.__class__.__name__
-    def __getitem__ (self, attr) : return getattr (self, attr)
-    def __setitem__ (self, attr, value) : setattr (self, attr, value)
-    def __iter__    (self) : return self.__dict__.__iter__()
-    def __next__    (self) : return self.__dict__.__next__()
-    def __len__     (self) : return len (self.__dict__)
-    def __init__ (self, **kwargs) :
-        for attr, value in kwargs.items () :
-            super().__setattr__(attr, value)
+a2o_day = [
+    ['COLIQRUN', 'O_Runoff'],
+    ['COCALVIN', 'OCalving'],
+    ['COCALVIN', 'OIceberg'],
+    ['COCALVIN', 'OIcshelf']]
 
-# Variables exchanged between ocean and atmosphere in IPSL coupled model
-o2a = [
-    ['O_SSTSST' , 'SISUTESW'] ,
-    ['OIceFrc'  , 'SIICECOV'] ,
-    ['O_TepIce' , 'SIICTEMW'] ,
-    ['O_AlbIce' , 'SIICEALW'] ,
-    ['O_OCurx1' , 'CURRENTX'] ,
-    ['O_OCury1' , 'CURRENTY'] ,
-    ['O_OCurz1' , 'CURRENTZ'] ]
-a2o = [
-    ['COTAUXXU' , 'O_OTaux1'] ,
-    ['COTAUYYU' , 'O_OTauy1'] ,
-    ['COTAUZZU' , 'O_OTauz1'] ,
-    ['COTAUXXV' , 'O_OTaux2'] ,
-    ['COTAUYYV' , 'O_OTauy2'] ,
-    ['COTAUZZV' , 'O_OTauz2'] ,
-    ['COWINDSP' , 'O_Wind10'] ,
-    ['COTOTRAI' , 'OTotRain'] ,
-    ['COTOTSNO' , 'OTotSnow'] ,
-    ['COTOTEVA' , 'OTotEvap'] ,
-    ['COICEVAP' , 'OIceEvap'] ,
-    ['COQSRMIX' , 'O_QsrMix'] ,
-    ['COQNSMIX' , 'O_QnsMix'] ,
-    ['COSHFICE' , 'O_QsrIce'] ,
-    ['CONSFICE' , 'O_QnsIce'] ]
+a2o_hf_wind = [
+    ['COTAUXXU', 'O_OTaux1'],
+    ['COTAUYYU', 'O_OTauy1'],
+    ['COTAUZZU', 'O_OTauz1'],
+    ['COTAUXXV', 'O_OTaux2'],
+    ['COTAUYYV', 'O_OTauy2'],
+    ['COTAUZZV', 'O_OTauz2'],
+    ['COWINDSP', 'O_Wind10']]
+
+a2o_hf_ext = [
+    ['COTOTRAI', 'OTotRain'],
+    ['COTOTSNO', 'OTotSnow'],
+    ['COTOTEVA', 'OTotEvap'],
+    ['COICEVAP', 'OIceEvap'],
+    ['COQSRMIX', 'O_QsrMix'],
+    ['COQNSMIX', 'O_QnsMix'],
+    ['COSHFICE', 'O_QsrIce'],
+    ['CONSFICE', 'O_QnsIce'],
+    ['CODFLXDT', 'O_dQnsdT']]
+
+a2o_hf = a2o_hf_wind + a2o_hf_ext
+a2o    = a2o_day     + a2o_hf
 
 # Build dictionnaries for correspondance between ocean and atmosphere variables.
 a2o_d = Container () ; a2o_r = Container ()
 for avar, ovar in a2o :
-    a2o_d.update ({avar:ovar})
-    a2o_r.update ({ovar:avar})
+    a2o_d[avar] = ovar
+    a2o_r[ovar] = avar
 
-o2a_d = {} ; o2a_r = {}
+o2a_d = Container () ; o2a_r = Container ()
 for ovar, avar in o2a :
-    o2a_d.update ({ovar:avar})
-    o2a_r.update ({avar:ovar})
+    o2a_d[ovar] = avar
+    o2a_r[avar] = ovar
 
-# OASIS internal options
-OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None }
+### OASIS internal options                                                     
+OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
 
 class set_options :
-    """
+    '''
     Set options for oasis
-    """
+    '''
     def __init__ (self, **kwargs) :
-        self.old = {}
+        self.old = Container ()
         for k, v in kwargs.items() :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -113,57 +99,57 @@ class set_options :
     def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
 
 def get_options () -> dict :
-    """
+    '''
     Get options for oasis
 
     See Also
     ----------
     set_options
 
-    """
+    '''
     return OPTIONS
 
 def return_stack () :
     return OPTIONS['Stack']
 
 def push_stack (string:str) :
-    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
-    else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    if OPTIONS.Depth : OPTIONS.Depth += 1
+    else             : OPTIONS.Depth = 1
+    if OPTIONS.Trace : print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
-    else                : OPTIONS['Stack'] = [string,]
+    if OPTIONS.Stack : OPTIONS.Stack.append (string)
+    else             : OPTIONS.Stack = [string,]
     #
-    if OPTIONS['Timing'] :
-        if OPTIONS['t0'] :
-            OPTIONS['t0'].append ( time.time() )
+    if OPTIONS.Timing :
+        if OPTIONS.t0 :
+            OPTIONS.t0.append ( time.time() )
         else :
-            OPTIONS['t0'] = [ time.time(), ]
+            OPTIONS.t0 = [ time.time(), ]
 
 def pop_stack (string:str) :
-    if OPTIONS['Timing'] :
-        dt = time.time() - OPTIONS['t0'][-1]
-        OPTIONS['t0'].pop()
+    if OPTIONS.Timing :
+        dt = time.time() - OPTIONS.t0[-1]
+        OPTIONS.t0.pop()
     else :
         dt = None
     if OPTIONS['Trace'] or dt :
         if dt : 
             if dt < 1e-3 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
             if dt >= 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1  :5.1f} second')
         else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string}')
     #
-    OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    OPTIONS.Depth -= 1
+    if OPTIONS.Depth == 0 : OPTIONS.Depth = None
+    OPTIONS.Stack.pop ()
+    if OPTIONS.Stack == list () : OPTIONS.Stack = None
     #
 
-## ===========================================================================
+## ============================================================================
 def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links) :
     push_stack ( f'compute_links ( remap_matrix, src_address, dst_address, {src_grid_size=}, {dst_grid_size=}, {num_links=} )' )
     
@@ -218,20 +204,20 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
         print ('Dimensions do not match')
         raise Exception ("Error in module: " + __name__ + ", file: " + __file__ + ", function: " + rmp_remap.__name__)
        
-    if OPTIONS['Debug'] : print ('grid sizes      : ', src_grid_size, dst_grid_size)
-    if OPTIONS['Debug'] : print ('num_links       : ', num_links)
-    if OPTIONS['Debug'] : print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
-    if OPTIONS['Debug'] : print ('src dimensions  : ', src_ny, src_nx)
-    if OPTIONS['Debug'] : print ('dst dimensions  : ', dst_ny, dst_nx)
+    if OPTIONS.Debug : print ('grid sizes      : ', src_grid_size, dst_grid_size)
+    if OPTIONS.Debug : print ('num_links       : ', num_links)
+    if OPTIONS.Debug : print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
+    if OPTIONS.Debug : print ('src dimensions  : ', src_ny, src_nx)
+    if OPTIONS.Debug : print ('dst dimensions  : ', dst_ny, dst_nx)
 
     # Get information to create the destination field
     src_shape_2D   = list (ptab.shape)
     dst_shape_2D   = src_shape_2D[:-2] + [dst_ny, dst_nx]
-    if OPTIONS['Debug'] : print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
+    if OPTIONS.Debug : print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
 
     src_shape_1D = src_shape_2D[:-2] + [src_ny*src_nx]
     dst_shape_1D = dst_shape_2D[:-2] + [dst_ny*dst_nx]
-    if OPTIONS['Debug'] : print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
+    if OPTIONS.Debug : print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
     
     src_dims_2D = list (ptab.dims) ; 
     src_dims_1D = src_dims_2D[:-2] + ['xy']  
@@ -240,8 +226,8 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     dst_dims_2D = dst_dims_2D + ['y', 'x']
     dst_dims_1D = dst_dims_2D[:-2] + ['xy']
     
-    if OPTIONS['Debug'] : print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
-    if OPTIONS['Debug'] : print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
+    if OPTIONS.Debug : print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
+    if OPTIONS.Debug : print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
         
     src_coords_2D = ptab.coords
     dst_coords_2D = []
@@ -255,8 +241,8 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     ## Creates an array to mask destinations points with no value assigned by the interpolation
     dst_mask_1D = np.full (dst_shape_1D, np.nan)
     
-    if OPTIONS['Debug'] : print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
-    if OPTIONS['Debug'] : print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
+    if OPTIONS.Debug : print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
+    if OPTIONS.Debug : print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
 
     # Interpolate
     dst_field_1D = remap ( src_field_1D, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan )
@@ -306,12 +292,12 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
     dst_field = np.zeros ( (dst_shape) )
     dst_mask  = np.full  ( (dst_shape), np.nan)
      
-    if OPTIONS['Debug'] : print ("\nStarting interpolation")
+    if OPTIONS.Debug : print ("\nStarting interpolation")
     t_start = time.time ()
     t_0 = t_start
    
     for link in np.arange (num_links) :
-        if OPTIONS['Debug'] :
+        if OPTIONS.Debug :
             if link%(num_links//100) == 0 :
                 t_1 = time.time ()
                 if t_1 > t_0 + 0.6 :
@@ -320,9 +306,9 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
         dst_mask  [..., dst_address [link]] = 1.0
         dst_field [..., dst_address [link]] += remap_matrix[link] * src_field[..., src_address[link]]
     t_end = time.time ()
-    if OPTIONS['Debug'] : progress (percent=100, width=width)
+    if OPTIONS.Debug : progress (percent=100, width=width)
     
-    if OPTIONS['Debug'] :
+    if OPTIONS.Debug :
         print ("\nInterpolation time : {:5.3}s".format (t_end-t_start))
         print (" ")
         
@@ -341,10 +327,10 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     '''
     push_stack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
     
-    gsinlon = np.sin (rad * glam)
-    gcoslon = np.cos (rad * glam)
-    gsinlat = np.sin (rad * gphi)
-    gcoslat = np.cos (rad * gphi)
+    gsinlon = np.sin (np.deg2rad(glam))
+    gcoslon = np.cos (np.deg2rad(glam))
+    gsinlat = np.sin (np.deg2rad(gphi))
+    gcoslat = np.cos (np.deg2rad(gphi))
           
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
@@ -361,10 +347,10 @@ def en2geo (pte, ptn, glam, gphi) :
         glam, gphi : longitude and latitude of the points
     '''
     push_stack ( f'en2geo (pte, ptn, glam, gphi)' )
-    gsinlon = np.sin (rad * glam)
-    gcoslon = np.cos (rad * glam)
-    gsinlat = np.sin (rad * gphi)
-    gcoslat = np.cos (rad * gphi)
+    gsinlon = np.sin (np.deg2rad(glam))
+    gcoslon = np.cos (np.deg2rad(glam))
+    gsinlat = np.sin (np.deg2rad(gphi))
+    gcoslat = np.cos (np.deg2rad(gphi))
 
     pxx = - pte * gsinlon - ptn * gcoslon * gsinlat
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
@@ -373,7 +359,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pop_stack ( 'en2geo' )
     return pxx, pyy, pzz
 
-## Sommes des poids à l'arrivée
+## Sommes des poids à l'arrivée                                                
 def sum_matrix (rmp) :
     '''
     Computes sum of weights on souce and destination points
@@ -394,8 +380,8 @@ def sum_matrix (rmp) :
     pop_stack ( 'sum_matrix' )
     return src_sum_matrix, dst_sum_matrix
 
-## ===========================================================================
-##
-##                               That's all folk's !!!
-##
-## ===========================================================================
+## ============================================================================
+##                                                                             
+##                               That's all folk's !!!                         
+##                                                                             
+## ============================================================================

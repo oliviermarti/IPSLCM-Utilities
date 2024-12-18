@@ -14,6 +14,7 @@ Includes ColorShading, ColorLine, RCPColorLine, RCPColorShading
 
 import types
 import numpy as np
+import matplotlib as mpl
 
 def color2hex ( r, g, b ) :
     return "#{:02X}{:02X}{:02X}".format ( int(r*255), int(g*255), int(b*255) )
@@ -149,6 +150,18 @@ def create_colormap (colors, position=None, bit=True, reverse=False, name='custo
     else :
         return ListedColormap (colors)
     #
+
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    '''
+    https://stackoverflow.com/a/18926541
+    '''
+    if isinstance(cmap, str):
+        cmap = plt.get_cmap(cmap)
+    new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
+    
 
 cmap = types.SimpleNamespace ()
 

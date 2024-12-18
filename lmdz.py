@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-## ===========================================================================
-##
-##  This software is governed by the CeCILL  license under French law and
-##  abiding by the rules of distribution of free software.  You can  use,
-##  modify and/ or redistribute the software under the terms of the CeCILL
-##  license as circulated by CEA, CNRS and INRIA at the following URL
-##  "http://www.cecill.info".
-##
-##  Warning, to install, configure, run, use any of Olivier Marti's
-##  software or to read the associated documentation you'll need at least
-##  one (1) brain in a reasonably working order. Lack of this implement
-##  will void any warranties (either express or implied).
-##  O. Marti assumes no responsability for errors, omissions,
-##  data loss, or any other consequences caused directly or indirectly by
-##  the usage of his software by incorrectly or partially configured
-##  personal.
-##
-## ===========================================================================
+## ============================================================================
+##                                                                             
+##  This software is governed by the CeCILL  license under French law and      
+##  abiding by the rules of distribution of free software.  You can  use,      
+##  modify and/ or redistribute the software under the terms of the CeCILL     
+##  license as circulated by CEA, CNRS and INRIA at the following URL          
+##  "http://www.cecill.info".                                                  
+##                                                                             
+##  Warning, to install, configure, run, use any of Olivier Marti's            
+##  software or to read the associated documentation you'll need at least      
+##  one (1) brain in a reasonably working order. Lack of this implement        
+##  will void any warranties (either express or implied).                      
+##  O. Marti assumes no responsability for errors, omissions,                  
+##  data loss, or any other consequences caused directly or indirectly by      
+##  the usage of his software by incorrectly or partially configured           
+##  personal.                                                                  
+##                                                                             
+## ============================================================================
 '''
 Utilities for LMDZ grid
 
@@ -25,7 +25,7 @@ Utilities for LMDZ grid
 
 Author: olivier.marti@lsce.ipsl.fr
 
-## SVN information
+## SVN information                                                             
 __Author__   = "$Author: omamce$"
 __Date__     = "$Date: 2023-10-10 12:58:04 +0200 (Tue, 10 Oct 2023)$"
 __Revision__ = "$Revision: 6647$"
@@ -36,14 +36,17 @@ __HeadURL    = "$HeadURL: svn+ssh://omamce@forge.ipsl.jussieu.fr/ipsl/forge/proj
 import numpy as np
 import xarray as xr
 import cartopy
+import cf_xarray.units 
+import pint_xarray
+from pint_xarray import unit_registry as ureg
+Q_ = ureg.Quantity
+
 if cartopy.__version__ > '0.20' :
     import cartopy.util as cutil
 else :
     import my_cyclic as cutil
-
-RPI   = np.pi
-RAD   = np.deg2rad (1.0)
-DAR   = np.rad2deg (1.0)
+from Utils import Container
+    
 REPSI = np.finfo (1.0).eps
 
 RAAMO  = xr.DataArray (12)        ; RAAMO .name='RAAMO'  ; RAAMO.attrs.update  ({'units':"mth"    , 'long_name':"Number of months in one year" })
@@ -61,43 +64,189 @@ VKARMN = xr.DataArray (0.4)       ; VKARMN.name='VKARMN' ; VKARMN.attrs.update (
 STEFAN = xr.DataArray (5.67e-8)   ; STEFAN.name='STEFAN' ; STEFAN.attrs.update ({'units':"W/m2/K4", 'long_name':"Stefan-Boltzmann constant"} )
 
 RDAY   = RJJHH * RHHMM * RMMSS               ; RDAY.attrs.update   ({'units':"s"      , 'long_name':"Day length"})
-RSIYEA = 365.25 * RDAY * 2. * RPI / 6.283076 ; RSIYEA.attrs.update ({'units':"s"      , 'long_name':"Sideral year length"})
+RSIYEA = 365.25 * RDAY * 2. * np.pi / 6.283076 ; RSIYEA.attrs.update ({'units':"s"      , 'long_name':"Sideral year length"})
 RSIDAY = RDAY / (1. + RDAY / RSIYEA)         ; RSIDAY.attrs.update ({'units':"s"      , 'long_name':"Sideral day length"})
-ROMEGA = 2. * RPI / RSIDAY                   ; ROMEGA.attrs.update ({'units':"s-1"    , 'long_name':"Earth rotation parameter"})
+ROMEGA = 2. * np.pi / RSIDAY                   ; ROMEGA.attrs.update ({'units':"s-1"    , 'long_name':"Earth rotation parameter"})
 
-## Default names of dimensions
-UDIMS = { 'x':'lon', 'y':'lat', 'z':'presnivs', 't': 'time_counter' }
+## Default names of dimensions                                                 
+UDIMS = { 'x':'lon', 'y':'lat', 'z':'presnivs', 't':'time_counter' }
 
-## All possible names of dimensions in LMDZ files
+## All possible names of dimensions in LMDZ files                              
 XNAME = [ 'x', 'X', 'lon', ]
 YNAME = [ 'y', 'Y', 'lat', ]
 CNAME = [ 'c', 'cell', ]
 ZNAME = [ 'z', 'Z', 'presnivs', ]
 TNAME = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
 
-## All possibles name of units of dimensions in LMDZ files
+## All possibles name of units of dimensions in LMDZ files                     
 XUNIT = [ 'degrees_east', ]
 YUNIT = [ 'degrees_north', ]
 CUNIT = [ 'cell', ]
 ZUNIT = [ 'Pa', ]
 TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
-## All possibles size of dimensions in LMDZ files
+## All possibles size of dimensions in LMDZ files                              
 XLENGTH  = [ 96, 144, 180, 360, ]
 YLENGTH  = [ 95, 96, 143, 144, 180, 360, ]
 XYLENGTH = [ [96,95], [144, 143], [180, 180], [360, 360]]
 CLENGTH  = [ 16002, ]
 ZLENGTH  = [ 39, 59, 79, ]
 
-# lmdz internal options
-OPTIONS = { 'Debug':False, 'Trace':False, 'Timing':None, 't0':None, 'Depth':None, 'Stack':None,  }
+## Units not recognize by pint
+ureg.define ('degree_C = degC'   )
+ureg.define ('DU  = 10^-5 * m'   )
+ureg.define ('ppb = 10^-9 * kg/kg' )
+
+pint_dict = {
+    # 'R_ecc'         : "m/m" ,
+    # 'R_ecc'         : "m/m" ,
+    # 'R_peri'        : "m/m" ,
+    # 'R_peri'        : "m/m" ,
+    # 'abs550aer'     : "m/m" ,
+    # 'aire'          : "m^2" ,
+    # 'aire'          : "m/m" ,
+    # 'alb1'          : "m/m" ,
+    # 'alb1'          : "m/m" ,
+    # 'alb2'          : "m/m" ,
+    # 'albe_lic'      : "m/m" ,
+    # 'albe_oce'      : "m/m" ,
+    # 'albe_sic'      : "m/m" ,
+    # 'albe_ter'      : "m/m" ,
+    # 'bnds'          : "m/m" ,
+    # 'cdrh'          : "m/m" ,
+    # 'cdrm'          : "m/m" ,
+    # 'cldh'          : "m/m" ,
+    # 'cldicemxrat'   : "m/m" ,
+    # 'cldl'          : "m/m" ,
+    # 'cldm'          : "m/m" ,
+    # 'cldt'          : "m/m" ,
+    # 'cldwatmxrat'   : "m/m" ,
+    # 'dqajs2d'       : "kg/m^2/s" ,
+    # 'dqcon2d'       : "kg/m^2/s" ,
+    # 'dqdyn2d'       : "kg/m^2/s" ,
+    # 'dqeva2d'       : "kg/m^2/s" ,
+    # 'dqldyn2d'      : "kg/m^2/s" ,
+    # 'dqlphy2d'      : "kg/m^2/s" ,
+    # 'dqlsc2d'       : "kg/m^2/s" ,
+    # 'dqphy2d'       : "kg/m^2/s" ,
+    # 'dqsdyn2d'      : "kg/m^2/s" ,
+    # 'dqsphy2d'      : "kg/m^2/s" ,
+    # 'dqthe2d'       : "kg/m^2/s" ,
+    # 'dqvdf2d'       : "kg/m^2/s" ,
+    # 'dqwak2d'       : "kg/m^2/s" ,
+    # 'dryod550aer'   : "m/m" ,
+    # 'ec550aer'      : "m^-1" ,
+    # 'ec550aer'      : "m^-1" ,
+    # 'evap'          : "kg/s/m^2" ,
+    # 'evap_lic'      : "kg/s/m^2" ,
+    # 'evap_oce'      : "kg/s/m^2" ,
+    # 'evap_sic'      : "kg/s/m^2" ,
+    # 'evap_ter'      : "kg/s/m^2" ,
+    # 'fl'            : "m/m" ,
+    # 'fract_lic'     : "m/m" ,
+    # 'fract_lic'     : "m/m" ,
+    # 'fract_oce'     : "m/m" ,
+    # 'fract_oce'     : "m/m" ,
+    # 'fract_sic'     : "m/m" ,
+    # 'fract_sic'     : "m/m" ,	
+    # 'fract_ter'     : "m/m" ,
+    # 'fract_ter'     : "m/m" ,
+    # 'fsnow'         : "m/m" ,
+    # 'ftime_con'     : "m/m" ,
+    # 'ftime_deepcv'  : "m/m" ,
+    # 'ftime_th'      : "m/m" ,
+    # 'klev'          : "m/m" ,
+    # 'klevp1'        : "m/m" ,
+    # 'n2'            : "m/m" ,
+    # 'ndayrain'      :  "days" ,
+    # 'ndayrain'      : "m/m" ,
+    # 'od550_STRAT'   : "m/m" ,
+    # 'od550aer'      : "m/m" ,
+    # 'od550lt1aer'   : "m/m" ,
+    # 'od550lt1aer'   : "m/m" ,
+    # 'od865aer'      : "m/m" ,
+    # 'ozone'         : "m/m" ,
+    # 'ozone_daylight': "m/m" ,
+    # 'pluc'          : "kg/s/m^2" ,
+    # 'plul'          : "kg/s/m^2" ,
+    # 'plun'          : "kg/s/m^2" ,
+    # 'pr_con_i'      : "m/m" ,
+    # 'pr_con_l'      : "m/m" ,
+    # 'pr_lsc_i'      : "m/m" ,
+    # 'pr_lsc_l'      : "m/m" ,
+    # 'precip'        : "kg/s/m^2" ,
+    # 'proba_notrig'  : "m/m" ,
+    # 'rain_con'      : "kg/s/m^2" ,
+    # 'rain_fall'     : "kg/s/m^2" ,
+    # 'random_notrig' : "m/m" ,
+    # 'rhum'          : "m/m" ,
+    # 'rneb'          : "m/m" ,
+    # 'rsu'           : "W m-2" ,
+    # 'sicf'          : "m/m" ,
+    # 'snow'          : "kg/s/m^2" ,
+    # 'stratomask'    : "m/m" ,
+    # 'ue'            : "m/m" ,
+    # 'uq'            : "m/m" ,
+    # 'uwat'          : "m/m" ,
+    # 've'            : "m/m" ,
+    # 'vq'            : "m/m" ,
+    # 'vwat'          : "m/m" ,
+    # 'wake_dens'     : "m^-2" ,
+    # 'wake_h'        : "m/m" ,
+    # 'wake_s'        : "m/m" ,
+    # 'wape'          : "m/m" ,
+    # 'wbilo_lic'     : "kg/m^2/s" ,
+    # 'wbilo_oce'     : "kg/m^2/s" ,
+    # 'wbilo_sic'     : "kg/m^2/s" ,
+    # 'wbilo_ter'     : "kg/m^2/s" ,
+    # 'wevap_lic'     : "kg/m^2/s" ,
+    # 'wevap_oce'     : "kg/m^2/s" ,
+    # 'wevap_sic'     : "kg/m^2/s" ,
+    # 'wevap_ter'     : "kg/m^2/s" ,
+    # 'wrain_lic'     : "kg/m^2/s" ,
+    # 'wrain_oce'     : "kg/m^2/s" ,
+    # 'wrain_sic'     : "kg/m^2/s" ,
+    # 'wrain_ter'     : "kg/m^2/s" ,
+    # 'wsnow_lic'     : "kg/m^2/s" ,
+    # 'wsnow_oce'     : "kg/m^2/s" ,
+    # 'wsnow_sic'     : "kg/m^2/s" ,
+    # 'wsnow_ter'     : "kg/m^2/s" ,
+    # 'wvapp'         : "m/m" ,
+    'epmax'             : 'W m^-2' , # A verifier !!! Que veut dire su ?
+    'ep'                : 'W m^-2' , # A verifier !!!
+    #'flx_co2_ocean'     : "kg/m2/s" ,
+    #'flx_co2_land'      : "kg/m2/s" ,
+    #'flx_co2_ocean_cor' : "kg/m2/s" ,
+    #'flx_co2_land_cor'  : "kg/m2/s" ,
+    #'flx_co2_ff'        : "kg/m2/s" ,
+    #'flx_co2_bb'        : "kg/m2/s" ,
+    }
+
+orch_dict = {
+    'ksat'        : "microm/s" ,
+    'npp'         : "g/m^2/s"  ,
+    'TWS'         : "kg/m^2"   ,
+    'TWBR'        : "kg/m^2"   ,
+    'mrso'        : "kg/m^2"   ,
+    'undermcr'    : 'm/m'      ,
+    'gpp'         : "g/m^2/s"  , 
+    'gppCrop'     : "g/m^2/s"  , 
+    'nee'         : "g/m^2/s"  , 
+    'maint_resp'  : "g/m^2/s"  , 
+    'hetero_resp' : "g/m^2/s"  , 
+    'growth_resp' : "g/m^2/s"  , 
+    'rhCrop'      : "g/m^2/s"  , 
+    }
+
+## lmdz internal options                                                       
+OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
 
 class set_options :
-    """
+    '''
     Set options for LMDZ
-    """
+    '''
     def __init__ (self, **kwargs):
-        self.old = {}
+        self.old = Container ()
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -114,57 +263,57 @@ class set_options :
         self._apply_update (self.old)
 
 def get_options () -> dict :
-    """
+    '''
     Get options for LMDZ
 
     See Also
     ----------
     set_options
 
-    """
+    '''
     return OPTIONS
 
 def return_stack () :
-    return OPTIONS['Stack']
+    return OPTIONS.Stack
 
 def push_stack (string:str) :
-    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
-    else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    if OPTIONS.Depth : OPTIONS.Depth += 1
+    else                : OPTIONS.Depth = 1
+    if OPTIONS.Trace : print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
-    else                : OPTIONS['Stack'] = [string,]
+    if OPTIONS.Stack : OPTIONS.Stack.append (string)
+    else             : OPTIONS.Stack = [string,]
     #
-    if OPTIONS['Timing'] :
-        if OPTIONS['t0'] :
-            OPTIONS['t0'].append ( time.time() )
+    if OPTIONS.Timing :
+        if OPTIONS.t0 :
+            OPTIONS.t0.append ( time.time() )
         else :
-            OPTIONS['t0'] = [ time.time(), ]
+            OPTIONS.t0 = [ time.time(), ]
 
 def pop_stack (string:str) :
-    if OPTIONS['Timing'] :
-        dt = time.time() - OPTIONS['t0'][-1]
+    if OPTIONS.Timing :
+        dt = time.time() - OPTIONS.t0[-1]
         OPTIONS['t0'].pop()
     else :
         dt = None
     if OPTIONS['Trace'] or dt :
         if dt : 
             if dt < 1e-3 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
             if dt >= 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string}')
     #
-    OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    OPTIONS.Depth -= 1
+    if OPTIONS.Depth == 0 : OPTIONS.Depth = None
+    OPTIONS.Stack.pop ()
+    if OPTIONS.Stack == list () : OPTIONS.Stack = None
     #
 
-## ==========================================================================
+## ============================================================================
 
 def __mmath__ (ptab, default=None) :
     '''
@@ -182,7 +331,9 @@ def __mmath__ (ptab, default=None) :
     return mmath
 
 def __find_axis__ (ptab, axis='z', back=True) :
-    '''Returns name and name of the requested axis'''
+    '''
+    Returns name and name of the requested axis
+    '''
     push_stack ( f'__find_axis__ ( ptab, {axis=} {back=} )' )
 
     mmath = __mmath__ (ptab)
@@ -190,25 +341,25 @@ def __find_axis__ (ptab, axis='z', back=True) :
 
     if axis in XNAME :
         ax_name, unit_list, length = XNAME, XUNIT, XLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS.Debug : print ( f'Working on xaxis found by name : {axis=} : {XNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in YNAME :
         ax_name, unit_list, length = YNAME, YUNIT, YLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS.Debug : print ( f'Working on yaxis found by name : {axis=} : {YNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in CNAME :
         ax_name, unit_list, length = CNAME, CUNIT, CLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on caxis found by name : {axis=} : {CNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS.Debug : print ( f'Working on caxis found by name : {axis=} : {CNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in ZNAME :
         ax_name, unit_list, length = ZNAME, ZUNIT, ZLENGTH
-        if OPTIONS['Debug'] : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS.Debug : print ( f'Working on zaxis found by name : {axis=} : {ZNAME=} {ax_name=} {unit_list=} {length=}' )
     if axis in TNAME :
         ax_name, unit_list, length = TNAME, TUNIT, None
-        if OPTIONS['Debug'] : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
+        if OPTIONS.Debug : print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
 
     if mmath == xr :
         # Try by name
         for dim in ax_name :
             if dim in ptab.dims :
-                if OPTIONS['Debug'] : print ( f'Rule 2 : {name=} axis found by unit : {axis=} : {XNAME=}' )
+                if OPTIONS.Debug : print ( f'Rule 2 : {name=} axis found by unit : {axis=} : {XNAME=}' )
                 ix, ax = ptab.dims.index (dim), dim
 
         # If not found, try by axis attributes
@@ -216,21 +367,21 @@ def __find_axis__ (ptab, axis='z', back=True) :
             for i, dim in enumerate (ptab.dims) :
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
-                    if OPTIONS['Debug'] : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
+                    if OPTIONS.Debug : print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
                     if l_axis in ax_name and l_axis == 'X' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS.Debug : print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'Y' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS.Debug : print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'C' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : caxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS.Debug : print ( f'Rule 3 : caxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'Z' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS.Debug : print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
                     if l_axis in ax_name and l_axis == 'T' :
-                        if OPTIONS['Debug'] : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
+                        if OPTIONS.Debug : print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
                         ix, ax = (i, dim)
 
         # If not found, try by units
@@ -239,7 +390,7 @@ def __find_axis__ (ptab, axis='z', back=True) :
                 if 'units' in ptab.coords[dim].attrs.keys() :
                     for name in unit_list :
                         if name in ptab.coords[dim].attrs['units'] :
-                            if OPTIONS['Debug'] : print ( f'Rule 4 : axis found by unit {name} : {unit_list=} {i=} {dim=}' )
+                            if OPTIONS.Debug : print ( f'Rule 4 : axis found by unit {name} : {unit_list=} {i=} {dim=}' )
                             ix, ax = i, dim
 
     # If numpy array or dimension not found, try by length
@@ -248,7 +399,7 @@ def __find_axis__ (ptab, axis='z', back=True) :
             l_shape = ptab.shape
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
-                    if OPTIONS['Debug'] : print ( f'Rule 5 : axis found by length : {axis=} : {XNAME=} {i=} {dim=}' )
+                    if OPTIONS.Debug : print ( f'Rule 5 : axis found by length : {axis=} : {XNAME=} {i=} {dim=}' )
                     ix = nn
 
     if ix and back :
@@ -258,14 +409,16 @@ def __find_axis__ (ptab, axis='z', back=True) :
     return ax, ix
 
 def find_axis ( ptab, axis='z', back=True ) :
-    '''Version of find_axis with no __'''
+    '''
+    Version of find_axis with no __'''
     push_stack ( f'find_axis__ ( ptab {axis=} {back=} )' )
     ix, xx = __find_axis__ (ptab, axis, back, verbose)
     pop_stack ( f'find_axis ( {ax=} {ix=} )' )
     return xx, ix
 
 def get_shape ( ptab ) :
-    '''Get shape of ptab return a string with axes names
+    '''
+    Get shape of ptab return a string with axes names
 
     shape may contain X, Y, C, Z or T
     Y is missing for a latitudinal slice
@@ -284,9 +437,9 @@ def get_shape ( ptab ) :
     push_stack ( f'get_shape : {g_shape=} ' )
     return g_shape
 
-#
 def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
-    '''Returns extended field eastward to have better plots, and box average crossing the boundary
+    '''
+    Returns extended field eastward to have better plots, and box average crossing the boundary
 
     Works only for xarray and numpy data (?)
 
@@ -332,7 +485,8 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=360.0) :
     return ztab
 
 def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
-    '''One-dimensionnal interpolation of a multi-dimensionnal field
+    '''
+    One-dimensionnal interpolation of a multi-dimensionnal field
 
     Intended to interpolate on standard pressure level
 
@@ -354,26 +508,26 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
 
     # Get the number of dimension with dim==zdim in input array
     axis = list (yp.dims).index(zdim)
-    if OPTIONS['Debug'] : print ( f'{axis=}' )
+    if OPTIONS.Debug : print ( f'{axis=}' )
 
     # Get the number of levels in each arrays
     nk_ou = len (x)
 
     # Define the result array
     in_shape       = np.array (yp.shape)
-    if OPTIONS['Debug'] : print ( f'{in_shape=}' )
+    if OPTIONS.Debug : print ( f'{in_shape=}' )
     ou_shape       = np.array (in_shape)
-    if OPTIONS['Debug'] : print ( f'{ou_shape=}' )
+    if OPTIONS.Debug : print ( f'{ou_shape=}' )
     ou_shape[axis] = nk_ou
 
     in_dims        = list (yp.dims)
-    if OPTIONS['Debug'] : print ( f'{in_dims=}' )
+    if OPTIONS.Debug : print ( f'{in_dims=}' )
     ou_dims        = in_dims
 
     pdim           = x.dims[0]
     ou_dims[axis]  = pdim
 
-    if OPTIONS['Debug'] : print ( f'{pdim=}' )
+    if OPTIONS.Debug : print ( f'{pdim=}' )
 
     new_coords = []
     for i, dim in enumerate (yp.dims) :
@@ -381,19 +535,19 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
             ou_dims[i] = x.dims[0]
             if units is not None :
                 yp[dim].attrs['units'] = units
-            if OPTIONS['Debug'] : print ( f'append new coord for {dim=} {x.shape=}' )
+            if OPTIONS.Debug : print ( f'append new coord for {dim=} {x.shape=}' )
             new_coords.append (x             .values)
         else :
-            if OPTIONS['Debug'] : print ( f'append coord for {dim=} {yp.coords[dim].shape=}' )
+            if OPTIONS.Debug : print ( f'append coord for {dim=} {yp.coords[dim].shape=}' )
             new_coords.append (yp.coords[dim].values)
 
-    #if OPTIONS['Debug'] :
+    #if OPTIONS.Debug :
     #    print ( f'{ou_dims   =}' )
     #    print ( f'{new_coords=}' )
 
     ou_tab = xr.DataArray (np.empty (ou_shape), dims=ou_dims, coords=new_coords)
 
-    if OPTIONS['Debug'] :
+    if OPTIONS.Debug :
         print ( f'{ou_tab.shape=} {ou_tab.dims=}' )
     
     if 'log' in method :
@@ -411,14 +565,14 @@ def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
         # Find index of the just above level
         push_stack ( f'interp1d.__interp (x, xp, yp, {pdim=})' )
 
-        #if OPTIONS['Debug'] :
+        #if OPTIONS.Debug :
         #    print ( f'{x.shape=} {x.dims=} {xp.shape=} {yp.shape=}' )
         #    print ( f'{pdim=}' )
         idk1 = np.minimum ( (x-xp), 0.).argmax (dim=pdim)
         idk2 = idk1 - 1
         idk2 = np.maximum (idk2, 0)
 
-        #if OPTIONS['Debug'] :
+        #if OPTIONS.Debug :
         #    print ( f'{idk1=} {idk2=}' )
         
         x1   = xp[{pdim:idk1}]
@@ -475,7 +629,7 @@ def correct_uv (u, v, lon, lat) :
     
     uv = np.sqrt (u*u + v*v)           # Original modulus
     zu = u
-    zv = v * np.cos (RAD*lat)
+    zv = v * np.cos (np.deg2rad(lat))
     zz = np.sqrt ( zu*zu + zv*zv )     # Corrected modulus
     uc = zu*uv/zz
     vc = zv*uv/zz                      # Final corrected values
@@ -529,27 +683,27 @@ def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell' ) :
 
     for xx in XNAME :
         if xx in dd.dims and xx != x :
-            if OPTIONS['Debug'] : print ( f"{xx} renamed to {x}" )
+            if OPTIONS.Debug : print ( f"{xx} renamed to {x}" )
             dd = dd.rename ( {xx:x})
 
     for yy in YNAME :
         if yy in dd.dims and yy != y  :
-            if OPTIONS['Debug'] : print ( f"{yy} renamed to {y}" )
+            if OPTIONS.Debug : print ( f"{yy} renamed to {y}" )
             dd = dd.rename ( {yy:y} )
 
     for cc in CNAME :
         if cc in dd.dims and cc != c  :
-            if OPTIONS['Debug'] : print ( f"{cc} renamed to {c}" )
+            if OPTIONS.Debug : print ( f"{cc} renamed to {c}" )
             dd = dd.rename ( {cc:c} )
 
     for zz in ZNAME :
         if zz in dd.dims and zz != z :
-            if OPTIONS['Debug'] : print ( f"{zz} renamed to {z}" )
+            if OPTIONS.Debug : print ( f"{zz} renamed to {z}" )
             dd = dd.rename ( {zz:z} )
 
     for tt in TNAME  :
         if tt in dd.dims and tt != t :
-            if OPTIONS['Debug'] : print ( f"{tt} renamed to {t}" )
+            if OPTIONS.Debug : print ( f"{tt} renamed to {t}" )
             dd = dd.rename ( {tt:t} )
 
     pop_stack ( f'unify_dims' )
@@ -593,7 +747,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
     if lon/lat is True, add longitude/latitude values (regular grid), with name lon_name (or 'lon' if lon_name not defined)
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
-    push_stack ( f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}, {lon_name=}, {lat_name=}) ' )
+    push_stack (f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}, {lon_name=}, {lat_name=})')
     
     math = __mmath__ (p1d)
 
@@ -623,7 +777,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
 
     p2d = np.empty (form_all)
     p2d [..., 1:-1, :] = np.reshape (np.float64 (p1d [..., 1:-1]), form_shape )
-    if OPTIONS['Debug'] : print (f'{math=} {jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}')
+    if OPTIONS.Debug : print (f'{math=} {jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}')
 
     if share_pole :
         p2d [...,  0 , :].flat = p1d [...,  0] / float (jpi)
@@ -655,7 +809,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
             if lat :
                 if not lat_name : lat_name = 'lat'
                 lat = np.linspace ( 90, -90, jpj, endpoint=True)
-        if OPTIONS['Debug'] : print ( f'{lon_name=} {type(lon)=}' )
+        if OPTIONS.Debug : print ( f'{lon_name=} {type(lon)=}' )
 
         if __mmath__(lon) == np :
             if math == xr :
@@ -683,7 +837,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
         if not lon_name : lon_name = 'x'
         if not lat_name : lat_name = 'y'
 
-        if OPTIONS['Debug'] : print ( f'{lon_name=}' )
+        if OPTIONS.Debug : print ( f'{lon_name=}' )
             
         if lon_name != p2d.dims[-1] : p2d = p2d.rename ( {p2d.dims[-1]:lon_name} ) 
         if lat_name != p2d.dims[-2] : p2d = p2d.rename ( {p2d.dims[-2]:lat_name} )
@@ -698,7 +852,7 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
             if __mmath__ (lat) == xr : p2d[lon_name].attrs.update ( lat.attrs )
             else                     : p2d[lat_name].attrs.update ( { 'units':'degrees_north', 'long_name':'Latitude' , 'standard_name':'latitude' , 'axis':'Y' }  )
 
-    pop_stack ( f'point2geo')
+    pop_stack (f'point2geo')
     return p2d
 
 def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=None, share_pole=False, lon_name=None, lat_name=None, lev_name=None) :
@@ -738,7 +892,7 @@ def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=Non
         jpij = jpn / jpk
         if jpi*jpj !=0 : 
             if jpk * ( jpi*(jpj-2) + 2 ) != jpn :
-                raise ValueError ( f'{jpn=}, {jpij=} {jpi=}, {jpj}, {jpk=}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]' )
+                raise ValueError (f'{jpn=}, {jpij=} {jpi=}, {jpj}, {jpk=}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]')
         if jpi==0 and jpj>0    : jpi = (jij-2)//(jpj-2)
         if jpi>0  and jpj == 0 : jpj = (jij-2)//jpi +2            
         if jpi==0 and jpi==0 :
@@ -748,13 +902,13 @@ def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=Non
 
     form_2D = form1 + list ( (jpk, jpi*(jpj-2) + 2, ) )
 
-    if OPTIONS['Debug'] :
+    if OPTIONS.Debug :
         print ( f'{jpn=}, {jpij=} {jpi=}, {jpj=}, {jpk=}' )
         print ( f'{form1=}, {form_2D=}' )
     if math == xr : p2d = np.reshape ( p1d.values, form_2D )
     else          : p2d = np.reshape ( p1d, form_2D )
         
-    if OPTIONS['Debug'] :
+    if OPTIONS.Debug :
         print ( f'{p2d.shape=}' )
     
     if math == xr :
@@ -773,7 +927,7 @@ def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=Non
             p2d = p2d.assign_coords ( {lev_name:lev} )
             if __mmath__ (lon) in [xr, np, np.ma] : p2d[lon_name].attrs.update ( lon.attrs )
             #else : 
-            #    p2d[lon_name].attrs.update ( { 'units':'degrees_east' , 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' } )
+            #    p2d[lon_name].attrs.update ( { 'units':'degrees_east', 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' } )
 
     push_stack ( f'point3geo')
     return p3d
@@ -790,10 +944,10 @@ def geo2point ( p2d, cumul_poles=False, dim1d='points_physiques' ) :
     jpn = jpi*(jpj-2) + 2
 
     # Get other dimensions
-    form1 = list(p2d.shape [0:-2]) 
+    form1   = list(p2d.shape [0:-2]) 
     form_2D = form1 + [jpn,]
         
-    p1d = np.empty (form_2D)
+    p1d     = np.empty (form_2D)
     form_1D = form1 + [jpn-2,]
     
     if math == xr : p1d [..., 1:-1] = np.reshape ( np.float64 (p2d[..., 1:-1, :].values).ravel(), form_1D )
@@ -828,10 +982,10 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         glam, gphi : longitude and latitude of the points
     '''
     push_stack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
-    gsinlon = np.sin (RAD * glam)
-    gcoslon = np.cos (RAD * glam)
-    gsinlat = np.sin (RAD * gphi)
-    gcoslat = np.cos (RAD * gphi)
+    gsinlon = np.sin (np.deg2rad(glam))
+    gcoslon = np.cos (np.deg2rad(glam))
+    gsinlat = np.sin (np.deg2rad(gphi))
+    gcoslat = np.cos (np.deg2rad(gphi))
 
     pte = - pxx * gsinlon            + pyy * gcoslon
     ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
@@ -848,10 +1002,10 @@ def en2geo (pte, ptn, glam, gphi) :
         glam, gphi : longitude and latitude of the points
     '''
     push_stack ( f'en2geo (pte, ptn, glam, gphi)' )
-    gsinlon = np.sin (RAD * glam)
-    gcoslon = np.cos (RAD * glam)
-    gsinlat = np.sin (RAD * gphi)
-    gcoslat = np.cos (RAD * gphi)
+    gsinlon = np.sin (np.deg2rad(glam))
+    gcoslon = np.cos (np.deg2rad(glam))
+    gsinlat = np.sin (np.deg2rad(gphi))
+    gcoslat = np.cos (np.deg2rad(gphi))
 
     pxx = - pte * gsinlon - ptn * gcoslon * gsinlat
     pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
@@ -865,20 +1019,20 @@ def limit_blon (blon, clon, lon_cen=0) :
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
     '''
-    push_stack ( f'limit_blon (blon, clon, {lon_cen=})' )
+    push_stack (f'limit_blon (blon, clon, {lon_cen=})')
     lon_min = lon_cen-180. ; lon_max = lon_cen+180.
     
     clon  = (clon+360.*10.)%360
     clon  = np.where (np.greater (clon, lon_max), clon-360., clon)
-    clon  = np.where (np.less    (clon, lon_min), clon+360.,clon)
+    clon  = np.where (np.less    (clon, lon_min), clon+360., clon)
     clon1 = np.ones  (blon.shape, dtype=float) * clon[..., None]
 
-    blon = (blon+360.*10.)%360
-    blon = np.where (np.greater(blon, lon_max), blon-360., blon)
-    blon = np.where (np.less   (blon, lon_min), blon+360., blon)
+    blon  = (blon+360.*10.)%360
+    blon  = np.where (np.greater(blon, lon_max), blon-360., blon)
+    blon  = np.where (np.less   (blon, lon_min), blon+360., blon)
     
-    blon = np.where (np.greater(abs(blon-clon1), abs(blon+360. -clon1)), blon+360., blon)
-    blon = np.where (np.greater(abs(blon-clon1), abs(blon-360. -clon1)), blon-360., blon)
+    blon  = np.where (np.greater(abs(blon-clon1), abs(blon+360. -clon1)), blon+360., blon)
+    blon  = np.where (np.greater(abs(blon-clon1), abs(blon-360. -clon1)), blon-360., blon)
 
     pop_stack ( 'limit_blon' )
     return blon, clon
@@ -897,8 +1051,14 @@ def limit_lon (clon, lon_cen=0) :
     
     return clon
 
+def direction (uu, vv, unit='deg') :
+    '''
+    Compute direction of a vector (angle with north)
+    '''
+    zd = np.atan2 (uu,vv)
+
 ## ===========================================================================
-##
-##                               That's all folk's !!!
-##
+##                                                                            
+##                               That's all folk's !!!                        
+##                                                                            
 ## ===========================================================================
