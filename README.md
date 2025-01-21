@@ -6,10 +6,13 @@ Author : olivier.marti@lsce.ipsl.fr
 git : https://github.com/oliviermarti/IPSLCM-Utilities
 
 ## ORCA\_Gallery.ipynb
-An eclectic demo of various plots with ORCA outputs.
+An eclectic demo of various plots with ORCA outputs, using nemo.py
 
 ## LMDZ\_Gallery.ipynb 
-A demo of plots with LMDZ outputs.
+A demo of plots with LMDZ outputs, using lmdz.py
+
+## libIGCM\_utils.py
+A few utilities used by the following modules
 
 ## libIGCM\_sys.py 
 Defines libIGCM directories, depending of the computer.
@@ -82,7 +85,7 @@ A few utilities to compute o the sphere : distance, etc ...
 
 ## climM.py
 Compute some climatologies
-Obsolete : using xcdat directly is simpler
+Obsolete : using xcdat directly is simpler and safer
 
 ## interp1d.py
 One-dimensionnal interpolation of a multi-dimensionnal field
