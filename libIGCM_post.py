@@ -1,15 +1,41 @@
 #!/usr/bin/env python3
 '''
 This library provide some utilities for post processing
+
+This software is governed by the CeCILL  license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal.
 '''
 
-import os, sys, re
+import os
+import re
 import json
 
-from Utils import Container
+from libIGCM_utils import Container
 import libIGCM_sys
-from libIGCM_sys import OPTIONS, push_stack, pop_stack, set_options, get_options
-    
+from libIGCM_sys import push_stack, pop_stack #, set_options, get_options
+import nemo
+
+def set_options (**kwargs) :
+    libIGCM_sys.set_options (**kwargs)
+    return libIGCM_sys.get_options ()
+
+def get_options () :
+    return libIGCM_sys.get_options ()
+
+OPTIONS = get_options ()
+
 class Config (libIGCM_sys.Config) :
     '''
     Defines the libIGCM directories and simulations characteristics
@@ -18,84 +44,150 @@ class Config (libIGCM_sys.Config) :
     '''
     def __init__ (self, JobName=None, SpaceName=None, TagName=None, ShortName=None, ExperimentName=None, ModelName=None, Comment=None,
                         TGCC_User=None, TGCC_Group=None,
-                        YearBegin=None, YearEnd=None, CalendarType=None, DatePattern=None,
-                        ColorShading=None, ColorLine=None, Line=None, Marker=None,
-                        OCE=None, ATM=None,
-                        IGCM_Catalog=None, **kwargs) :
+                        YearBegin=None, YearEnd=None, CalendarType=None, DatePattern=None, Period=None, PeriodSE=None,
+                        Shading=None, Line=None, Marker=None,
+                        OCE=None, ATM=None, Perio=None, OCE_DOM=None, ATM_DOM=None,
+                        IGCM_Catalog=None, IGCM_Catalog_list=None, **kwargs) :
+
+        OPTIONS=libIGCM_sys.get_options ()
 
         ### ===========================================================================================
         ## Read catalog of known simulations
-        push_stack ( '__init__')
+        push_stack ( 'libIGCM_post.__init__')
 
-        if not IGCM_Catalog : IGCM_Catalog = OPTIONS.IGCM_Catalog
+        if OPTIONS.Debug :
+            print ( f'{OPTIONS = }' )
+
+        if not IGCM_Catalog      :
+            IGCM_Catalog      = OPTIONS.IGCM_Catalog
+        if not IGCM_Catalog_list :
+            IGCM_Catalog_list = OPTIONS.IGCM_Catalog_list
         
-        if OPTIONS.Debug : print ( f'{IGCM_Catalog=}' )
+        if OPTIONS.Debug :
+            print ( f'{IGCM_Catalog_list=}' )
+            print ( f'{IGCM_Catalog=}' )
 
-        if IGCM_Catalog : 
+        exp = None
+
+        if IGCM_Catalog :
             if os.path.isfile (IGCM_Catalog) :
-                if OPTIONS.Debug : print ( f'Catalog file : {IGCM_Catalog=}' )
+                if OPTIONS.Debug :
+                    print ( f'Catalog file : {IGCM_Catalog=}' )
                 exp_file = open (IGCM_Catalog)
                 Experiments = json.load (exp_file)
-            else : 
+                if JobName in Experiments.keys () :
+                    exp = Experiments[JobName]
+            else :
                 raise Exception ( f'Catalog file not found : {IGCM_Catalog}' )
 
-            if JobName in Experiments.keys () :
-                exp = Experiments[JobName]
-                if OPTIONS.Debug : print ( f'Read catalog file for {JobName=}' )
+        else :
+            for cfile in OPTIONS.IGCM_Catalog_list :
+                if os.path.isfile (cfile) :
+                    if OPTIONS.Debug :
+                        print ( f'Catalog file : {cfile=}' )
+                    exp_file = open (cfile)
+                    Experiments = json.load (exp_file)
+                    if JobName in Experiments.keys () :
+                        exp = Experiments[JobName]
+                        break
 
-                if not SpaceName       :
-                    if 'SpaceName'     in exp.keys() : SpaceName      = exp['SpaceName']
-                if not TagName         : 
-                   if 'SpaceName'      in exp.keys() : TagName        = exp['TagName']
-                if not ShortName       :
-                   if 'ShortName'      in exp.keys() : ShortName      = exp['ShortName']
-                if not ExperimentName  :
-                   if 'ExperimentName' in exp.keys() : ExperimentName = exp['ExperimentName']
-                if not ModelName       :
-                   if 'ModelName'      in exp.keys() : ModelName      = exp['ModelName']
-                if not Comment         :
-                   if 'Comment'        in exp.keys() : Comment        = exp['Comment']
-                if not YearBegin       :
-                    if 'YearBegin'     in exp.keys() : YearBegin      = exp['YearBegin']
-                if not YearBegin       :
-                    if 'YearBegin'     in exp.keys() : YearBegin      = exp['YearBegin']
-                if not YearEnd         :
-                    if 'YearEnd'       in exp.keys() : YearEnd        = exp['YearEnd']
-                if not CalendarType    :
-                    if 'CalendarType'  in exp.keys() : CalendarType   = exp['CalendarType']
-                if not DatePattern     :
-                    if 'DatePattern'   in exp.keys() : DatePattern    = exp['DatePattern']
-                if not TGCC_User       :
-                    if 'TGCC_User'     in exp.keys() : TGCC_User      = exp['TGCC_User']
-                if not TGCC_Group      :
-                    if 'TGCC_Group'    in exp.keys() : TGCC_Group     = exp['TGCC_Group']
-                if not CalendarType    :
-                    if 'CalendarType'  in exp.keys() : CalendarType   = exp['CalendarType']
-                if not DatePattern     :
-                    if 'DatePattern'   in exp.keys() : DatePattern    = exp['DatePattern']
-                if not ColorLine       :
-                    if 'ColorLine'     in exp.keys() : ColorLine      = exp['ColorLine']
-                if not ColorShading    :
-                    if 'ColorShading'  in exp.keys() : ColorShading   = exp['ColorShading']
-                if not Marker          :
-                    if 'Marker'        in exp.keys() : Marker         = Container (**exp['Marker'])
-                if not Line            :
-                    if 'Line'          in exp.keys() : Line           = exp['Line']
-                if not OCE             :
-                    if 'OCE'           in exp.keys() : OCE            = exp['OCE']
-                if not ATM             :
-                    if 'ATM'           in exp.keys() : ATM            = exp['ATM'] 
+            if exp :
+                if OPTIONS.Debug :
+                    print ( f'Read catalog file for {JobName=}' )
 
+                if not SpaceName      and 'SpaceName'      in exp.keys() :
+                    SpaceName      = exp['SpaceName']
+                if not TagName        and 'TagName'        in exp.keys() :
+                    TagName        = exp['TagName']
+                if not ShortName      and 'ShortName'      in exp.keys() :
+                    ShortName      = exp['ShortName']
+                if not ExperimentName and 'ExperimentName' in exp.keys() :
+                    ExperimentName = exp['ExperimentName']
+                if not ModelName      and 'ModelName'      in exp.keys() :
+                    ModelName      = exp['ModelName']
+                if not Comment        and 'Comment'        in exp.keys() :
+                    Comment        = exp['Comment']
+                if not YearBegin      and 'YearBegin'      in exp.keys() :
+                    YearBegin      = exp['YearBegin']
+                if not YearEnd        and 'YearEnd'        in exp.keys() :
+                    YearEnd        = exp['YearEnd']
+                if not CalendarType   and 'CalendarType'   in exp.keys() :
+                    CalendarType   = exp['CalendarType']
+                if not DatePattern    and 'DatePattern'    in exp.keys() :
+                    DatePattern    = exp['DatePattern']
+                if not Period         and 'Period'         in exp.keys() :
+                    Period         = exp['Period']
+                if not PeriodSE       and 'PeriodSE'       in exp.keys() :
+                    PeriodSE       = exp['PeriodSE']
+                if not TGCC_User      and 'TGCC_User'      in exp.keys() :
+                    TGCC_User      = exp['TGCC_User']
+                if not TGCC_Group     and 'TGCC_Group'     in exp.keys() :
+                    TGCC_Group     = exp['TGCC_Group']
+                if not CalendarType   and 'CalendarType'   in exp.keys() :
+                    CalendarType   = exp['CalendarType']
+                if not Shading        and 'Shading'        in exp.keys() :
+                    Shading        = exp['Shading']
+                if not Marker         and 'Marker'         in exp.keys() :
+                    Marker         = Container (**exp['Marker'])
+                if not Line           and 'Line'           in exp.keys() :
+                    Line           = Container (**exp['Line'])
+                if not OCE            and 'OCE'            in exp.keys() :
+                    OCE            = exp['OCE']
+                if not ATM            and 'ATM'            in exp.keys() :
+                    ATM            = exp['ATM']
+
+                if OCE :
+                    OCE_DOM = nemo.domain (cfg_name=OCE)
+                    
+                if not OCE_DOM :
+                    if 'OCE_DOM' in exp.keys() :
+                        OCE_DOM = Container (**exp['OCE_DOM'])
+                        if OCE :
+                            OCE_DOM['cfg_name']=OCE
+                        OCE_DOM = nemo.domain (**OCE_DOM)
+                if not ATM_DOM :
+                    if 'ATM_DOM' in exp.keys() :
+                        ATM_DOM = Container (**exp['ATM_DOM'])
+
+                if YearBegin and YearEnd and not Period :
+                    Period   = f'{YearBegin}0101_{YearEnd}1231'
+                if YearBegin and YearEnd and not PeriodSE :
+                    PeriodSE = f'{YearBegin}_{YearEnd}'
+                if Period and not (YearBegin or not YearEnd) :
+                    Y1, Y2 = Period.split('_')
+                    if not YearBegin :
+                        YearBegin = Y1[0:4]
+                    if not YearEnd   :
+                        YearEnd   = Y2[0:4]
+                if PeriodSE and not (YearBegin or not YearEnd) :
+                    Y1, Y2 = PeriodSE.split('_')
+                    if not YearBegin :
+                        YearBegin = Y1
+                    if not YearEnd   :
+                        YearEnd   = Y2
+                    
+            else :
+                if IGCM_Catalog : 
+                    raise Exception ( f'{JobName} not found in {IGCM_Catalog=}' )
+                elif IGCM_Catalog_list :
+                    raise Exception ( f'{JobName} not found in {IGCM_Catalog_list=}' )
+                else :
+                    raise Exception ( f'{JobName} not found' )
+                                          
+                
         libIGCM_sys.Config.__init__ (self, JobName=JobName, SpaceName=SpaceName, TagName=TagName, ShortName=ShortName, Comment=Comment,
                                            ExperimentName=ExperimentName, ModelName=ModelName,
                                            TGCC_User=ModelName, TGCC_Group=TGCC_Group,
                                            YearBegin=YearBegin, YearEnd= YearEnd, CalendarType=CalendarType, DatePattern=DatePattern,
-                                           ColorShading=ColorShading, ColorLine=ColorLine, Line=Line, Marker=Marker,
-                                           OCE=OCE, ATM=ATM, **kwargs)
-        pop_stack ( '__init__' )
+                                           Period=Period, PeriodSE=PeriodSE,
+                                           Shading=Shading, Line=Line, Marker=Marker,
+                                           OCE=OCE, ATM=ATM, OCE_DOM=OCE_DOM, ATM_DOM=ATM_DOM, **kwargs)
+        
+        pop_stack ( 'libIGCM_post.__init__' )
 
         
 def comp ( varName ) :
+    #OPTIONS=get_options ()
     class RegexEqual (str):
         def __eq__(self, pattern):
             return bool(re.search(pattern, self))
@@ -106,13 +198,20 @@ def comp ( varName ) :
     Comp = None
 
     match RegexEqual(varName) :
-        case "Ahyb.*.*" | "Bhyb.*" | ".*_ppm" | ".*_ppb|R_.*" : Comp = 'ATM'
-        case "SW.*" | "LW.*" | "[flw|fsw|sens]_[oce|lic|sic|ter]*" |  "[pourc|fract]_[oce|lic|sic|ter]" : Comp = 'ATM'
-        case "w.*_[oce|sic|lic|ter]" : Comp = 'ATM'
-        case "dq.*" : Comp = 'ATM'
-        case "tau[xy]_[oce|ter|lic|sic]" : Comp = 'ATM'
-        case ".*10m" | ".*2m" : Comp = 'ATM'
-        case "rsun.*" : Comp = 'ATM'
+        case "Ahyb.*.*" | "Bhyb.*" | ".*_ppm" | ".*_ppb|R_.*" :
+            Comp = 'ATM'
+        case "SW.*" | "LW.*" | "[flw|fsw|sens]_[oce|lic|sic|ter]*" |  "[pourc|fract]_[oce|lic|sic|ter]" :
+            Comp = 'ATM'
+        case "w.*_[oce|sic|lic|ter]" :
+            Comp = 'ATM'
+        case "dq.*" :
+            Comp = 'ATM'
+        case "tau[xy]_[oce|ter|lic|sic]" :
+            Comp = 'ATM'
+        case ".*10m" | ".*2m" :
+            Comp = 'ATM'
+        case "rsun.*" :
+            Comp = 'ATM'
         case 'abs550aer'| 'ages_lic'| 'ages_sic'| 'aire'| 'alb1'| 'alb1'| \
              'alb2'| 'alb2'| 'albe_lic'| 'albe_[oce|sic|lic|ter]' | 'ale'| 'ale_.*' 'ale_wk' :
              Comp = 'ATM'
@@ -132,12 +231,12 @@ def comp ( varName ) :
               'pr_con_i'| 'pr_con_l' | 'pr_lsc_i' | 'pr_lsc_l' | 'precip'| 'pres'| 'presnivs'| 'prlw'| 'proba_notrig'| 'prsw'| 'prw'| 'psol'| \
               'pt0' | 'ptop' | 'ptstar' | 'qsol'| 'qsurf'| 'radsol'| 'rain_con'| 'rain_fall'| 'random_notrig'| 're'| 'ref_liq'| \
               'rhum' | 'rneb'| 'rsu'| 'rugs_lic'| 'rugs_oce'| 'rugs_sic'| 'rugs_ter' :
-              Comp = 'ATM'
+            Comp = 'ATM'
         case 'runofflic' | 's2' | 's_lcl' | 's_pblh' | 's_pblt' | 's_therm' | 'scon.*cbc' | 'sens'| \
              'sicf'| 'slab_bils_oce'| 'slp'| 'snow_[oce|sic|ter|lic]'| 'solaire'| 'soll'| 'soll0'| 'sols'| \
              'sols0'| 'stratomask'| 'sza'| 't_oce_sic'| 'taux' | 'tauy' | 'tau[xy]_[oce|sic|ter|lic]'| \
              'temp'| 'theta'| 'tke_.*'| 'topl'| 'topl.*' | 'tops' :
-             Comp = 'ATM'
+            Comp = 'ATM'
         case 'tops.*' | 'tsol'| 'tsol_[lic|sic|ter|oce]' | '[uv]e' | '[uv]q' | 'ustar' | '[uv]wat' | \
               've'| 'vit[uvw]' | 'wake_.*' | 'wape'| \
               'wbeff' :
@@ -159,7 +258,8 @@ def comp ( varName ) :
               'rsds' | 'emp_oce' | 'nsh*' | 'thedepth' | 'mldr10_1' | 'friver' | 'wfo'  :
             Comp = 'OCE'
 
-        case "si.*|sn.*|ice.*|it.*" : Comp = 'ICE'
+        case "si.*|sn.*|ice.*|it.*" :
+            Comp = 'ICE'
         
         case 'Alkalini' | '*CHL' | 'DIC' | 'Fer' | 'NO*' | 'O2' | 'PO4' | 'Si' | 'TPP' | 'Cflx' | 'Dpco2' | 'EPC100' | 'INTPP' :
             Comp = 'MBG'
@@ -174,6 +274,7 @@ def comp ( varName ) :
     return Comp
 
 def VarOut2VarIn (VarOut, JobName) :
+    #OPTIONS=get_options ()
     push_stack ( f'VarOut2VarIn ({VarOut=} {JobName=})' )
     
     VarIn = VarOut
@@ -181,18 +282,27 @@ def VarOut2VarIn (VarOut, JobName) :
     match JobName :
         case 'TR5AS-Vlr01' :	
             match VarOut :
-                case 'siconc'   : VarIn='ice_pres'
-                case 'ice_conc' : VarIn='ice_pres'
-                case 'sistem'   : VarIn='tsice'    
-                case 'sithic' | 'sivolu' : varIn='iicethic' 
-                case 'snthic' | 'snvolu' : VarIn='isnowthi' 
+                case 'siconc'   :
+                    VarIn='ice_pres'
+                #case 'ice_conc' :
+                #    VarIn='ice_pres'
+                case 'sistem'   :
+                    VarIn='tsice'    
+                case 'sithic' | 'sivolu' :
+                    VarIn='iicethic' 
+                case 'snthic' | 'snvolu' :
+                    VarIn='isnowthi' 
     
         case 'TR6AV-Sr02' :
             match VarOut :
-                case 'siconc' : VarIn='ice_pres'
-                case 'sistem' : VarIn='iicetemp'
-                case 'sithic' | 'sivolu' : VarIn='iicethic'
-                case 'snthic' | 'snvolu' : VarIn='isnowthi'
-                 
+                case 'siconc' :
+                    VarIn='ice_pres'
+                case 'sistem' :
+                    VarIn='iicetemp'
+                case 'sithic' | 'sivolu' :
+                    VarIn='iicethic'
+                case 'snthic' | 'snvolu' :
+                    VarIn='isnowthi'
+
     pop_stack ( f'VarOut2VarIn ({VarIn=})' )
     return VarIn

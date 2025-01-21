@@ -1,45 +1,41 @@
 #
 # -*- coding: utf-8 -*-
-## ===========================================================================
-##                                                                            
-##  This software is governed by the CeCILL  license under French law and     
-##  abiding by the rules of distribution of free software.  You can  use,     
-##  modify and/ or redistribute the software under the terms of the CeCILL    
-##  license as circulated by CEA, CNRS and INRIA at the following URL         
-##  "http://www.cecill.info".                                                 
-##                                                                            
-##  Warning, to install, configure, run, use any of Olivier Marti's           
-##  software or to read the associated documentation you'll need at least     
-##  one (1) brain in a reasonably working order. Lack of this implement       
-##  will void any warranties (either express or implied).                     
-##  O. Marti assumes no responsability for errors, omissions,                 
-##  data loss, or any other consequences caused directly or indirectly by     
-##  the usage of his software by incorrectly or partially configured          
-##  personal.                                                                 
-##                                                                            
-## ===========================================================================
 '''
 Utilities to compute on the sphere
 
 Author: olivier.marti@lsce.ipsl.fr
 
-## SVN information                                                             
-Author   = "$Author:  $"
-Date     = "$Date: $"
-Revision = "$Revision: $"
-Id       = "$Id: $"
-HeadURL  = "$HeadURL: $"
+This software is governed by the CeCILL  license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal.
 '''
 
 import time
+import copy
 import numpy as np
-import xarray as xr
-from Utils import Container
+#import pint
+#import pint_xarray
+from pint_xarray import unit_registry as ureg
+import libIGCM_utils
+from libIGCM_utils import Container
+#Q_ = ureg.Quantity
   
 REPSI = np.finfo (1.0).eps
 
 # Sphere internal options
-OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
+DEFAULT_OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
+OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
 
 class set_options :
     """
@@ -53,9 +49,12 @@ class set_options :
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
-    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
-    def __enter__ (self) : return
-    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+    def _apply_update (self, options_dict) :
+        OPTIONS.update (options_dict)
+    def __enter__ (self) :
+        return
+    def __exit__ (self, type, value, traceback) :
+        self._apply_update (self.old)
 
 def get_options () -> dict :
     """
@@ -68,16 +67,24 @@ def get_options () -> dict :
     """
     return OPTIONS
 
+def reset_options():
+    return set_options (**DEFAULT_OPTIONS)
+
 def return_stack () :
     return OPTIONS['Stack']
 
 def push_stack (string:str) :
-    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
-    else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    if OPTIONS['Depth'] :
+        OPTIONS['Depth'] += 1
+    else                :
+        OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] :
+        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
-    else                : OPTIONS['Stack'] = [string,]
+    if OPTIONS['Stack'] :
+        OPTIONS['Stack'].append (string)
+    else                :
+        OPTIONS['Stack'] = [string,]
     #
     if OPTIONS['Timing'] :
         if OPTIONS['t0'] :
@@ -103,24 +110,41 @@ def pop_stack (string:str) :
             print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
     OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    if OPTIONS['Depth'] == 0 :
+        OPTIONS['Depth'] = None
     OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    if OPTIONS['Stack'] == list () :
+        OPTIONS['Stack'] = None
     #
     
-def distance (lat1:float, lon1:float, lat2:float, lon2:float, radius:float=1.0) -> float :
+def distance (lat1:float, lon1:float, lat2:float, lon2:float, radius:float=1.0, Debug=False) -> float :
     '''
     Compute distance on the sphere
     '''
     arg      = ( np.sin (np.deg2rad(lat1)) * np.sin (np.deg2rad(lat2))
                + np.cos (np.deg2rad(lat1)) * np.cos (np.deg2rad(lat2)) *
-                 np.cos(np.deg2rad(lon1-lon2)) ) 
+                 np.cos (np.deg2rad(lon1-lon2)) ) 
     
     zdistance = np.arccos (arg) * radius
-    
+    if OPTIONS.Debug or Debug :
+        print ( f'1 - {zdistance.values = }' )
+
+    zdistance = libIGCM_utils.xr_quantify (zdistance)
+    if OPTIONS.Debug or Debug :
+        print ( f'2 - {zdistance.values = }' )
+
+    if   'units' in dir(zdistance) :
+        zdistance = zdistance / ureg.rad
+
+    elif 'pint' in dir(zdistance) :
+        zdistance = zdistance / ureg.rad
+
+    if OPTIONS.Debug or Debug :
+        print ( f'3 - {zdistance.values = }' )
+
     return zdistance
 
-def aire_triangle (lat0: float, lon0: float, lat1: float, lon1: float, lat2: float, lon2: float) -> float :
+def aire_triangle (lat0: float, lon0: float, lat1: float, lon1: float, lat2: float, lon2: float, radius:float=1.0, Debug=False) -> float :
     '''
     Area of a triangle on the sphere
     Girard's formula
@@ -130,25 +154,35 @@ def aire_triangle (lat0: float, lon0: float, lat1: float, lon1: float, lat2: flo
     b = distance (lat1 , lon1, lat2 , lon2)
     c = distance (lat2 , lon2, lat0 , lon0)
 
+    if OPTIONS.Debug :
+        print ( f'{a=}, {b=}, {c=}' )
+
     arg_alpha = (np.cos(a) - np.cos(b)*np.cos(c)) / (np.sin(b)*np.sin(c)) 
     arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / (np.sin(a)*np.sin(c)) 
-    arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / (np.sin(a)*np.sin(b)) 
+    arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / (np.sin(a)*np.sin(b))
 
+    if OPTIONS.Debug or Debug :
+        print ( f'{arg_alpha=}, {arg_beta=}, {arg_gamma=}' )
+    
     alpha = np.arccos (arg_alpha) 
-    beta  = np.arccos (arg_alpha) 
-    gamma = np.arccos (arg_alpha)
+    beta  = np.arccos (arg_beta ) 
+    gamma = np.arccos (arg_gamma)
 
-    Saire = (alpha + beta + gamma - np.pi)
+    if OPTIONS.Debug or Debug :
+        print ( f'{alpha=}, {beta=}, {gamma=} {radius.item()=}' )
+
+    Saire = (alpha + beta + gamma - np.pi) * radius * radius
+    Saire = libIGCM_utils.xr_quantify (Saire)
 
     return Saire
 
-def aire_quadri (lat0:float, lon0:float, lat1:float, lon1:float, lat2:float, lon2:float, lat3:float, lon3:float) -> float :
+def aire_quadri (lat0:float, lon0:float, lat1:float, lon1:float, lat2:float, lon2:float, lat3:float, lon3:float, radius:float=1.0) -> float :
     '''
     Area of a quadrilatere on the sphere
     Girard's formula
     '''
     
-    Saire = aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2 ) \
-          + aire_triangle (lat2, lon2, lat3, lon3, lat0, lon0)
+    Saire = aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2, radius ) \
+          + aire_triangle (lat2, lon2, lat3, lon3, lat0, lon0, radius )
           
     return Saire

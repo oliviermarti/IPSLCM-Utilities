@@ -9,12 +9,11 @@ https://www.ipcc.ch/site/assets/uploads/2019/04/IPCC-visual-style-guide.pdf
 Includes ColorShading, ColorLine, RCPColorLine, RCPColorShading
 
 '''
-
-# plt.rcParams ['axes.prop_cycle'] = plt.cycler ('color', IPCC.ColorLineHexa )
-
 import types
 import numpy as np
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+# plt.rcParams ['axes.prop_cycle'] = plt.cycler ('color', IPCC.ColorLineHexa )
 
 def color2hex ( r, g, b ) :
     return "#{:02X}{:02X}{:02X}".format ( int(r*255), int(g*255), int(b*255) )
@@ -91,7 +90,7 @@ def c2c (tab) :
     if not isinstance (ztab, np.ndarray):
         ztab = np.array (ztab, dtype='float')
     if len (ztab.shape) == 1 :
-        colors = np.reshape (ztab, (ztab.shape[0]//3, 3))
+        ztab = np.reshape (ztab, (ztab.shape[0]//3, 3))
     return ztab
         
 def create_colormap (colors, position=None, bit=True, reverse=False, name='custom_colormap', liste=False, continuous=False):

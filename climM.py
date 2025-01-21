@@ -8,7 +8,8 @@ En gros inutile. Utiliser xcdat directement est plus simple
 
 '''
 
-import numpy as np, xarray as xr, xcdat as xc
+import xarray as xr
+import xcdat as xc
 
 def seamean (var, time_dim) :
     '''
@@ -113,13 +114,13 @@ def yearmax (var, time_dim) :
     Ouput :        A yearly time series
     '''
     if isinstance (time_dim, str) :
-        ztime_dim  = var[time_dim]
+        #ztime_dim  = var[time_dim]
         ztime_name = time_dim
     else : 
-        ztime_dim  = time_dim
+        #ztime_dim  = time_dim
         ztime_name = time_dim.name
         
-    month_length  = ztime_dim.dt.days_in_month # a remplacer par le nombre de pas de temps ...      
+    #month_length  = ztime_dim.dt.days_in_month # a remplacer par le nombre de pas de temps ...      
     var_yearmax = var.resample ({ztime_name:"1YE"})
     var_yearmax = var_yearmax.max ()
 
@@ -141,15 +142,15 @@ def yearmin (var, time_dim) :
        A yearly time series
     '''
     if isinstance (time_dim, str) :
-        ztime_dim  = var[time_dim]
+        #ztime_dim  = var[time_dim]
         ztime_name = time_dim
     else : 
-        ztime_dim  = time_dim
+        #ztime_dim  = time_dim
         ztime_name = time_dim.name
         
-    month_length  = ztime_dim.dt.days_in_month # a remplacer par le nombre de pas de temps ...      
-    var_yearmin = var.resample ({ztime_name:"1YE"})
-    var_yearmin = var_yearmin.min ()
+    #month_length  = ztime_dim.dt.days_in_month # a remplacer par le nombre de pas de temps ...      
+    var_yearmin   = var.resample ({ztime_name:"1YE"})
+    var_yearmin   = var_yearmin.min ()
 
     if len ( var.attrs) > 0 :
         var_yearmin.attrs.update ( var.attrs)
@@ -203,13 +204,17 @@ def yseamean (dd: xc.dataset, varname:str, season:str='JJAS', drop_incomplete_dj
         custom_seasons = [ ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"], ["Sep", "Oct", "Nov", "Dec"] ]
 
     if season == 'DJF'  :
-        use_custom=False ; nseason=0
+        use_custom = False
+        nseason    = 0
     if season == 'MAM'  :
-        use_custom=False ; nseason=1
+        use_custom = False
+        nseason    = 1
     if season == 'JJA'  :
-        use_custom=False ; nseason=2
+        use_custom = False
+        nseason    = 2
     if season == 'SON'  :
-        use_custom=False ; nseason=3
+        use_custom = False
+        nseason    = 3
         
     if use_custom :
         if xc.__version__ > '0.8' :
@@ -224,25 +229,25 @@ def yseamean (dd: xc.dataset, varname:str, season:str='JJAS', drop_incomplete_dj
 
     return zz
 
-def ymonthmean (var, time_dim, month=None) :
-    '''
-    Compute seasonal means for a specific month
+# def ymonthmean (var, time_dim, month=None) :
+#     '''
+#     Compute seasonal means for a specific month
  
-    Inputs :
-       var      : an xr.DataArray with a proper time dimension
-       time_dim : the time dimension
-       season   : 'DJF', 'MAM', 'JJA', 'SON' or None
+#     Inputs :
+#        var      : an xr.DataArray with a proper time dimension
+#        time_dim : the time dimension
+#        season   : 'DJF', 'MAM', 'JJA', 'SON' or None
 
-    Ouput :
-        A yearly time series of one specific season mean
-        A yearly time series of all season if season == None
-    '''
-    if isinstance (time_dim, str) :
-        ztime_dim = var[time_dim]
-        ztime_name = time_dim
-    else : 
-        ztime_dim  = time_dim
-        ztime_name = time_dim.name
+#     Ouput :
+#         A yearly time series of one specific season mean
+#         A yearly time series of all season if season == None
+#     '''
+#     if isinstance (time_dim, str) :
+#         ztime_dim = var[time_dim]
+#         ztime_name = time_dim
+#     else : 
+#         ztime_dim  = time_dim
+#         ztime_name = time_dim.name
         
-    SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice(1,None,12), 'MAR':slice(2,None,12), 'APR':slice(3,None,12), 'MAY':slice( 4,None,12), 'JUN':slice( 5,None,12),
-                'JUL':slice(6,None,12), 'AUG':slice(7,None,12), 'SEP':slice(8,None,12), 'OCT':slice(9,None,12), 'NOV':slice(10,None,12), 'DEC':slice(11,None,12)}
+#     SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice(1,None,12), 'MAR':slice(2,None,12), 'APR':slice(3,None,12), 'MAY':slice( 4,None,12), 'JUN':slice( 5,None,12),
+#                 'JUL':slice(6,None,12), 'AUG':slice(7,None,12), 'SEP':slice(8,None,12), 'OCT':slice(9,None,12), 'NOV':slice(10,None,12), 'DEC':slice(11,None,12)}

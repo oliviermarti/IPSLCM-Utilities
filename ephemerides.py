@@ -9,12 +9,29 @@ More details here : http://jean-paul.cornec.pagesperso-orange.fr/heures_lc.htm
 
 Details for exact computation : https://www.imcce.fr/en/grandpublic/systeme/promenade/pages3/367.html
 
+This software is governed by the CeCILL  license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal.
+
 '''
 
 import time
-import numpy as np, xarray as xr
+import copy
+import numpy as np
+import xarray as xr
 import cftime
-from Utils import Container
+from libIGCM_utils import Container
 
 deg2rad = np.deg2rad (1.0)
 rad2deg = np.rad2deg (1.0)
@@ -58,7 +75,13 @@ SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice(1,None,12), 'MAR':slice(2,None,1
 SOLAR = 1365.0          # Solar constant (W/m^2)   
 
 # Ephemerides internal options
-OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
+DEFAULT_OPTIONS = Container (Debug  = False,
+                             Trace  = False,
+                             Timing = None,
+                             t0     = None,
+                             Depth  = None,
+                             Stack  = None)
+OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
 
 class set_options :
     """
@@ -72,9 +95,12 @@ class set_options :
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
-    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
-    def __enter__ (self) : return
-    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+    def _apply_update (self, options_dict) :
+        OPTIONS.update (options_dict)
+    def __enter__ (self) :
+        return
+    def __exit__ (self, type, value, traceback) :
+        self._apply_update (self.old)
 
 def get_options () -> dict :
     """
@@ -87,16 +113,24 @@ def get_options () -> dict :
     """
     return OPTIONS
 
+def reset_options():
+    return set_options (**DEFAULT_OPTIONS)
+
 def return_stack () :
     return OPTIONS['Stack']
 
 def push_stack (string:str) :
-    if OPTIONS['Depth'] : OPTIONS['Depth'] += 1
-    else                : OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] : print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+    if OPTIONS['Depth'] :
+        OPTIONS['Depth'] += 1
+    else                :
+        OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] :
+        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] : OPTIONS['Stack'].append (string)
-    else                : OPTIONS['Stack'] = [string,]
+    if OPTIONS['Stack'] :
+        OPTIONS['Stack'].append (string)
+    else                :
+        OPTIONS['Stack'] = [string,]
     #
     if OPTIONS['Timing'] :
         if OPTIONS['t0'] :
@@ -122,9 +156,11 @@ def pop_stack (string:str) :
             print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
     OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 : OPTIONS['Depth'] = None
+    if OPTIONS['Depth'] == 0 :
+        OPTIONS['Depth'] = None
     OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () : OPTIONS['Stack'] = None
+    if OPTIONS['Stack'] == list () :
+        OPTIONS['Stack'] = None
     #
 
 ## ============================================================================
@@ -139,13 +175,17 @@ def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
     '''
     push_stack ( f'time2BP (time, {unit=}, {year0=}, {month0=}, {day0=}, {hour0=})' )
     
-    try    : ty    = isinstance (time, xr.core.dataarray.DataArray)
-    except : ty    = None
-    if OPTIONS['Debug'] : print ( f'{ty=}')
-    if ty  : ztime = time.values
-    else   : ztime = time
+    ty = isinstance (time, xr.core.dataarray.DataArray)
+        
+    if OPTIONS['Debug'] :
+        print ( f'{ty=}')
+    if ty  :
+        ztime = time.values
+    else   :
+        ztime = time
     result = np.empty_like (time)
-    if OPTIONS['Debug'] : print ( f'{type (ztime)=}')
+    if OPTIONS['Debug'] :
+        print ( f'{type (ztime)=}')
         
     for ii, tt in enumerate (ztime) :
         #if OPTIONS['Debug'] : print ( f'{tt=}')
@@ -162,14 +202,14 @@ def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
         else : 
             result.attrs.update ({'unit':'Year BP' , 'Comment':'Year before 1950' })
 
-    pop_stack ( f'time2BP' )        
+    pop_stack ( 'time2BP' )        
     return result
 
 def mthday2day (month, day) :
     '''
     From month and day, compute day of year
     '''
-    push_stack ( f'mthday2day (month, day)' )
+    push_stack ( 'mthday2day (month, day)' )
     days = np.sum ( mth_length[:np.mod (month-1, 12)] ) + day
     pop_stack ( 'mthday2day' )
     return days
@@ -291,7 +331,7 @@ def sun_height (delta, lat, omega) :
       lambda : latitude 
       omega  : hour angle
     '''
-    push_stack (f'sun_height (delta, lat, omega)' )
+    push_stack ('sun_height (delta, lat, omega)')
     sin_h = np.sin(deg2rad*delta)*np.sin(deg2rad*lat) + np.cos(deg2rad*delta)*np.cos(deg2rad*lat)*np.cos(deg2rad*omega)
     sun_height = rad2deg * np.arcsin(sin_h)
 
@@ -309,7 +349,7 @@ def insol (delta, lat, omega) :
       lambda : latitude 
       omega  : hour angle
     '''
-    push_stack ( f'insol (delta, lat, omega)')
+    push_stack ( 'insol (delta, lat, omega)')
     sin_h = np.sin(deg2rad*delta)*np.sin(deg2rad*lat) + np.cos(deg2rad*delta)*np.cos(deg2rad*lat)*np.cos(deg2rad*omega)
 
     insol = SOLAR * np.maximum(0., sin_h)
@@ -327,7 +367,7 @@ def SunRiseGMT (day, lat, lon) :
     lat ; latitude in degrees
     lon : longitude in degrees
     '''
-    push_stack ( f'SunRiseGMT (day, lat, lon) ')
+    push_stack ( 'SunRiseGMT (day, lat, lon) ')
     h0 = H0 (day, lat)
     eq = equation_temps (day)
     h1 = 12. - h0/15. + eq/60. - lon/15.  
@@ -346,7 +386,7 @@ def SunSetGMT (day, lat, lon) :
     lat ; latitude in degrees
     lon : longitude in degrees
     '''
-    push_stack (f'SunSetGMT (day, lat, lon)' )
+    push_stack ('SunSetGMT (day, lat, lon)')
     h0 = H0 (day, lat)
     eq = equation_temps (day)
     h1 = 12. + h0/15. + eq/60. - lon/15.
@@ -365,7 +405,7 @@ def DayLength (day, lat) :
     lat ; latitude in degrees
     lon : longitude in degrees
     '''
-    push_stack ( f'DayLength (day, lat)' )
+    push_stack ( 'DayLength (day, lat)' )
     h0  = H0    (day, lat)
     arg = argH0 (day, lat)
     h0  = xr.where ( arg < -1.,  180., h0)
@@ -397,7 +437,7 @@ def DayLength (day, lat) :
     if isinstance (DayLength, xr.core.dataarray.DataArray) :
         DayLength.attrs.update ( {'units':'hours', 'comment':'Length of the day, from sun rise to sun set'})
 
-    pop_stack ( f'DayLength' )
+    pop_stack ( 'DayLength' )
     return DayLength 
 
 def SunRiseLocal (day, lat) :
@@ -408,7 +448,7 @@ def SunRiseLocal (day, lat) :
     day : number of the day of the year. May be > 366
     lat ; latitude in degrees
     '''
-    push_stack ( f'SunRiseLocal (day, lat)')
+    push_stack ( 'SunRiseLocal (day, lat)')
     zval =  SunRiseGMT (day, lat, lon=0)
     pop_stack ( 'SunRiseLocal' )
     return zval
@@ -421,7 +461,7 @@ def SunSetLocal (day, lat) :
     day : number of the day of the year. May be > 366
     lat ; latitude in degrees
     '''
-    push_stack ( f'SunSetLocal (day, lat)' )
+    push_stack ( 'SunSetLocal (day, lat)' )
     zval =  SunSetGMT (day, lat, lon=0)
     pop_stack ( 'SunSetLocal' )
     return zval
@@ -509,10 +549,13 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
     hourGMT   = date2hourdec (ptime, t0)
     hour      = np.mod (hourGMT + lon/15.0, 24.0)
 
-    if OPTIONS.Debug : print ( f'{day=}' )
+    if OPTIONS.Debug :
+        print ( f'{day=}' )
 
-    if isinstance (ptime, xr.core.dataarray.DataArray) : math = xr
-    else : math = np
+    if isinstance (ptime, xr.core.dataarray.DataArray) :
+        math = xr
+    else :
+        math = np
     
     # Ephemerides of the Sun in local time
     zeroh    = 0.0
@@ -533,7 +576,7 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
     pseudo_local_time = math.where ( SunSet>SunRise, h1 + h2 + h3 + h4, np.nan)
 
     if isinstance (pseudo_local_time, xr.core.dataarray.DataArray) :
-        hourdec.attrs.update ( {'units':'hours', 'comment':'pseudo local time, roman definition',
+        pseudo_local_time.attrs.update ( {'units':'hours', 'comment':'pseudo local time, roman definition',
                                 'reference':'Marti, O., S. Nguyen, P. Braconnot, S. Valcke, F. Lemarié, and E. Blayo, 2021: A Schwarz iterative method to evaluate ocean–atmosphere coupling schemes: implementation and diagnostics in IPSL-CM6-SW-VLR. Geosci. Model Dev., 14, 2959–2975, https://doi.org/10.5194/gmd-14-2959-2021.'} )
 
         

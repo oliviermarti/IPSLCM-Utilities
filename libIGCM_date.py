@@ -21,19 +21,26 @@ Dates format
   - 360d|360_day :
       Year of 360 days with month of equal length.
 
-  Warning, to install, configure, run, use any of included software or
-  to read the associated documentation you'll need at least one (1)
-  brain in a reasonably working order. Lack of this implement will
-  void any warranties (either express or implied).  Authors assumes
-  no responsability for errors, omissions, data loss, or any other
-  consequences caused directly or indirectly by the usage of his
-  software by incorrectly or partially configured personal
+This software is governed by the CeCILL  license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal.
 '''
 
-import time
+import time, copy
 import numpy as np
 import cftime
-from Utils import Container
+from libIGCM_utils import Container
 
 # Characteristics of the gregorian calender
 mth_length = np.array ( [31, 28, 31,  30,  31,  30,  31,  31,  30,  31,  30,  31] )
@@ -61,8 +68,14 @@ DA_name = [ 'DA', 'DAYS'  , 'Days'  , 'days'  , 'DAY'  , 'Day'  , 'day'  , 'DA',
 # function IGCM_date_DaysInPreviousPeriod
 
 # libIGCM_date internal options
-OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None,
-                     Stack=None, DefaultCalendar='Gregorian')
+DEFAULT_OPTIONS = Container (Debug  = False,
+                             Trace  = False,
+                             Timing = None,
+                             t0     = None,
+                             Depth  = None,
+                             Stack  = None,
+                             DefaultCalendar = 'Gregorian')
+OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
 
 class set_options :
     """
@@ -90,6 +103,9 @@ def get_options () :
 
     """
     return OPTIONS
+
+def reset_options():
+    return set_options (DEFAULT_OPTIONS)
 
 def return_stack () :
     return OPTIONS.Stack

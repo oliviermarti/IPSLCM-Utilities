@@ -1,31 +1,30 @@
 # -*- coding: utf-8 -*-
-## ============================================================================
-##                                                                             
-##  This software is governed by the CeCILL  license under French law and      
-##  abiding by the rules of distribution of free software.  You can  use,      
-##  modify and/ or redistribute the software under the terms of the CeCILL     
-##  license as circulated by CEA, CNRS and INRIA at the following URL          
-##  "http://www.cecill.info".                                                  
-##                                                                             
-##  Warning, to install, configure, run, use any of Olivier Marti's            
-##  software or to read the associated documentation you'll need at least      
-##  one (1) brain in a reasonably working order. Lack of this implement        
-##  will void any warranties (either express or implied).                      
-##  O. Marti assumes no responsability for errors, omissions,                  
-##  data loss, or any other consequences caused directly or indirectly by      
-##  the usage of his software by incorrectly or partially configured           
-##  personal.                                                                  
-##                                                                             
-## ============================================================================
 '''
 A few fonctionnalities of the OASIS coupler in Python
 
 olivier.marti@lsce.ipsl.fr
+
+This software is governed by the CeCILL  license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal.
 '''
 
 import time
-import sys, numpy as np, xarray as xr
-from Utils import Container ()
+import copy
+import numpy as np
+import xarray as xr
+from libIGCM_utils import Container
 
 ## Variables exchanged between ocean and atmosphere in IPSL coupled model      
 o2a_hf = [
@@ -69,18 +68,26 @@ a2o_hf = a2o_hf_wind + a2o_hf_ext
 a2o    = a2o_day     + a2o_hf
 
 # Build dictionnaries for correspondance between ocean and atmosphere variables.
-a2o_d = Container () ; a2o_r = Container ()
+a2o_d = Container ()
+a2o_r = Container ()
 for avar, ovar in a2o :
     a2o_d[avar] = ovar
     a2o_r[ovar] = avar
 
-o2a_d = Container () ; o2a_r = Container ()
+o2a_d = Container ()
+o2a_r = Container ()
 for ovar, avar in o2a :
     o2a_d[ovar] = avar
     o2a_r[avar] = ovar
 
 ### OASIS internal options                                                     
-OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
+DEFAULT_OPTIONS = Container (Debug  = False,
+                     Trace  = False,
+                     Timing = None,
+                     t0     = None,
+                     Depth  = None,
+                     Stack  = None)
+OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
 
 class set_options :
     '''
@@ -94,9 +101,12 @@ class set_options :
             self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
-    def _apply_update (self, options_dict) : OPTIONS.update (options_dict)
-    def __enter__ (self) : return
-    def __exit__ (self, type, value, traceback) : self._apply_update (self.old)
+    def _apply_update (self, options_dict) :
+        OPTIONS.update (options_dict)
+    def __enter__ (self) :
+        return
+    def __exit__ (self, type, value, traceback) :
+        self._apply_update (self.old)
 
 def get_options () -> dict :
     '''
@@ -109,16 +119,24 @@ def get_options () -> dict :
     '''
     return OPTIONS
 
+def reset_options():
+    return set_options (**DEFAULT_OPTIONS)
+
 def return_stack () :
     return OPTIONS['Stack']
 
 def push_stack (string:str) :
-    if OPTIONS.Depth : OPTIONS.Depth += 1
-    else             : OPTIONS.Depth = 1
-    if OPTIONS.Trace : print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
+    if OPTIONS.Depth :
+        OPTIONS.Depth += 1
+    else             :
+        OPTIONS.Depth = 1
+    if OPTIONS.Trace :
+        print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS.Stack : OPTIONS.Stack.append (string)
-    else             : OPTIONS.Stack = [string,]
+    if OPTIONS.Stack :
+        OPTIONS.Stack.append (string)
+    else             :
+        OPTIONS.Stack = [string,]
     #
     if OPTIONS.Timing :
         if OPTIONS.t0 :
@@ -144,9 +162,11 @@ def pop_stack (string:str) :
             print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string}')
     #
     OPTIONS.Depth -= 1
-    if OPTIONS.Depth == 0 : OPTIONS.Depth = None
+    if OPTIONS.Depth == 0 :
+        OPTIONS.Depth = None
     OPTIONS.Stack.pop ()
-    if OPTIONS.Stack == list () : OPTIONS.Stack = None
+    if OPTIONS.Stack == list () :
+        OPTIONS.Stack = None
     #
 
 ## ============================================================================
@@ -159,7 +179,8 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
     dst_grid_target     = np.zeros ((dst_grid_size,), dtype=int)
     dst_grid_weight     = np.zeros ((dst_grid_size,))
     for link in np.arange (num_links) :
-        if link%1000 == 0 : print ( link, end=' ' )
+        if link%1000 == 0 :
+            print ( link, end=' ' )
         src_grid_target[src_address[link]] += 1
         src_grid_weight[src_address[link]] += remap_matrix [link]
         dst_grid_target[dst_address[link]] += 1
@@ -183,7 +204,7 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
       sval : value of destinations points with no value assigned by the interpolation
     '''
 
-    push_stack ( f'rmp_remap :  Read rmp file')
+    push_stack ( 'rmp_remap :  Read rmp file')
     
     num_links      = d_rmp.sizes ['num_links']
     src_grid_size  = d_rmp.sizes ['src_grid_size']
@@ -204,30 +225,39 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
         print ('Dimensions do not match')
         raise Exception ("Error in module: " + __name__ + ", file: " + __file__ + ", function: " + rmp_remap.__name__)
        
-    if OPTIONS.Debug : print ('grid sizes      : ', src_grid_size, dst_grid_size)
-    if OPTIONS.Debug : print ('num_links       : ', num_links)
-    if OPTIONS.Debug : print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
-    if OPTIONS.Debug : print ('src dimensions  : ', src_ny, src_nx)
-    if OPTIONS.Debug : print ('dst dimensions  : ', dst_ny, dst_nx)
+    if OPTIONS.Debug :
+        print ('grid sizes      : ', src_grid_size, dst_grid_size)
+    if OPTIONS.Debug :
+        print ('num_links       : ', num_links)
+    if OPTIONS.Debug :
+        print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
+    if OPTIONS.Debug :
+        print ('src dimensions  : ', src_ny, src_nx)
+    if OPTIONS.Debug :
+        print ('dst dimensions  : ', dst_ny, dst_nx)
 
     # Get information to create the destination field
     src_shape_2D   = list (ptab.shape)
     dst_shape_2D   = src_shape_2D[:-2] + [dst_ny, dst_nx]
-    if OPTIONS.Debug : print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
+    if OPTIONS.Debug :
+        print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
 
     src_shape_1D = src_shape_2D[:-2] + [src_ny*src_nx]
     dst_shape_1D = dst_shape_2D[:-2] + [dst_ny*dst_nx]
-    if OPTIONS.Debug : print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
+    if OPTIONS.Debug :
+        print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
     
-    src_dims_2D = list (ptab.dims) ; 
+    src_dims_2D = list (ptab.dims) 
     src_dims_1D = src_dims_2D[:-2] + ['xy']  
   
     dst_dims_2D = list (src_dims_2D[:-2])
     dst_dims_2D = dst_dims_2D + ['y', 'x']
     dst_dims_1D = dst_dims_2D[:-2] + ['xy']
     
-    if OPTIONS.Debug : print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
-    if OPTIONS.Debug : print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
+    if OPTIONS.Debug :
+        print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
+    if OPTIONS.Debug :
+        print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
         
     src_coords_2D = ptab.coords
     dst_coords_2D = []
@@ -241,8 +271,10 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     ## Creates an array to mask destinations points with no value assigned by the interpolation
     dst_mask_1D = np.full (dst_shape_1D, np.nan)
     
-    if OPTIONS.Debug : print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
-    if OPTIONS.Debug : print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
+    if OPTIONS.Debug :
+        print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
+    if OPTIONS.Debug :
+        print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
 
     # Interpolate
     dst_field_1D = remap ( src_field_1D, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval = np.nan )
@@ -292,9 +324,10 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
     dst_field = np.zeros ( (dst_shape) )
     dst_mask  = np.full  ( (dst_shape), np.nan)
      
-    if OPTIONS.Debug : print ("\nStarting interpolation")
+    if OPTIONS.Debug :
+        print ("\nStarting interpolation")
     t_start = time.time ()
-    t_0 = t_start
+    t_0     = t_start
    
     for link in np.arange (num_links) :
         if OPTIONS.Debug :
@@ -306,7 +339,8 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
         dst_mask  [..., dst_address [link]] = 1.0
         dst_field [..., dst_address [link]] += remap_matrix[link] * src_field[..., src_address[link]]
     t_end = time.time ()
-    if OPTIONS.Debug : progress (percent=100, width=width)
+    if OPTIONS.Debug :
+        progress (percent=100, width=width)
     
     if OPTIONS.Debug :
         print ("\nInterpolation time : {:5.3}s".format (t_end-t_start))
@@ -325,7 +359,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
         pxx, pyy, pzz : components on the geocentric system
         glam, gphi : longitude and latitude of the points
     '''
-    push_stack ( f'geo2en (pxx, pyy, pzz, glam, gphi)' )
+    push_stack ( 'geo2en (pxx, pyy, pzz, glam, gphi)' )
     
     gsinlon = np.sin (np.deg2rad(glam))
     gcoslon = np.cos (np.deg2rad(glam))
@@ -346,7 +380,7 @@ def en2geo (pte, ptn, glam, gphi) :
         pte, ptn : eastward/northward components
         glam, gphi : longitude and latitude of the points
     '''
-    push_stack ( f'en2geo (pte, ptn, glam, gphi)' )
+    push_stack ( 'en2geo (pte, ptn, glam, gphi)' )
     gsinlon = np.sin (np.deg2rad(glam))
     gcoslon = np.cos (np.deg2rad(glam))
     gsinlat = np.sin (np.deg2rad(gphi))
@@ -367,7 +401,7 @@ def sum_matrix (rmp) :
     rmp : an xarray dataset corresponding to a rmp file 
           Weight files are at OASIS-MCT format (matching ESMF or CDO weights files format)
     '''
-    push_stack ( f'sum_matrix (rmp)' )
+    push_stack ( 'sum_matrix (rmp)' )
     
     src_sum_matrix = np.zeros ( (rmp.dims['src_grid_size'],) )
     dst_sum_matrix = np.zeros ( (rmp.dims['dst_grid_size'],) )

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ## ===========================================================================
-##
+##                                                                            
 ##  This software is governed by the CeCILL  license under French law and
 ##  abiding by the rules of distribution of free software.  You can  use,
 ##  modify and/ or redistribute the software under the terms of the CeCILL
@@ -110,9 +110,9 @@ def zgr_z (config='orca2') :
             zt = zw + 0.5
             # Double tanh function
             gdepw_1d = ( zsur + za0 * zw + za1 * zacr * np.log ( np.cosh( (zw-zkth ) / zacr  ) )    \
-                                                + za2 * zacr2* np.log ( np.cosh( (zw-zkth2) / zacr2 ) )  )
+                                         + za2 * zacr2* np.log ( np.cosh( (zw-zkth2) / zacr2 ) )  )
             gdept_1d = ( zsur + za0 * zt + za1 * zacr * np.log ( np.cosh( (zt-zkth ) / zacr  ) )    \
-                                                + za2 * zacr2* np.log ( np.cosh( (zt-zkth2) / zacr2 ) )  )
+                                         + za2 * zacr2* np.log ( np.cosh( (zt-zkth2) / zacr2 ) )  )
             e3w_1d   =          za0      + za1        * np.tanh(       (zw-zkth ) / zacr  )      \
                                          + za2        * np.tanh(       (zw-zkth2) / zacr2 )
             e3t_1d   =          za0      + za1        * np.tanh(       (zt-zkth ) / zacr  )      \
