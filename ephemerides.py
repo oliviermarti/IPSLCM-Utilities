@@ -31,7 +31,7 @@ import copy
 import numpy as np
 import xarray as xr
 import cftime
-from libIGCM_utils import Container
+from libIGCM import Container
 
 deg2rad = np.deg2rad (1.0)
 rad2deg = np.rad2deg (1.0)
