@@ -4,6 +4,8 @@ libIGCM.sys
 
 author: olivier.marti@lsce.ipsl.fr
 
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+
 This library if a layer under some usefull
 environment variables and commands.
 All those definitions depend on host particularities.
@@ -21,7 +23,8 @@ will void any warranties (either express or implied).
 O. Marti assumes no responsability for errors, omissions,
 data loss, or any other consequences caused directly or indirectly by
 the usage of his software by incorrectly or partially configured
-personal.
+personal. Be warned that the author himself may not respect the
+prerequisites.
 '''
 
 import os
@@ -31,11 +34,10 @@ import time
 import copy
 import numpy as np
 import libIGCM.date
-from   libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
-
 
 ## ============================================================================
 def Mach (long:bool=False) -> str :
@@ -88,10 +90,10 @@ def Mach (long:bool=False) -> str :
         zmach = zmachfull
 
     return zmach
+# =======================================================================
 
 MASTER    = Mach (long=False)
 LocalUser = os.environ ['USER']
-
 
 IGCM_Catalog      = get_options ()['IGCM_Catalog']
 IGCM_Catalog_list = get_options ()['IGCM_Catalog_list']
@@ -109,10 +111,10 @@ if 'IGCM_Catalog' in os.environ :
 if 'IGCM_Catalog_list' in os.environ :
     IGCM_Catalog_list = os.environ['IGCM_Catalog_list']
 
-set_options ( IGCM_Catalog = IGCM_Catalog, IGCM_Catalog_list=IGCM_Catalog_list )
+set_options (IGCM_Catalog = IGCM_Catalog, IGCM_Catalog_list=IGCM_Catalog_list)
 
-# Where do we run ?
-SysName, NodeName, Release, Version, Machine = os.uname ()
+## Where do we run ?
+#SysName, NodeName, Release, Version, Machine = os.uname ()
 
 class Config :
     '''
@@ -163,6 +165,8 @@ class Config :
         return self.__dict__.__next__()
     def __len__     (self) :
         return len(self.__dict__)
+    def __copy__    (self) :
+        return Config (self)
 
     def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
                   LongName=None, ModelName=None, ShortName=None, Comment=None,
@@ -174,7 +178,8 @@ class Config :
                   REBUILD_DIR=None, POST_DIR=None,
                   ThreddsPrefix=None, DapPrefix=None, R_GRAF=None, DB=None,
                   IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
-                  Debug=None, TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None, IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
+                  Debug=None, TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None,
+                  IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
                   DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
                   SeasonalFrequency=None, CalendarType=None,
                   DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
@@ -185,6 +190,10 @@ class Config :
    
         if not Debug               :
             Debug               = OPTIONS.Debug
+        if not User                :
+            User                = OPTIONS.User
+        if not Group               :
+            Group               = OPTIONS.Group
         if not TGCC_User           :
             TGCC_User           = OPTIONS.TGCC_User
         if not TGCC_Group          :
@@ -211,16 +220,16 @@ class Config :
         if not MASTER :
             MASTER = 'Unknown'
             
-        if Debug :
-            print ( f'libIGCM.sys : {MASTER=}' )
-            print ( f'libIGCM.sys : {LocalUser=}' )
+        if OPTIONS.Debug or Debug :
+            print ( f'libIGCM.sys.Config : {MASTER=}' )
+            print ( f'libIGCM.sys.Config : {LocalUser=}' )
             
         # ===========================================================================================
         # Reads config.card if available
         if ConfigCard :
             # Text existence of ConfigCard
             if not os.path.exists (ConfigCard ) :
-                raise FileExistsError ( f"File not found : {ConfigCard = }" )
+                raise FileExistsError ( f"libIGCM.sys.Config : File not found : {ConfigCard = }" )
                 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
@@ -247,8 +256,8 @@ class Config :
         # Reads run.card if available
         if RunCard :
             # Text existence of RunCard
-            if not os.path.exists (RunCard ) :
-                raise FileExistsError ( f"File not found : {RunCard = }" )
+            if not os.path.exists (RunCard) :
+                raise FileExistsError ( f"libIGCM.sys.Config : File not found : {RunCard = }" )
                 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
@@ -542,9 +551,9 @@ class Config :
                 L_EXP = os.path.join ( TagName, SpaceName, ExperimentName, JobName )
 
             if Debug :
-                print ( f'libIGCM.sys : {R_BUF=}' )
-                print ( f'libIGCM.sys : {IGCM_OUT_name=}' )
-                print ( f'libIGCM.sys : {L_EXP=}' )
+                print ( f'libIGCM.sys.Config : libIGCM.sys : {R_BUF=}' )
+                print ( f'libIGCM.sys.Config : libIGCM.sys : {IGCM_OUT_name=}' )
+                print ( f'libIGCM.sys.Config : libIGCM.sys : {L_EXP=}' )
                 
             if R_OUT and not R_SAVE :
                 R_SAVE      = os.path.join ( R_OUT  , L_EXP )

@@ -1,4 +1,16 @@
+'''
+ORCA namelists
+
+olivier.marti@lsce.ipsl.fr
+
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+
+'''
+
 import numpy as np
+import libIGCM
+from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+
 nam_config = {
     'orca2' : {
         'key_agrif'   : False, 
@@ -94,3 +106,5 @@ nam_config = {
                 }
             }
     }
+
+nam_config = Container (nam_config)

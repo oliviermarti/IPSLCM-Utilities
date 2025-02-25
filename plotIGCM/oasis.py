@@ -4,6 +4,8 @@ A few fonctionnalities of the OASIS coupler in Python
 
 olivier.marti@lsce.ipsl.fr
 
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+
 This software is governed by the CeCILL  license under French law and
 abiding by the rules of distribution of free software.  You can  use,
 modify and/ or redistribute the software under the terms of the CeCILL

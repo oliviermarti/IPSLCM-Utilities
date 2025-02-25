@@ -2,7 +2,9 @@
 '''
 Utilities 1D vertical interpolation
 
-authoir: olivier.marti@lsce.ipsl.fr
+author: olivier.marti@lsce.ipsl.fr
+
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
 
 Design to interpolatte on pressure levels
 

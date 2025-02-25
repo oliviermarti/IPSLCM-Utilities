@@ -7,6 +7,8 @@ Utilities for LMDZ grid
 
 Author: olivier.marti@lsce.ipsl.fr
 
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+
 This software is governed by the CeCILL  license under French law and
 abiding by the rules of distribution of free software.  You can  use,
 modify and/ or redistribute the software under the terms of the CeCILL
@@ -78,12 +80,13 @@ YNAME = [ 'y', 'Y', 'lat', ]
 CNAME = [ 'c', 'cell', ]
 ZNAME = [ 'z', 'Z', 'presnivs', ]
 TNAME = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
+BNAME = [ 'bnd', 'bnds', 'bound', 'bounds', 'vertex', 'nvertex', 'two', 'two1', 'two2', 'four' ]
 
 ## All possibles name of units of dimensions in LMDZ files                     
 XUNIT = [ 'degrees_east', ]
 YUNIT = [ 'degrees_north', ]
 CUNIT = [ 'cell', ]
-ZUNIT = [ 'Pa', ]
+ZUNIT = [ 'Pa', 'm', 'meter']
 TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
 XUNIT_PINT = [ ureg('degrees_east'), ]
@@ -287,6 +290,10 @@ def __find_axis__ (ptab, axis='z', back=True) :
         ax_name, unit_list, length = TNAME, TUNIT, None
         if OPTIONS.Debug :
             print ( f'Working on taxis found by name : {axis=} : {TNAME=} {ax_name=} {unit_list=} {length=}' )
+    if axis in BNAME :
+        ax_name, unit_list, length = BNAME, None, None
+        if OPTIONS.Debug :
+            print ( f'Working on taxis found by name : {axis=} : {BNAME=} {ax_name=} {unit_list=} {length=}' )
 
     if mmath == xr :
         # Try by name
@@ -296,33 +303,33 @@ def __find_axis__ (ptab, axis='z', back=True) :
                     print ( f'Rule 2 : {ax_name=} axis found by unit : {axis=} : {XNAME=}' )
                 ix, ax = ptab.dims.index (dim), dim
 
-        # If not found, try by axis attributes
+        # If not found, try by 'axis' attribute
         if not ix :
-            for i, dim in enumerate (ptab.dims) :
+            for ii, dim in enumerate (ptab.dims) :
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
                     if OPTIONS.Debug :
                         print ( f'Rule 3 : Trying {i=} {dim=} {l_axis=}' )
                     if l_axis in ax_name and l_axis == 'X' :
                         if OPTIONS.Debug :
-                            print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                            print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'Y' :
                         if OPTIONS.Debug :
-                            print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                            print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'C' :
                         if OPTIONS.Debug :
-                            print ( f'Rule 3 : caxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                            print ( f'Rule 3 : caxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'Z' :
                         if OPTIONS.Debug :
-                            print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                            print ( f'Rule 3 : zaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
                     if l_axis in ax_name and l_axis == 'T' :
                         if OPTIONS.Debug :
-                            print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {i=} {dim=}' )
-                        ix, ax = (i, dim)
+                            print ( f'Rule 3 : taxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                        ix, ax = (ii, dim)
 
         # If not found, try by units
         if not ix :
@@ -336,7 +343,7 @@ def __find_axis__ (ptab, axis='z', back=True) :
 
     # If numpy array or dimension not found, try by length
     if mmath != xr or not ix :
-        if length :
+        if not length is None :
             l_shape = ptab.shape
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :

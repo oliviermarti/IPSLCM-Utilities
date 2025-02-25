@@ -4,6 +4,8 @@ libIGCM_utils : a few utilities
 
 Author : olivier.marti@lsce.ipsl.fr
 
+Github : https://github.com/oliviermarti/IPSLCM-Utilities
+
 This software is governed by the CeCILL  license under French law and      
 abiding by the rules of distribution of free software.  You can  use,      
 modify and/ or redistribute the software under the terms of the CeCILL     
@@ -17,7 +19,7 @@ will void any warranties (either express or implied).
 O. Marti assumes no responsability for errors, omissions,                  
 data loss, or any other consequences caused directly or indirectly by      
 the usage of his software by incorrectly or partially configured           
-personal.                                                                  
+personal. Be warned that the author himself may not respect the prerequisites.                                                               
 '''
 
 import copy
@@ -48,6 +50,10 @@ class Container :
         zv = self[attr]
         delattr (self, attr)
         return zv
+    def copy (self) :
+        return Container (self)
+    #def __deepcopy__(self, memo):
+    #    return Container(copy.deepcopy(self.name, memo))
     ## Hidden functions
     def __str__     (self) :
         return str  (self.__dict__)
@@ -65,6 +71,9 @@ class Container :
         return self.__dict__.__next__()
     def __len__     (self) :
         return len (self.__dict__)
+    def __copy__    (self) :
+        return Container (self)
+    
     def __init__ (self, dico=None, **kwargs) :
         if dico :
             zargs = dico
@@ -86,6 +95,8 @@ DEFAULT_OPTIONS = Container (Debug  = False,
                              Depth  = None,
                              Stack  = None,
                              DefaultCalendar      = 'Gregorian',
+                             User                 = None,
+                             Group                = None,
                              TGCC_User            = 'p86mart',
                              TGCC_Group           = 'gen12006',
                              IDRIS_User           = 'rces009',
@@ -97,13 +108,19 @@ DEFAULT_OPTIONS = Container (Debug  = False,
                              DapPrefix            = None,
                              ThreddsPrefix        = None,
                              IGCM_Catalog         = None,
-                             IGCM_Catalog_list    = [ 'IGCM_catalog.json', ] )
+                             IGCM_Catalog_list    = [ 'IGCM_catalog.json', ],
+                             Pint                 = False)
 
 OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
 
 class set_options :
     '''
-    Set options for libIGCM_utils
+    Set options for libIGCM
+    
+    See Also :
+    ----------
+    reset_options, get_options
+    
     '''
     def __init__ (self, **kwargs) :
         self.old = Container ()
@@ -111,7 +128,7 @@ class set_options :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
-        self._apply_update(kwargs)
+        self._apply_update (kwargs)
 
     def _apply_update (self, options_dict) :
         OPTIONS.update (options_dict)
@@ -122,16 +139,24 @@ class set_options :
 
 def get_options () -> dict :
     '''
-    Get options for nemo
+    Get options for libIGCM
 
-    See Also
+    See Also :
     ----------
-    set_options
+    set_options, reset_options
 
     '''
     return OPTIONS
 
 def reset_options():
+    '''
+    Reset options to default_options for libIGCM
+
+    See Also :
+    ----------
+    set_options, get_options
+
+    '''
     return set_options (**DEFAULT_OPTIONS)
 
 def return_stack () :
@@ -152,9 +177,9 @@ def push_stack (string:str) :
     #
     if OPTIONS.Timing :
         if OPTIONS.t0 :
-            OPTIONS.t0.append ( time.time() )
+            OPTIONS.t0.append (time.time())
         else :
-            OPTIONS.t0 = [ time.time(), ]
+            OPTIONS.t0 = [time.time(),]
 
 def pop_stack (string:str) :
     if OPTIONS.Timing :

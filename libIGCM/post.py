@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 '''
-This library provide some utilities for post processing
+This library provides some utilities for post processing
+
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
 
 This software is governed by the CeCILL  license under French law and
 abiding by the rules of distribution of free software.  You can  use,
@@ -67,7 +69,7 @@ class Config (libIGCM.sys.Config) :
                 if JobName in Experiments.keys () :
                     exp = Experiments[JobName]
             else :
-                raise Exception ( f'Catalog file not found : {IGCM_Catalog}' )
+                raise Exception ( f'libIGCM.post.Config : Catalog file not found : {IGCM_Catalog}' )
 
         else :
             for cfile in OPTIONS.IGCM_Catalog_list :
@@ -298,7 +300,10 @@ def comp ( varName ) :
     return Comp
 
 def VarOut2VarIn (VarOut, JobName) :
-    #OPTIONS=get_options ()
+    '''
+    From a variable name, try to get a more standard name
+    Useful because variable names may be different for different model version (mainly for NEMO)
+    '''
     push_stack ( f'VarOut2VarIn ({VarOut=} {JobName=})' )
     
     VarIn = VarOut

@@ -554,7 +554,7 @@ def DaysInYear (year, Calendar=None ) -> int :
     pop_stack ( 'DaysInYear : {ndays}' )
     return ndays
 
-def DaysBetweenDate ( pdate1, pdate2, Calendar=None ) -> int :
+def DaysBetweenDate (pdate1, pdate2, Calendar=None) -> int :
   '''
   Calculates the days difference between two dates
 

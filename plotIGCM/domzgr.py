@@ -19,6 +19,9 @@
 ## ===========================================================================
 '''
 olivier.marti@lsce.ipsl.fr
+
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+
 '''
 import numpy as np
 import orca

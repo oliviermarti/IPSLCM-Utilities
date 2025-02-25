@@ -67,6 +67,7 @@ Marker = [
 
 # RCPs
 RCP = types.SimpleNamespace ()
+
 ## Lines
 RCP.ColorLine = {
     'RCP8.5':np.array([153,   0,   2])/255,
@@ -74,7 +75,7 @@ RCP.ColorLine = {
     'RCP4.5':np.array([112, 160, 205])/255,
     'RCP2.6':np.array([  0,  52, 102])/255 }
 
-RCP.ColorLineHexa = dict (zip ( RCP.ColorLine.keys(), list ( map ( lambda x: color2hex (*x), RCP.ColorLine.values() ) ) ) )
+RCP.ColorLineHexa = dict (zip (RCP.ColorLine.keys(), list (map(lambda x: color2hex (*x), RCP.ColorLine.values()))))
 
 ## Shading
 RCP.ColorShading = {
@@ -83,7 +84,7 @@ RCP.ColorShading = {
     'RCP4.5':np.array([146, 197, 222])/255,
     'RCP2.6':np.array([ 67, 147, 195])/255 }
     
-RCP.ColorShadingHexa = dict (zip ( RCP.ColorShading.keys(), list ( map ( lambda x: color2hex (*x), RCP.ColorShading.values() ) ) ) )
+RCP.ColorShadingHexa = dict (zip (RCP.ColorShading.keys(), list(map(lambda x: color2hex (*x), RCP.ColorShading.values()))))
 
 def c2c (tab) :
     ztab = tab

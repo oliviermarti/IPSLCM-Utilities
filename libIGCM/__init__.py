@@ -4,6 +4,8 @@ libIGCM
 
 author: olivier.marti@lsce.ipsl.fr
 
+GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+
 This library if a layer under some usefull
 environment variables and commands.
 All those definitions depend on host particularities.
