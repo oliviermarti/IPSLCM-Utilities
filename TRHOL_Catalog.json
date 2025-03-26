@@ -1,0 +1,196 @@
+{   "Description" : "Catalogue des simulations THROL",
+    "Author"      : "Olivier Marti",
+    "Institution" : "IPSL/LSCE",
+    "Date"        : "2025-01-07",
+    "mailto"      : "olivier.marti@lsce.ipsl.fr",
+
+    "CM61-LR-PI-Vdyn00":
+    {	"JobName"       :"CM61-LR-PI-Vdyn00",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"V1", "ExperimentName":"piControl", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb",  "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"Line"          :{"color":"blue", "style":"solid"},
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"full"},
+	"OCE"           :"eORCA1.2",  "ATM":"LMD144x144"
+    },
+    "CM61-LR-H6k-Vdyn03":
+    { 	"JobName"       :"CM61-LR-H6k-Vdyn03",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"V1", "ExperimentName":"midHolocene", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb",  "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"none"},
+	"Line"          :{"color":"blue", "style":"dotted"},
+	"OCE"           :"eORCA1.2", "ATM" :"LMD144x144"
+    },
+    "CM61-LR-PI-Vdyn17":
+    {	"JobName"       :"CM61-LR-PI-Vdyn17",
+	"SpaceName"     :"PROD",  "TagName":"IPSLCM6",  "ShortName":"V2",  "ExperimentName":"piControl", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb",  "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"full"},
+	"Line"          :{"color":"green", "style":"solid"},
+	"OCE"           :"eORCA1.2",  "ATM":"LMD144x144"
+    },
+    "CM61-LR-H6k-Vdyn17":
+    {	"JobName"       :"CM61-LR-H6k-Vdyn17",
+	"SpaceName"     :"PROD",  "TagName":"IPSLCM6", "ShortName":"V2", "ExperimentName":"midHolocene", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb", "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"none"},
+	"Line"          :{"color":"green", "style":"dotted"},
+	"OCE"           :"eORCA1.2",  "ATM":"LMD144x144"
+    },
+    "CM61-LR-PI-Vdyn21":
+    {	"JobName"       :"CM61-LR-PI-Vdyn21",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"V3", "ExperimentName":"piControl", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb",  "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"full"},
+	"Line"          :{"color":"red", "style":"solid"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144"
+    },
+    "CM61-LR-H6k-Vdyn21":
+    { 	"JobName"       :"CM61-LR-H6k-Vdyn21",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"V3", "ExperimentName":"midHolocene", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb",   "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"none"},
+	"Line"          :{"color":"red", "style":"dotted"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144"
+    },
+    "CM61-LR-PI-Vdyn28":
+    {	"JobName"       :"CM61-LR-PI-Vdyn28", 
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"V4", "ExperimentName":"piControl", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb", "TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"ColorLine"     :"black",
+	"Marker"        :{"marker":"s", "fillstyle":"full"},
+	"Line"          :{"color":"black", "style":"solid"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144"
+    },
+
+    
+    "CM61-LR-H6k-Vdyn28":
+    {	"JobName"       :"CM61-LR-H6k-Vdyn28",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"V4", "ExperimentName":"midHolocene", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86pasb", 	"TGCC_Group":"gen12006",
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Marker"        :{"marker":"s", "fillstyle":"none"},
+	"Line"          :{"color":"black", "style":"dotted"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144"
+    },
+    
+  
+    "TR5AS-Vlr01":
+    {	"JobName"       :"TR5AS-Vlr01",
+	"SpaceName"     :"PROD", "TagName" :"IPSLCM5A2", "ShortName" :"Vlr01 CM5A2", "ExperimentName":"Holocene", "ModelName":"IPSL CM5 VLR",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen2212",
+	"YearBegin"     : 2000, "YearEnd": 7999, "CalendarType":"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Shading"       :[0.5, 0.5, 0.5],
+	"Marker"        :{"marker":"p", "fillstyle":"full"},
+	"Line"          :{"color":"black", "style":"solid"},
+	"OCE"           :"ORCA2.3", "ATM" :"LMD95x96"
+    },
+    "TR6AV-Sr02":
+    {	"JobName"       :"TR6AV-Sr02",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"Sr02 CM6.0 Veg", "ExperimentName":"Holocene", "ModelName":"IPSL CM6 Veg",
+	"TGCC_User"     :"p86mart", "TGCC_Group":"gen2212",
+	"YearBegin"     : 2000,  "YearEnd":7999,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Shading"       :[0.36, 0.68, 0.70],
+	"Marker"        :{"marker":"s", "fillstyle":"full"},
+	"Line"          :{"color":[0.44, 0.63, 0.80], "style":"solid"},
+	"OCE"           :"ORCA2.3",  "ATM" :"LMD144x144"
+    },
+    "TR6kCM6AS-Sr01":
+    {	"JobName"       :"TR6kCM6AS-Sr01",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"Sr01 CM6.2", "ExperimentName":"Holocene", "ModelName":"IPSL CM6.2 LR",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen12006",
+	"YearBegin":2000,  "YearEnd":7999,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Shading"       :[0.80, 0.68, 0.44],
+	"Marker"        :{"marker":"^", "fillstyle":"full"},
+	"Line"          :{"color":[0.77, 0.44, 0 ], "style":"solid"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144",
+	"PeriodBefore"  :{"Beg":"3500-01-01", "End":"4200-12-31"},
+	"PeriodAfter"   :{"Beg":"5000-01-01", "End":"5400-12-31"}
+    },
+    "TR6kCM6AS-Sr02": 
+    {	"JobName"       :"TR6kCM6AS-Sr02",
+	"SpaceName"     :"PROD",  "TagName":"IPSLCM6", "ShortName":"Sr02 CM6.2", "ExperimentName":"Holocene", "ModelName":"IPSL CM6.2 LR",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen12006",
+	"YearBegin": 4000,   "YearEnd": 7999,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[4-7]??00101_[2-7]??91231",
+	"Shading"  :[0.75, 0.75, 0.75],
+	"Line"          :{"color":[0.70, 0.70, 0.70], "style":"solid"},
+	"Marker"        :{"marker":"v", "fillstyle":"full"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144",
+	"PeriodBefore" : {"Begin":"4800-01-01", "End":"5200-12-31"},
+	"PeriodAfter"  : {"Begin":"5800-01-01", "End":"6200-12-31"}
+    },
+    "TR6kCM6AS-Sr04":
+    {	"JobName"       :"TR6kCM6AS-Sr04",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"Sr04 CM6.2", "ExperimentName":"Holocene", "ModelName":"IPSL CM6.2 LR",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen12006",
+	"YearBegin"     :5000, 	"YearEnd":7999,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[5-7]??00101_[2-7]??91231",
+	"Shading"  :[0.26, 0.68, 0.76],
+	"Line"          :{"color":[0,  0.20, 0.41], "style":"solid"},
+	"Marker"        :{"marker":"<", "fillstyle":"full"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144",
+	"PeriodBefore"  :{"Begin":"4800-01-01", "End":"5200-12-31"},
+	"PeriodAfter"   :{"Begin":"5800-01-01", "End":"6200-12-31"}
+    },
+    "TR6kCM6AV-Sr28": 
+    {	"JobName"       :"TR6kCM6AV-Sr28",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"Sr28 CM6.2 Veg", "ExperimentName":"Holocene", "ModelName":"IPSL CM6 Veg",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen2212",
+	"YearBegin"     :2000, 	"YearEnd": 7999,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Shading"  :[0.87, 0.93, 0.76],
+	"Line"          :{"color":[0,  0.31, 0   ], "style":"solid"},
+	"Marker"        :{"marker":"D", "fillstyle":"full"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144"
+    },
+    "CM61-LR-H3500Sr02-Vdyn28":
+    {	"JobName"       :"CM61-LR-H3500Sr02-Vdyn28",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"H3500 CM6.2 Veg", "ExperimentName":"midHolocene", "ModelName":"IPSL CM6 Veg",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen2212",
+	"YearBegin"     :2000, 	"YearEnd": 2798,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Shading"       :[0.87, 0.93, 0.76],
+	"Line"          :{"line":[0,  0.31, 0   ], "style":"solid"},
+	"Marker"        :{"marker":"D", "fillstyle":"full"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144",
+	"PeriodBefore"  :{"Beg":"01-01-4600", "End":"4800-12-31"},
+	"PeriodAfter"   :{"Beg":"01-01-5200", "End":"5299-12-31"}
+    },
+    "CM6AS-H3500-Sr05": 
+    {	"JobName"       :"CM6AS-H3500-Sr05",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"H3500 CM6.2", "ExperimentName":"midHolocene", "ModelName":"IPSL CM6",
+	"TGCC_User"     :"p86mart",  "TGCC_Group":"gen12006",
+	"YearBegin"     :4500, "YearEnd": 4999,
+	"CalendarType"  :"leap",
+	"DatePattern"   :"[2-7]??00101_[2-7]??91231",
+	"Shading"       :[0.87, 0.93, 0.76],
+	"Line"          :{"color":[0,  0.31, 0   ], "style":"solid"},
+	"Marker"        :{"marker":"v", "fillstyle":"full"},
+	"OCE"           :"eORCA1.2",  "ATM" :"LMD144x144",
+	"PeriodAfter"   :{"Beg":"4700-01-01", "End" :"5200-12-31"}
+    }
+}

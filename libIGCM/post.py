@@ -86,6 +86,8 @@ class Config (libIGCM.sys.Config) :
                 if OPTIONS.Debug :
                     print ( f'Read catalog file for {JobName=}' )
                 exp = Container (**exp)
+                if OPTIONS.Debug :
+                    print (exp)
                     
                 exp.pop ('JobName')    
                 if not SpaceName      and 'SpaceName'      in exp.keys() :
@@ -200,7 +202,7 @@ class Config (libIGCM.sys.Config) :
                 
         libIGCM.sys.Config.__init__ (self, JobName=JobName, SpaceName=SpaceName, TagName=TagName, ShortName=ShortName, Comment=Comment,
                                            ExperimentName=ExperimentName, ModelName=ModelName,
-                                           TGCC_User=ModelName, TGCC_Group=TGCC_Group,
+                                           TGCC_User=TGCC_User, TGCC_Group=TGCC_Group,
                                            YearBegin=YearBegin, YearEnd= YearEnd, CalendarType=CalendarType, DatePattern=DatePattern,
                                            Period=Period, PeriodSE=PeriodSE,
                                            Shading=Shading, Line=Line, Marker=Marker,

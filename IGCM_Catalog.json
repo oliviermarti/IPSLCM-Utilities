@@ -1,0 +1,38 @@
+{   "Description" : "Catalogue des simulations perso",
+    "Author"      : "Olivier Marti",
+    "Institution" : "IPSL/LSCE",
+    "Date"        : "2025-01-07",
+    "mailto"      : "olivier.marti@lsce.ipsl.fr",
+
+    "XML01": 
+    {	"JobName"       :"XML01",
+	"SpaceName"     :"TEST", "TagName":"LMDZOR", "ShortName":"XML01", "ExperimentName":"clim", "ModelName":"LMDZ ORCHIDEE",
+	"TGCC_User"     :"p86mart", "TGCC_Group":"gencmip6",
+	"CalendarType"  :"leap",
+	"Line"          :{"color":"blue", "style":"solid"},
+	"DatePattern"   :"1995-01-01_1995-01-31",
+	"Marker"        :{"marker":"s", "fillstyle":"full"},
+	"OCE"           :"eORCA1.4.2", "ATM" :"LMD144x144"
+    },
+    "IPSLCM6.2-ECS-LR-W3-181":
+    { "JobName":"IPSLCM6.2-ECS-LR-W3-181", "TagName":"IPSLCM6", "ExperimentName":"piControl", "SpaceName":"PROD",
+      "TGCC_User"     :"p86caub", "TGCC_Group":"gencmip6",
+      "CalendarType"  :"leap",
+      "Line"          :{"color":"blue", "style":"solid"},
+      "DatePattern"   :"SE_2090_2099_1M",
+      "Marker"        :{"marker":"s", "fillstyle":"full"},
+      "ATM"           :"LMD144x144",
+      "OCE"           :"eORCA1.4"
+    },
+    "CM6-SW-DB03":
+    { "JobName"       :"CM6-SW-DB03", "SpaceName" : "PROD", "TagName":"IPSLCM6", "ExperimentName":"piControl",
+      "TGCC_User"     :"p86mart", "TGCC_Group":"gen2212",
+      "YearBegin"     : 4500, "YearEnd": 4999,
+      "CalendarType"  :"leap",
+      "DatePattern"   : "18500101_18501231",
+      "Shading"       :[0.87, 0.93, 0.76],
+      "Line"          :{"color":[0,  0.31, 0   ], "style":"solid"},
+      "Marker"        :{"marker":"D", "fillstyle":"full"},
+      "OCE"           :"ORCA2.3",  "ATM" :"LMD96x95"
+    }
+}

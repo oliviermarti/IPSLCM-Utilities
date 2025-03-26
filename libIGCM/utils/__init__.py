@@ -21,14 +21,13 @@ data loss, or any other consequences caused directly or indirectly by
 the usage of his software by incorrectly or partially configured           
 personal. Be warned that the author himself may not respect the prerequisites.                                                               
 '''
-
 import copy
 import time
 
 ## ============================================================================
 class Container :
     '''
-    Void class to act as a container
+    Void class to fill the gap between dictonnaries and spacenames
     Class members can be accessed either with dictionnary or namespace syntax
        i.e  <Container>['member'] or <Container>.member
     '''
@@ -36,8 +35,18 @@ class Container :
         '''Use a dictionnary to update values'''
         if dico :
             for attr in dico.keys () :
-                super().__setattr__ (attr, dico[attr])
-        self.__dict__.update (kwargs)
+                value = dico[attr]
+                if isinstance (value, dict) :
+                    super().__setattr__ (attr, Container (value))
+                else :
+                    super().__setattr__ (attr, value)
+        for key, value in kwargs.items():
+            if isinstance (value, dict) :
+                setattr (self, key, Container(value))
+            else :
+                setattr (self, key, value)
+        #self.__dict__.update (kwargs)
+            
     def keys    (self) :
         return self.__dict__.keys()
     def values  (self) :
@@ -64,7 +73,10 @@ class Container :
     def __getitem__ (self, attr) :
         return getattr (self, attr)
     def __setitem__ (self, attr, value) :
-        setattr (self, attr, value)
+        if isinstance (value, dict) :
+            setattr (self, attr, Container(value))
+        else : 
+            setattr (self, attr, value)
     def __iter__    (self) :
         return self.__dict__.__iter__()
     def __next__    (self) :

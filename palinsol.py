@@ -31,16 +31,11 @@ R Code developed for R version 2.15.2 (2012-10-26) -- "Trick or Treat"
 https://www.rdocumentation.org/packages/palinsol/versions/0.93
 https://cran.r-project.org/web/packages/palinsol/palinsol.pdf
 
-Translated  (partially) to Python/numpy by Olivier Marti
+Translated (partially) to Python/numpy by Olivier Marti
 ---------------------------------------------------------------------- 
 '''
 
 import numpy as np
-
-try    : import numba
-except ImportError : pass
-
-#import pygsl
 
 # Utilities
 deg2rad = np.deg2rad
@@ -78,9 +73,9 @@ def InsolFromDay (day, lat=deg2rad(45), eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR)
     InsolFromDay = Insol (lat=lat, lon=lon, eps=eps, varpi=varpi, ecc=ecc, S0=S0)
     return InsolFromDay
  
-@numba.jit(forceobj=True)
 def Insol (lat=deg2rad(45), lon=deg2rad(180), eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR) :
-    '''Returns daily mean incoming solar insolation after Berger (1978) 
+    '''
+    Returns daily mean incoming solar insolation after Berger (1978) 
     eps     : obliquity (radians)
     varpi   : longitude of perihelion (radians)
     ecc     : eccentricity 
@@ -109,8 +104,6 @@ def Insol (lat=deg2rad(45), lon=deg2rad(180), eps=EPS, varpi=VARPI, ecc=ECC, S0=
     Insol = S0 / (np.pi*rho*rho) * (H0*sinlatsindelta+coslatcosdelta*sinH0)
     return Insol
  
-
-@numba.jit(forceobj=True)
 def dtdnu (lon, eps=EPS, varpi=VARPI, ecc=ECC) :
     '''Time increment corresponding a tsl increment'''
     nu    = lon - varpi
@@ -126,7 +119,6 @@ def dtdnu (lon, eps=EPS, varpi=VARPI, ecc=ECC) :
 #InsolWrapper <- function(times=times,astrosol=ber78,...)
 #  sapply (times,function(tt)  Insol(astrosol(tt),...) )
 
-@numba.jit(forceobj=True)
 def calins (lat=deg2rad(65), eps=EPS, varpi=VARPI, ecc=ECC) :
     ''' Caloric_insolation
     integrated insolation over the 180 days receiving above median insolation
@@ -147,7 +139,6 @@ def calins (lat=deg2rad(65), eps=EPS, varpi=VARPI, ecc=ECC) :
 
     return calins
 
-@numba.jit(forceobj=True)
 def thrins (lat=deg2rad(65.), threshold=400, eps=EPS, varpi=VARPI, ecc=ECC) :
     '''
     Integrated insolation over the 360 days receiving insolation above a threshold
@@ -165,8 +156,6 @@ def thrins (lat=deg2rad(65.), threshold=400, eps=EPS, varpi=VARPI, ecc=ECC) :
     
     return thrins
 
-
-@numba.jit(forceobj=True)
 def Insol_l1l2 (lon1=deg2rad(0.), lon2=deg2rad(360.), lat=deg2rad(65.), avg=False, ell=True,
                     eps=EPS, varpi=VARPI, ecc=ECC) :
     ''' Warning : dont work !!!
@@ -218,7 +207,6 @@ def Insol_l1l2 (lon1=deg2rad(0.), lon2=deg2rad(360.), lat=deg2rad(65.), avg=Fals
       
     return INT
 
-@numba.jit(forceobj=True)
 def day2lon (day, eps=EPS, varpi=VARPI, ecc=ECC) :
     '''
     Converts day to longitude.
@@ -250,7 +238,6 @@ def day2lon (day, eps=EPS, varpi=VARPI, ecc=ECC) :
     L = np.mod (V + varpi, 2.0*np.pi)
     return L
 
-@numba.jit(forceobj=True)
 def lon2day (lon, eps=EPS, varpi=VARPI, ecc=ECC) :
     '''
     Converts true solar longitude to day
@@ -280,7 +267,6 @@ def lon2day (lon, eps=EPS, varpi=VARPI, ecc=ECC) :
     day = np.mod (80.0 + (M - lm)  * 360.0/(2.0*np.pi), 360.0)
     return day
 
-@numba.jit(forceobj=True)
 def date_of_perihelion (eps=EPS, varpi=VARPI, ecc=ECC) :
     # Definitions for speed-up
     xee = ecc*ecc
@@ -301,7 +287,6 @@ def date_of_perihelion (eps=EPS, varpi=VARPI, ecc=ECC) :
     
     return DAY
 
-@numba.jit(forceobj=True)
 def Insol_d1d2 (day1, day2, lat=65*np.pi/180., avg=False, eps=EPS, varpi=VARPI, ecc=ECC) :
       '''Like Insol but given days rather than longitudes'''
       lon1 = day2lon (day1, eps=eps, varpi=varpi, ecc=ecc)
@@ -324,7 +309,6 @@ def W (xx, n=3, eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR) :
     cphi = np.cos (phi)
     tphi = sphi/cphi
 
-    @numba.jit(forceobj=True)
     def eq34 (xx) :
       sxx    = np.sin(xx)
       cxx    = np.cos(xx)
@@ -340,7 +324,6 @@ def W (xx, n=3, eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR) :
 
       return eq34
   
-    @numba.jit(forceobj=True)
     def eq40 (xx) :
         ## The max(-1, min(1, 
         ## is to account for a numerical artefact when xx = xx1,2,3,4
@@ -352,7 +335,8 @@ def W (xx, n=3, eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR) :
         k1 = cphi/seps
         psi  = np.arcsin(max(-1, np.minimum(1,k*sxx)))
       
-        if cxx < 0 : psi = pi-psi
+        if cxx < 0 :
+            psi = pi-psi
       
         sesl   = seps*sxx
         tdelta = sesl / np.sqrt(1-sesl*sesl)
@@ -366,7 +350,6 @@ def W (xx, n=3, eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR) :
 
         return eq40
       
-    @numba.jit(forceobj=True)
     def eq38 (xx) :
           eq38 = np.pi * sphi*seps*np.cos(xx)
           return eq38
@@ -385,16 +368,21 @@ def W (xx, n=3, eps=EPS, varpi=VARPI, ecc=ECC, S0=SOLAR) :
   
         WW=0
 
-        if (xx > 0)   : WW = WW + eq40 (min(xx,xx1))
-        if (xx > xx2) : WW = WW + eq40 (min(xx,xx3)) - eq40(xx2)
-        if (xx > xx4) : WW = WW + eq40 (xx) - eq40(xx4)
+        if (xx > 0)   :
+            WW = WW + eq40 (min(xx,xx1))
+        if (xx > xx2) :
+            WW = WW + eq40 (min(xx,xx3)) - eq40(xx2)
+        if (xx > xx4) :
+            WW = WW + eq40 (xx) - eq40(xx4)
               
         if phi >= (pi2-eps) :
             ## northern hemisphere
-            if (xx > xx1) : WW = WW + eq38 (min(xx,xx2)) - eq38(xx1)
+            if (xx > xx1) :
+                WW = WW + eq38 (min(xx,xx2)) - eq38(xx1)
         else :
             ## Southern hemisphere
-            if (xx > xx3) :  WW = WW + eq38 (min(xx,xx4)) - eq38(xx3)
+            if (xx > xx3) :
+                WW = WW + eq38 (min(xx,xx4)) - eq38(xx3)
               
         WW = W0*WW 
 

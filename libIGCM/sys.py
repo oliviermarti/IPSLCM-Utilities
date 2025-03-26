@@ -44,9 +44,9 @@ def Mach (long:bool=False) -> str :
     '''
     Find the computer we are on
 
-    On Irene, Mach returns Irene, Irene-Next, Rome or Rome-Prev if long==True
-
     Returns a standardized name of the computer we run on
+
+    On Irene, Mach returns Irene, Irene-Next, Rome or Rome-Prev if long==True
     '''
 
     zmach = None
@@ -97,7 +97,6 @@ LocalUser = os.environ ['USER']
 
 IGCM_Catalog      = get_options ()['IGCM_Catalog']
 IGCM_Catalog_list = get_options ()['IGCM_Catalog_list']
-#IGCM_Catalog_list = [ 'IGCM_catalog.json', ]
 
 if LocalUser in  ['marti', 'omamce', 'p25mart', 'p86mart', 'rces009' ] :
     IGCM_Catalog_list.append (os.path.join(os.environ['HOME'], 'Python', 'Library', 'IGCM_Catalog.json' ))
@@ -183,10 +182,15 @@ class Config :
                   DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
                   SeasonalFrequency=None, CalendarType=None,
                   DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
-                  Period=None, PeriodSE=None,
-                  Shading=None, Marker=None, Line=None,
+                  Period=None, PeriodSE=None, Shading=None, Marker=None, Line=None,
                   OCE=None, ATM=None,
                   CMIP6_BUF=None, **kwargs ) :
+
+        if OPTIONS.Debug or Debug :
+            print ( f'libIGCM.sys.Config : {MASTER=}' )
+            print ( f'libIGCM.sys.Config : {LocalUser=}' )
+            print ( f'libIGCM.sys.Config : {TGCC_User=}' )
+            print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
    
         if not Debug               :
             Debug               = OPTIONS.Debug
@@ -223,7 +227,9 @@ class Config :
         if OPTIONS.Debug or Debug :
             print ( f'libIGCM.sys.Config : {MASTER=}' )
             print ( f'libIGCM.sys.Config : {LocalUser=}' )
-            
+            print ( f'libIGCM.sys.Config : {TGCC_User=}' )
+            print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
+             
         # ===========================================================================================
         # Reads config.card if available
         if ConfigCard :
@@ -393,6 +399,9 @@ class Config :
         # ===========================================================================================
         if ( 'Irene' in MASTER ) or ( 'Rome' in MASTER ) :
             ccc_home = os.path.isfile ( subprocess.getoutput ( 'which ccc_home'))
+
+            if Debug :
+                print ( f'{TGCC_User=} {TGCC_Group=}' )
                 
             if not User or User == 'marti' :
                 if not TGCC_User :
@@ -405,9 +414,15 @@ class Config :
                     Group = TGCC_Group
                 else          :
                     Group = LocalGroup
+
+            if Debug :
+                print ( f'{User=} {Group=}' )
                     
             LocalHome  = subprocess.getoutput ( 'ccc_home --ccchome' )
-            LocalGroup = os.path.basename ( os.path.dirname (LocalHome))           
+            LocalGroup = os.path.basename ( os.path.dirname (LocalHome))
+
+            if Debug :
+                print ( f'{MASTER=} {LocalHome=} {LocalGroup=}' )
 
             if not Source :
                 IGCM_OUT_name = 'IGCM_OUT'
@@ -417,41 +432,59 @@ class Config :
                     R_IN       = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg' ), 'IGCM')
                 else        :
                     R_IN       = '/ccc/work/cont003/igcmg/igcmg/IGCM'
+            if Debug :
+                print ( f'{R_IN}' )
             if not ARCHIVE  :
                 if ccc_home :
                     ARCHIVE    = subprocess.getoutput ( f'ccc_home --cccstore   -u {User} -d {Group}')
                 else        :
                     ARCHIVE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+            if Debug :
+                print ( f'{ARCHIVE}' )
             if not STORAGE  :
                 if ccc_home :
                     STORAGE    = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
                     STORAGE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+            if Debug :
+                print ( f'{STORAGE}' )
             if not SCRATCHDIR  :
                 if ccc_home :
                     SCRATCHDIR = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
                 else        :
                     SCRATCHDIR = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
+            if Debug :
+                print ( f'{SCRATCHDIR}' )
             if not R_BUF       :
                 if ccc_home :
                     R_BUF      = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
                 else        :
                     R_BUF      = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
+            if Debug :
+                print ( f'{R_BUF}' )
             if not R_FIG       :
                 if ccc_home :
                     R_FIG      = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
                     R_FIG      = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+            if Debug :
+                print ( f'{R_FIG}' )
             if not R_GRAF or 'http' in R_GRAF :
                 if ccc_home :
                     R_GRAF     = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA')
                 else        :
                     R_GRAF     = '/ccc/store/cont003/drf/p86mart'
+            if Debug :
+                print ( f'{R_GRAF}' )
             if not DB          :
                 if ccc_home :
                     DB         = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg'), 'database')
                 else        :
                     DB         = '/ccc/store/cont003/igcmg/igcmg/database'
+            if Debug :
+                print ( f'{DB}' )
+
+                
                     
             if not rebuild :
                 rebuild = os.path.join ( subprocess.getoutput ('ccc_home --ccchome -d igcmg -u igcmg' ),
@@ -548,7 +581,7 @@ class Config :
             
         if TagName and SpaceName and ExperimentName and JobName :
             if not L_EXP :
-                L_EXP = os.path.join ( TagName, SpaceName, ExperimentName, JobName )
+                L_EXP = os.path.join (TagName, SpaceName, ExperimentName, JobName)
 
             if Debug :
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {R_BUF=}' )
@@ -559,7 +592,7 @@ class Config :
                 R_SAVE      = os.path.join ( R_OUT  , L_EXP )
             if IGCM_OUT_name :
                 if STORAGE and not R_FIGR :
-                    R_FIGR      = os.path.join ( STORAGE, IGCM_OUT_name, L_EXP )
+                    R_FIGR      = os.path.join (STORAGE, IGCM_OUT_name, L_EXP)
             else :
                 if STORAGE and not R_FIGR  :
                     R_FIGR      = os.path.join ( STORAGE, L_EXP )
@@ -633,7 +666,7 @@ class Config :
         self.STORAGE             = STORAGE
         self.SCRATCHDIR          = SCRATCHDIR
         self.R_OUT               = R_OUT
-        self.R_BUF               = R_BUFR
+        self.R_BUF               = R_BUF
         self.R_GRAF              = R_GRAF
         self.DB                  = DB
         self.IGCM_OUT            = IGCM_OUT

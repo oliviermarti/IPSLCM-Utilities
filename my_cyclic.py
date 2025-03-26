@@ -13,8 +13,7 @@ Copied here because Spirit has too old version of cartopy
 import numpy as np
 import numpy.ma as ma
 
-
-def add_cyclic_point(data, coord=None, axis=-1):
+def add_cyclic_point (data, coord=None, axis=-1):
     """
     Add a cyclic point to an array and optionally a corresponding
     coordinate.
@@ -93,7 +92,6 @@ def add_cyclic_point(data, coord=None, axis=-1):
         return_value = new_data, new_coord
     return return_value
 
-
 def _add_cyclic_data (data, axis=-1) :
     """
     Add a cyclic point to a data array.
@@ -154,7 +152,6 @@ def _add_cyclic_x (x, axis=-1, cyclic=360) :
     #     cx = npc.where(cx <= cyclic, cx, np.mod(cx, cyclic))
     return npc.concatenate((x, cx), axis=axis)
 
-
 def has_cyclic (x, axis=-1, cyclic=360, precision=1e-4) :
     """
     Check if x/longitude coordinates already have a cyclic point.
@@ -209,7 +206,6 @@ def has_cyclic (x, axis=-1, cyclic=360, precision=1e-4) :
         return True
     else:
         return False
-
 
 def add_cyclic(data, x=None, y=None, axis=-1,
                cyclic=360, precision=1e-4):

@@ -192,7 +192,7 @@ def IsLeapYear (year : [int, str], Calendar=None) -> bool :
 
 def DateFormat ( date ) -> str :
     '''
-    Get date format. Could be 'human' or 'gregorian'
+    Get date format. Could be 'Human' or 'Gregorian'
 
       [yy]yymmdd   is Gregorian
       [yy]yy-mm-dd is Human

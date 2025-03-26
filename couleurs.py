@@ -1,52 +1,14 @@
-def cprint (s, color='RESET', brightness='NORMAL', back='RESET', **kwargs):
-    ''' 
-    Utility function wrapping the regular `print ()` function, but with colors and brightness  
-    Fore and Back : BLACK, BLUE, CYAN, GREEN, 
-    LIGHTBLACK_EX, LIGHTBLUE_EX, LIGHTCYAN_EX, LIGHTGREEN_EX, LIGHTMAGENTA_EX, LIGHTRED_EX, LIGHTWHITE_EX, LIGHTYELLOW_EX, 
-    MAGENTA, RED, RESET, WHITE, YELLOW
-    Style : BRIGHT, DIM, NORMAL, RESET_ALL
-    '''
-    from colorama import Fore, Back, Style
-    print (f"{eval ('Style.'+ brightness)}{eval ('Fore.'+color)}{eval ('Back.'+ back)}{s}{Style.RESET_ALL}", **kwargs)
-    
-class colors:
-    '''Colors class:
-      reset all colors with colors.reset
-      two sub classes fg for foreground, and bg for background
-      use as colors.subclass.colorname.
-      i.e. colors.fg.red or colors.bg.greenalso, the generic bold, disable,
-      underline, reverse, strike through,
-      and invisible work with the main class i.e. colors.bold'''
-    reset         = '\033[0m'
-    bold          = '\033[01m'
-    disable       = '\033[02m'
-    underline     = '\033[04m'
-    reverse       = '\033[07m'
-    strikethrough = '\033[09m'
-    invisible     = '\033[08m'
-    class fg :
-        black      = '\033[30m'
-        red        = '\033[31m'
-        green      = '\033[32m'
-        orange     = '\033[33m'
-        blue       = '\033[34m'
-        purple     = '\033[35m'
-        cyan       = '\033[36m'
-        lightgrey  = '\033[37m'
-        darkgrey   = '\033[90m'
-        lightred   = '\033[91m'
-        lightgreen = '\033[92m'
-        yellow     = '\033[93m'
-        lightblue  = '\033[94m'
-        pink       = '\033[95m'
-        lightcyan  = '\033[96m'
+from colorama import Fore, Back, Style
 
-    class bg:
-        black      = '\033[40m'
-        red        = '\033[41m'
-        green      = '\033[42m'
-        orange     = '\033[43m'
-        blue       = '\033[44m'
-        purple     = '\033[45m'
-        cyan       = '\033[46m'
-        lightgrey  = '\033[47m'
+UNDERLINE = '\033[4;37;48m'
+
+WARNING = f'{Fore.RED}'
+ERROR   = f'{Style.BRIGHT}{Fore.RED}'
+FATAL   = f'{Style.BRIGHT}{Fore.RED}{Back.YELLOW}'
+EMP     = f'{Fore.CYAN}'
+STRONG  = f'{Style.BRIGHT}{Fore.CYAN}'
+TITLE   = f'{Style.BRIGHT}{Fore.BLUE}{Back.WHITE}'
+OK      = f'{Style.BRIGHT}{Fore.GREEN}'
+KO      = f'{Style.BRIGHT}{Fore.RED}'
+MESG    = f'{Style.BRIGHT}{Fore.CYAN}'
+NORM    = f'{Style.RESET_ALL}'
