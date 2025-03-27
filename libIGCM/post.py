@@ -27,34 +27,114 @@ import json
 import libIGCM
 from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 
+def list_arguments(func):
+    """Renvoie les noms des arguments d'une fonction"""
+    return func.__code__.co_varnames[:func.__code__.co_argcount]
+
 class Config (libIGCM.sys.Config) :
     '''
     Defines the libIGCM directories and simulations characteristics
 
     Overload libIGCM.sys.Config to add knowldege about some simulations
+    described in a catalog (at json format)
     '''
-    def __init__ (self, JobName=None, SpaceName=None, TagName=None, ShortName=None, ExperimentName=None, ModelName=None, Comment=None,
-                        TGCC_User=None, TGCC_Group=None,
-                        YearBegin=None, YearEnd=None, CalendarType=None, DatePattern=None, Period=None, PeriodSE=None,
-                        Shading=None, Line=None, Marker=None,
-                        OCE=None, ATM=None, Perio=None,
-                        IGCM_Catalog=None, IGCM_Catalog_list=None, **kwargs) :
 
-        OPTIONS=get_options ()
+    #print (list_arguments(__init__))
+    
+    def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
+                  LongName=None, ModelName=None, ShortName=None, Comment=None,
+                  Source=None, MASTER=None, ConfigCard=None, RunCard=None, User=None, Group=None,
+                  TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
+                  ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
+                  R_FIG=None, L_EXP=None, R_SAVE=None, R_FIGR=None, R_BUF=None, R_BUFR=None, R_BUF_KSH=None,
+                  REBUILD_DIR=None, POST_DIR=None, ThreddsPrefix=None, DapPrefix=None,
+                  R_GRAF=None, DB=None, IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
+                  TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None, IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
+                  DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
+                  SeasonalFrequency=None, CalendarType=None,
+                  DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
+                  Period=None, PeriodSE=None, Shading=None, Marker=None, Line=None,
+                  OCE=None, ATM=None, CMIP6_BUF=None,
+                  IGCM_Catalog=None, IGCM_Catalog_list=None, Debug=False, **kwargs) :
+
+        OPTIONS = get_options ()
+
+        self.ARCHIVE              = ARCHIVE
+        self.ATM                  = ATM
+        self.CMIP6_BUF            = CMIP6_BUF
+        self.CalendarType         = CalendarType
+        self.Comment              = Comment
+        self.ConfigCard           = ConfigCard
+        self.DB                   = DB
+        self.DapPrefix            = DapPrefix
+        self.DateBegin            = DateBegin
+        self.DateBeginGregorian   = DateBeginGregorian
+        self.DateEnd              = DateEnd
+        self.DateEndGregorian     = DateEndGregorian
+        self.DatePattern          = DatePattern
+        self.Debug                = Debug
+        self.ExperimentName       = ExperimentName
+        self.FullPeriod           = FullPeriod
+        self.Group                = Group
+        self.IDRIS_DapPrefix      = IDRIS_DapPrefix
+        self.IDRIS_Group          = IDRIS_Group 
+        self.IDRIS_ThreddsPrefix  = IDRIS_ThreddsPrefix
+        self.IDRIS_User           = IDRIS_User
+        self.IGCM_Catalog         = IGCM_Catalog
+        self.IGCM_Catalog_list    = IGCM_Catalog_list
+        self.IGCM_OUT             = IGCM_OUT 
+        self.IGCM_OUT_name        = IGCM_OUT_name
+        self.JobName              = JobName
+        self.L_EXP                = L_EXP
+        self.Line                 = Line
+        self.LongName             = LongName
+        self.MASTER               = MASTER
+        self.Marker               = Marker
+        self.ModelName            = ModelName
+        self.POST_DIR             = POST_DIR
+        self.Period               = Period
+        self.PeriodLength         = PeriodLength
+        self.PeriodSE             = PeriodSE
+        self.REBUILD_DIR          = REBUILD_DIR  
+        self.R_BUF                = R_BUF
+        self.R_BUFR               = R_BUFR
+        self.R_BUF_KSH            = R_BUF_KSH
+        self.R_FIG                = R_FIG
+        self.R_FIGR               = R_FIGR
+        self.R_GRAF               = R_GRAF
+        self.R_IN                 = R_IN
+        self.R_OUT                = R_OUT
+        self.R_SAVE               = R_SAVE
+        self.RunCard              = RunCard
+        self.SCRATCHDIR           = SCRATCHDIR
+        self.STORAGE              = STORAGE
+        self.SeasonalFrequency    = SeasonalFrequency
+        self.Shading              = Shading
+        self.ShortName            = ShortName
+        self.Source               = Source
+        self.SpaceName            = SpaceName
+        self.TGCC_DapPrefix       = TGCC_DapPrefix
+        self.TGCC_Group           = TGCC_Group
+        self.TGCC_ThreddsPrefix   = TGCC_ThreddsPrefix
+        self.TGCC_User            = TGCC_User
+        self.TagName              = TagName
+        self.ThreddsPrefix        = ThreddsPrefix
+        self.TmpDir               = TmpDir
+        self.User                 = User
+        self.YearBegin            = YearBegin
+        self.YearEnd              = YearEnd
+        self.rebuild              = rebuild
 
         ### ===========================================================================================
         ## Read catalog of known simulations
         push_stack ( 'libIGCM.post.__init__')
-
-        if OPTIONS.Debug :
-            print ( f'{OPTIONS = }' )
 
         if not IGCM_Catalog      :
             IGCM_Catalog      = OPTIONS.IGCM_Catalog
         if not IGCM_Catalog_list :
             IGCM_Catalog_list = OPTIONS.IGCM_Catalog_list
         
-        if OPTIONS.Debug :
+        if OPTIONS.Debug or Debug :
             print ( f'{IGCM_Catalog_list=}' )
             print ( f'{IGCM_Catalog=}' )
 
@@ -62,7 +142,7 @@ class Config (libIGCM.sys.Config) :
 
         if IGCM_Catalog :
             if os.path.isfile (IGCM_Catalog) :
-                if OPTIONS.Debug :
+                if OPTIONS.Debug or Debug :
                     print ( f'Catalog file : {IGCM_Catalog=}' )
                 exp_file = open (IGCM_Catalog)
                 Experiments = json.load (exp_file)
@@ -74,7 +154,7 @@ class Config (libIGCM.sys.Config) :
         else :
             for cfile in OPTIONS.IGCM_Catalog_list :
                 if os.path.isfile (cfile) :
-                    if OPTIONS.Debug :
+                    if OPTIONS.Debug or Debug :
                         print ( f'Catalog file : {cfile=}' )
                     exp_file = open (cfile)
                     Experiments = json.load (exp_file)
@@ -82,131 +162,101 @@ class Config (libIGCM.sys.Config) :
                         exp = Experiments[JobName]
                         break
 
-            if exp :
-                if OPTIONS.Debug :
-                    print ( f'Read catalog file for {JobName=}' )
-                exp = Container (**exp)
-                if OPTIONS.Debug :
-                    print (exp)
+        if OPTIONS.Debug or Debug :
+            print (f'exp before analysing : {exp=}')
+            print (f'{len(exp)}')
+               
+        if kwargs is not None :
+            exp.update (**kwargs)
                     
-                exp.pop ('JobName')    
-                if not SpaceName      and 'SpaceName'      in exp.keys() :
-                    SpaceName      = exp['SpaceName']
-                    exp.pop ('SpaceName')
-                if not TagName        and 'TagName'        in exp.keys() :
-                    TagName        = exp['TagName']
-                    exp.pop ('TagName')
-                if not ShortName      and 'ShortName'      in exp.keys() :
-                    ShortName      = exp['ShortName']
-                    exp.pop ('ShortName')
-                if not ExperimentName and 'ExperimentName' in exp.keys() :
-                    ExperimentName = exp['ExperimentName']
-                    exp.pop ('ExperimentName')
-                if not ModelName      and 'ModelName'      in exp.keys() :
-                    ModelName      = exp['ModelName']
-                    exp.pop ('ModelName')
-                if not Comment        and 'Comment'        in exp.keys() :
-                    Comment        = exp['Comment']
-                    exp.pop ('Comment')
-                if not YearBegin      and 'YearBegin'      in exp.keys() :
-                    YearBegin      = exp['YearBegin']
-                    exp.pop ('YearBegin')
-                if not YearEnd        and 'YearEnd'        in exp.keys() :
-                    YearEnd        = exp['YearEnd']
-                    exp.pop ('YearEnd')
-                if not CalendarType   and 'CalendarType'   in exp.keys() :
-                    CalendarType   = exp['CalendarType']
-                    exp.pop ('CalendarType')
-                if not DatePattern    and 'DatePattern'    in exp.keys() :
-                    DatePattern    = exp['DatePattern']
-                    exp.pop ('DatePattern')
-                if not Period         and 'Period'         in exp.keys() :
-                    Period         = exp['Period']
-                    exp.pop ('Period')
-                if not PeriodSE       and 'PeriodSE'       in exp.keys() :
-                    PeriodSE       = exp['PeriodSE']
-                    exp.pop ('PeriodSE')
-                if not TGCC_User      and 'TGCC_User'      in exp.keys() :
-                    TGCC_User      = exp['TGCC_User']
-                    exp.pop ('TGCC_User')
-                if not TGCC_Group     and 'TGCC_Group'     in exp.keys() :
-                    TGCC_Group     = exp['TGCC_Group']
-                    exp.pop ('TGCC_Group')
-                if not CalendarType   and 'CalendarType'   in exp.keys() :
-                    CalendarType   = exp['CalendarType']
-                    exp.pop ('CalendarType')
-                if not Shading        and 'Shading'        in exp.keys() :
-                    Shading        = exp['Shading']
-                    exp.pop ('Shading')
-                if not Marker         and 'Marker'         in exp.keys() :
-                    #Marker         = Container (**exp['Marker'])
-                    Marker         = exp['Marker']
-                    exp.pop ('Marker')
-                if not Line           and 'Line'           in exp.keys() :
-                    #Line           = Container (**exp['Line'])
-                    Line           = exp['Line']
-                    exp.pop ('Line')
-                if not OCE            and 'OCE'            in exp.keys() :
-                    OCE            = exp['OCE']
-                    exp.pop ('OCE')
-                if not ATM            and 'ATM'            in exp.keys() :
-                    ATM            = exp['ATM']
-                    exp.pop ('ATM')
-
-                #if OCE :
-                #    OCE_DOM = nemo.domain (cfg_name=OCE)
+        if len(exp) > 0 :
+            if OPTIONS.Debug or Debug :
+                print ( f'Read catalog file for {JobName=}' )
+            exp = Container (**exp)
+            if OPTIONS.Debug or Debug :
+                print (f'exp at start of analysing : {exp=}')
                     
-                #if not OCE_DOM :
-                #    if 'OCE_DOM' in exp.keys() :
-                #        OCE_DOM = Container (**exp['OCE_DOM'])
-                #        if OCE :
-                #            OCE_DOM['cfg_name']=OCE
-                #        OCE_DOM = nemo.domain (**OCE_DOM)
-                #if not ATM_DOM :
-                #    if 'ATM_DOM' in exp.keys() :
-                #        ATM_DOM = Container (**exp['ATM_DOM'])
-
-                if YearBegin and YearEnd and not Period :
-                    Period   = f'{YearBegin}0101_{YearEnd}1231'
-                if YearBegin and YearEnd and not PeriodSE :
-                    PeriodSE = f'{YearBegin}_{YearEnd}'
-                if Period and not (YearBegin or not YearEnd) :
-                    Y1, Y2 = Period.split('_')
-                    if not YearBegin :
-                        YearBegin = Y1[0:4]
-                    if not YearEnd   :
-                        YearEnd   = Y2[0:4]
-                if PeriodSE and not (YearBegin or not YearEnd) :
-                    Y1, Y2 = PeriodSE.split('_')
-                    if not YearBegin :
-                        YearBegin = Y1
-                    if not YearEnd   :
-                        YearEnd   = Y2
-
-                if len(exp)== 0 :
-                    add_values = Container ()
+            liste_pop = []
+            for key, value in exp.items () :
+                liste_pop.append (key)
+                if OPTIONS.Debug or Debug :
+                    print ( f'Analyzing {key=} {value=}')
+                if key in self.keys() :
+                    if OPTIONS.Debug or Debug :
+                        print ( f'  {key=} found in self : {self[key]}')
+                    if self[key] is not None :
+                        if OPTIONS.Debug or Debug :
+                            print ( f'  {key:18} found in self : {self[key]}')
+                    else :
+                        setattr (self, key, value)
+                        if OPTIONS.Debug or Debug :
+                            print ( f'  {key:18} set from exp (1) : {self[key]} {value}')
                 else :
-                    add_values = exp
-                    
-                if kwargs :
-                    add_values.update (kwargs)
-                    
+                    setattr (self, key, value)
+                    if OPTIONS.Debug or Debug :
+                        print ( f'{key:18} set from exp (2) : {self[key]}')
+                        
+            for key in liste_pop :
+                exp.pop (key)
+            if OPTIONS.Debug or Debug :
+                print ( f'exp after analysing : {exp=}' )
+
+        else :
+            if IGCM_Catalog : 
+                raise Exception ( f'{self.JobName} not found in {self.IGCM_Catalog=}' )
+            elif IGCM_Catalog_list :
+                raise Exception ( f'{self.JobName} not found in {self.IGCM_Catalog_list=}' )
             else :
-                if IGCM_Catalog : 
-                    raise Exception ( f'{JobName} not found in {IGCM_Catalog=}' )
-                elif IGCM_Catalog_list :
-                    raise Exception ( f'{JobName} not found in {IGCM_Catalog_list=}' )
-                else :
-                    raise Exception ( f'{JobName} not found' )
-                                          
-                
-        libIGCM.sys.Config.__init__ (self, JobName=JobName, SpaceName=SpaceName, TagName=TagName, ShortName=ShortName, Comment=Comment,
-                                           ExperimentName=ExperimentName, ModelName=ModelName,
-                                           TGCC_User=TGCC_User, TGCC_Group=TGCC_Group,
-                                           YearBegin=YearBegin, YearEnd= YearEnd, CalendarType=CalendarType, DatePattern=DatePattern,
-                                           Period=Period, PeriodSE=PeriodSE,
-                                           Shading=Shading, Line=Line, Marker=Marker,
-                                           OCE=OCE, ATM=ATM, **add_values)
+                raise Exception ( f'{self.JobName} not found' )
+            
+        if self.YearBegin and self.YearEnd and not self.Period :
+            self.Period = f'{self.YearBegin}0101_{self.YearEnd}1231'
+            if YearBegin and self.YearEnd and not self.PeriodSE :
+               self.PeriodSE = f'{self.YearBegin}_{self.YearEnd}'
+            if Period and not (self.YearBegin or not self.YearEnd) :
+                Y1, Y2 = self.Period.split ('_')
+                if not self.YearBegin :
+                    self.YearBegin = Y1[0:4]
+                if not self.YearEnd   :
+                    self.YearEnd   = Y2[0:4]
+            if self.PeriodSE and not (self.YearBegin or not self.YearEnd) :
+                Y1, Y2 = self.PeriodSE.split ('_')
+                if not self.YearBegin :
+                    self.YearBegin = Y1
+                if not YearEnd   :
+                    self.YearEnd   = Y2
+
+        if len(exp)== 0 :
+            add_values = Container ()
+        else :
+            if OPTIONS.Debug or Debug :
+                print ( f'exp after analyzing : {exp=}' )
+            add_values = exp
+
+        libIGCM.sys.Config.__init__ (self, JobName=self.JobName, TagName=self.TagName, SpaceName=self.SpaceName,
+                                     ExperimentName=self.ExperimentName, LongName=self.LongName, ModelName=self.ModelName,
+                                     ShortName=self.ShortName, Comment=self.Comment, Source=self.Source,
+                                     MASTER=self.MASTER, ConfigCard=self.ConfigCard, RunCard=self.RunCard,
+                                     User=self.User, Group=self.Group, TGCC_User=self.TGCC_User, TGCC_Group=self.TGCC_Group,
+                                     IDRIS_User=self.IDRIS_User, IDRIS_Group=self.IDRIS_Group,
+                                     ARCHIVE=self.ARCHIVE, SCRATCHDIR=self.SCRATCHDIR, STORAGE=self.STORAGE,
+                                     R_IN=self.R_IN, R_OUT=self.R_OUT, R_FIG=self.R_FIG, L_EXP=self.L_EXP,
+                                     R_SAVE=self.R_SAVE, R_FIGR=self.R_FIGR, R_BUF=self.R_BUF, R_BUFR=self.R_BUFR,
+                                     R_BUF_KSH=self.R_BUF_KSH,
+                                     REBUILD_DIR=self.REBUILD_DIR, POST_DIR=self.POST_DIR,
+                                     ThreddsPrefix=self.ThreddsPrefix, DapPrefix=self.DapPrefix,
+                                     R_GRAF=self.R_GRAF, DB=self.DB,
+                                     IGCM_OUT=self.IGCM_OUT, IGCM_OUT_name=self.IGCM_OUT_name, rebuild=self.rebuild,
+                                     TmpDir=self.TmpDir, TGCC_ThreddsPrefix=self.TGCC_ThreddsPrefix, TGCC_DapPrefix=self.TGCC_DapPrefix,
+                                     IDRIS_ThreddsPrefix=self.IDRIS_ThreddsPrefix, IDRIS_DapPrefix=self.IDRIS_DapPrefix,
+                                     DateBegin=self.DateBegin, DateEnd=self.DateEnd,
+                                     YearBegin=self.YearBegin, YearEnd=self.YearEnd, PeriodLength=self.PeriodLength,
+                                     SeasonalFrequency=self.SeasonalFrequency, CalendarType=self.CalendarType,
+                                     DateBeginGregorian=self.DateBeginGregorian, DateEndGregorian=self.DateEndGregorian,
+                                     FullPeriod=self.FullPeriod, DatePattern=self.DatePattern,
+                                     Period=self.Period, PeriodSE=self.PeriodSE, Shading=self.Shading,
+                                     Marker=self.Marker, Line=self.Line, OCE=self.OCE, ATM=self.ATM, CMIP6_BUF=self.R_BUF,
+                                     Debug=self.Debug, **add_values)
         
         pop_stack ( 'libIGCM.post.__init__' )
 

@@ -79,7 +79,6 @@ def Mach (long:bool=False) -> str :
 
         if zmach == 'Irene' :
             CPU    = subprocess.getoutput ('lscpu')
-            #ccc_os = subprocess.getoutput ('ccc_os')
 
             if "Intel(R) Xeon(R) Platinum" in CPU :
                 zmachfull = 'Irene'
@@ -110,7 +109,7 @@ if 'IGCM_Catalog' in os.environ :
 if 'IGCM_Catalog_list' in os.environ :
     IGCM_Catalog_list = os.environ['IGCM_Catalog_list']
 
-set_options (IGCM_Catalog = IGCM_Catalog, IGCM_Catalog_list=IGCM_Catalog_list)
+set_options (IGCM_Catalog=IGCM_Catalog, IGCM_Catalog_list=IGCM_Catalog_list)
 
 ## Where do we run ?
 #SysName, NodeName, Release, Version, Machine = os.uname ()
@@ -177,19 +176,19 @@ class Config :
                   REBUILD_DIR=None, POST_DIR=None,
                   ThreddsPrefix=None, DapPrefix=None, R_GRAF=None, DB=None,
                   IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
-                  Debug=None, TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None,
+                  TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None,
                   IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
                   DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
                   SeasonalFrequency=None, CalendarType=None,
                   DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
                   Period=None, PeriodSE=None, Shading=None, Marker=None, Line=None,
                   OCE=None, ATM=None,
-                  CMIP6_BUF=None, **kwargs ) :
+                  CMIP6_BUF=None,Debug=False, **kwargs ) :
 
         if OPTIONS.Debug or Debug :
-            print ( f'libIGCM.sys.Config : {MASTER=}' )
-            print ( f'libIGCM.sys.Config : {LocalUser=}' )
-            print ( f'libIGCM.sys.Config : {TGCC_User=}' )
+            print ( f'libIGCM.sys.Config : {MASTER=}'     )
+            print ( f'libIGCM.sys.Config : {LocalUser=}'  )
+            print ( f'libIGCM.sys.Config : {TGCC_User=}'  )
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
    
         if not Debug               :
@@ -225,9 +224,9 @@ class Config :
             MASTER = 'Unknown'
             
         if OPTIONS.Debug or Debug :
-            print ( f'libIGCM.sys.Config : {MASTER=}' )
-            print ( f'libIGCM.sys.Config : {LocalUser=}' )
-            print ( f'libIGCM.sys.Config : {TGCC_User=}' )
+            print ( f'libIGCM.sys.Config : {MASTER    =}'     )
+            print ( f'libIGCM.sys.Config : {LocalUser =}'  )
+            print ( f'libIGCM.sys.Config : {TGCC_User =}'  )
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
              
         # ===========================================================================================
@@ -240,7 +239,6 @@ class Config :
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
             MyReader.optionxform = str # To keep capitals
-            
             MyReader.read (ConfigCard)
             
             if not JobName        :
@@ -349,7 +347,7 @@ class Config :
             else      :
                 IGCM_OUT_name = 'IGCM_OUT'
             if not ARCHIVE    :
-                ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data' )
+                ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data'    )
             if not SCRATCHDIR :
                 SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
             if not R_BUF      :
@@ -703,8 +701,6 @@ class Config :
         self.Marker              = Marker
         self.OCE                 = OCE
         self.ATM                 = ATM
-#        self.OCE_DOM             = OCE_DOM
-#        self.ATM_DOM             = ATM_DOM
 
         ### ===========================================================================================
         ## Add user defined attributes

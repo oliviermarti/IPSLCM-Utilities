@@ -56,9 +56,14 @@ class Container :
     def dict    (self) :
         return self.__dict__
     def pop     (self, attr) :
-        zv = self[attr]
-        delattr (self, attr)
-        return zv
+         zv = self[attr]
+         delattr (self, attr)
+         return zv
+    #def pop (self, attr) :
+    #    for element in reversed (self.storage_list) :
+    #        if element.name == attr :
+    #            return element
+    #        return None
     def copy (self) :
         return Container (self)
     #def __deepcopy__(self, memo):
