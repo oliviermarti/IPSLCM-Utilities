@@ -104,7 +104,8 @@ class Container :
              else :
                  super().__setattr__ (attr, value)
         return None
-    
+
+## ============================================================================
 DEFAULT_OPTIONS = Container (Debug  = False,
                              Trace  = False,
                              Timing = None,

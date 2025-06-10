@@ -302,7 +302,7 @@ def argH0 (day, lat) :
     pop_stack ('argH0')
     return arg
 
-def hour_angle (H) :
+def hour_angle (Hour) :
     '''
     omega : hour angle, second equatorial coordinate of the Sun, defined here as the angle, 
     counted positively towards the east, between the current position of the local meridian plane and the position
@@ -315,8 +315,8 @@ def hour_angle (H) :
 
     hour_angle is computed in degrees
     '''
-    push_stack ( 'hour_angle(H0)' )
-    omega = 180.0 * (1 - H/12.)
+    push_stack ( 'hour_angle(Hour)' )
+    omega = 180.0 * (1 - Hour/12.)
     if isinstance (omega, xr.core.dataarray.DataArray) :
         omega.attrs.update ( {'units':'degrees_east', 'long_name':'angle horaire'} )
 
@@ -526,16 +526,16 @@ def date2hour (pdate, t0=np.datetime64 ('1955-01-01T00:00:00'), out='int') :
 def date2hourdec (pdate, t0) :
     '''
     Gives day from a date in np.datetime64 format : hour and fraction of hour
-
     Input
     pdate : date in np.datetime64
+
     t0    : reference date in np.datetime64 01-JAN of any year, time 00:00
     '''
     push_stack ( f'date2hourdec (pdate, {t0=})' )
-    ts = (pdate - t0) / np.timedelta64 (1, 'h')
     hourdec = ts%24
     if isinstance (pdate, xr.core.dataarray.DataArray) :
-        hourdec.attrs.update ( {'units':'hours'} )
+        ts = (pdate - t0) / np.timedelta64 (1, 'h')
+    hourdec.attrs.update ( {'units':'hours'} )
     pop_stack ( 'date2hourdec' )
     return hourdec
 

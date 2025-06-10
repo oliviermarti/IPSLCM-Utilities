@@ -186,9 +186,10 @@ class Config :
                   CMIP6_BUF=None,Debug=False, **kwargs ) :
 
         if OPTIONS.Debug or Debug :
-            print ( f'libIGCM.sys.Config : {MASTER=}'     )
-            print ( f'libIGCM.sys.Config : {LocalUser=}'  )
-            print ( f'libIGCM.sys.Config : {TGCC_User=}'  )
+            print ( f'libIGCM.sys.Config : {MASTER    =}' )
+            print ( f'libIGCM.sys.Config : {User      =}' )
+            print ( f'libIGCM.sys.Config : {LocalUser =}' )
+            print ( f'libIGCM.sys.Config : {TGCC_User =}' )
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
    
         if not Debug               :
@@ -224,9 +225,10 @@ class Config :
             MASTER = 'Unknown'
             
         if OPTIONS.Debug or Debug :
-            print ( f'libIGCM.sys.Config : {MASTER    =}'     )
-            print ( f'libIGCM.sys.Config : {LocalUser =}'  )
-            print ( f'libIGCM.sys.Config : {TGCC_User =}'  )
+            print ( f'libIGCM.sys.Config : {MASTER    =}' )
+            print ( f'libIGCM.sys.Config : {User      =}' )
+            print ( f'libIGCM.sys.Config : {LocalUser =}' )
+            print ( f'libIGCM.sys.Config : {TGCC_User =}' )
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
              
         # ===========================================================================================
@@ -347,13 +349,13 @@ class Config :
             else      :
                 IGCM_OUT_name = 'IGCM_OUT'
             if not ARCHIVE    :
-                ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+                ARCHIVE     = os.path.join ( os.path.expanduser ('~{User}'), 'Data'    )
             if not SCRATCHDIR :
-                SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+                SCRATCHDIR  = os.path.join ( os.path.expanduser ('~{User}'), 'Scratch' )
             if not R_BUF      :
-                R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
+                R_BUF       = os.path.join ( os.path.expanduser ('~{User}'), 'Scratch' )
             if not R_FIG      :
-                R_FIG       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+                R_FIG       = os.path.join ( os.path.expanduser ('~{User}'), 'Data'    )
                 
             if not STORAGE    :
                 STORAGE     = ARCHIVE
@@ -375,25 +377,25 @@ class Config :
             else      :
                 IGCM_OUT_name = 'IGCM_OUT'
             if not ARCHIVE    :
-                ARCHIVE     = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+                ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
             if not SCRATCHDIR :
-                SCRATCHDIR  = os.path.join ( os.path.expanduser ('~'), 'Data' )
+                SCRATCHDIR  = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
             if not R_BUF      :
-                R_BUF       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+                R_BUF       = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
             if not R_FIG      :
-                R_FIG       = os.path.join ( os.path.expanduser ('~'), 'Data'    )
+                R_FIG       = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
                 
             if not STORAGE    :
                 STORAGE     = ARCHIVE
             if not R_IN       :
-                R_IN        = os.path.join ( os.path.expanduser ('~'), 'Data', 'IGCM' )
+                R_IN        = os.path.join ( os.path.expanduser (f'~{User}'), 'Data', 'IGCM' )
             if not R_GRAF or 'http' in R_GRAF :
-                R_GRAF      = os.path.join ( os.path.expanduser ('~'), 'GRAF', 'DATA' )
+                R_GRAF      = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DATA' )
             if not DB         :
-                DB          = os.path.join ( os.path.expanduser ('~'), 'marti', 'GRAF', 'DB' )
+                DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DB' )
             if not TmpDir     :
-                TmpDir      = os.path.join ( os.path.expanduser ('~'), 'Scratch' )
-                
+                TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
+
         # ===========================================================================================
         if ( 'Irene' in MASTER ) or ( 'Rome' in MASTER ) :
             ccc_home = os.path.isfile ( subprocess.getoutput ( 'which ccc_home'))
@@ -713,7 +715,7 @@ class Config :
         return None
         
 ### ===========================================================================
-def Dap2Thredds (file, mm=None) :
+def Dap2Thredds (file:str, mm=None) :
     '''
     ! Convert a Dap URL to http URL
     '''

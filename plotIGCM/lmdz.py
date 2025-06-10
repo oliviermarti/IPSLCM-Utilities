@@ -249,7 +249,7 @@ pint_dict = {
     }
 
 ## ============================================================================
-def qq_par (DoPint=True) :
+def qq_par (DoPint:bool=True) :
     '''
     pinfity all parameters
     '''
@@ -261,7 +261,7 @@ def qq_par (DoPint=True) :
         print ( f'{zz:12} : {globals()[zz].attrs["long_name"]:45} : {globals()[zz].item():12}' ) 
     ureg.formatter.default_format = zopt
 
-def __find_axis__ (ptab, axis='z', back=True) :
+def __find_axis__ (ptab, axis:str='z', back:bool=True) :
     '''
     Returns name and name of the requested axis
     '''
@@ -357,7 +357,7 @@ def __find_axis__ (ptab, axis='z', back=True) :
     pop_stack ( f'__find_axis__ ( {ax=} {ix=} )' )
     return ax, ix
 
-def find_axis ( ptab, axis='z', back=True ) :
+def find_axis ( ptab, axis:str='z', back:bool=True ) :
     '''
     Version of find_axis with no __'''
     push_stack ( f'find_axis__ ( ptab {axis=} {back=} )' )
@@ -391,7 +391,7 @@ def get_shape ( ptab ) :
     push_stack ( f'get_shape : {g_shape=} ' )
     return g_shape
 
-def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=lon_per) :
+def extend (tab, Lon:bool=False, jplus:int=25, jpi:int=None, lonplus:float=lon_per) :
     '''
     Returns extended field eastward to have better plots, and box average crossing the boundary
 
@@ -441,7 +441,7 @@ def extend (tab, Lon=False, jplus=25, jpi=None, lonplus=lon_per) :
     pop_stack ( 'extend ' )
     return ztab
 
-def interp1d (x, xp, yp, zdim='presnivs', units=None, method='linear') :
+def interp1d (x, xp, yp, zdim:str='presnivs', units:str=None, method:str='linear') :
     '''
     One-dimensionnal interpolation of a multi-dimensionnal field
 
@@ -609,7 +609,7 @@ def correct_uv (u, v, lon, lat) :
     pop_stack ( 'correct_uv' )
     return uc, vc
 
-def fixed_lon (lon, center_lon=0.0) :
+def fixed_lon (lon, center_lon:float=0.0) :
     '''Returns corrected longitudes for nicer plots
 
     lon        : longitudes of the grid. At least 1D.
@@ -641,7 +641,7 @@ def nord2sud (p2d) :
     pop_stack ( 'nord2sud' )
     return z2d_inv 
 
-def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell' ) :
+def unify_dims (dd, x:str='x', y:str='y', z:str='olevel', t:str='time_counter', c:str='cell' ) :
     '''
     Rename dimensions to unify them between LMDZ versions
     '''
@@ -680,7 +680,7 @@ def unify_dims ( dd, x='x', y='y', z='olevel', t='time_counter', c='cell' ) :
     pop_stack ( 'unify_dims' )
     return dd
 
-def add_cyclic (ptab, x, y, axis=-1, cyclic=lon_per, precision=0.0001, Debug=False) :
+def add_cyclic (ptab, x, y, axis:int=-1, cyclic:float=lon_per, precision:float=0.0001, Debug:bool=False) :
     '''
     Add a cyclic point to an array and optionally corresponding x/longitude and y/latitude coordinates.
     
@@ -715,7 +715,8 @@ def add_cyclic (ptab, x, y, axis=-1, cyclic=lon_per, precision=0.0001, Debug=Fal
     pop_stack ( 'add_cyclic' )
     return ztab, xx, yy
 
-def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, lon_name=None, lat_name=None) :
+def point2geo (p1d, lon=False, lat=False, jpi:int=None, jpj:int=None, 
+               share_pole:bool=False, lon_name:str=None, lat_name:str=None) :
     '''
     From 1D [..., points_physiques] (restart type) to 2D [..., lat, lon]
 
@@ -856,7 +857,8 @@ def point2geo (p1d, lon=False, lat=False, jpi=None, jpj=None, share_pole=False, 
     pop_stack ('point2geo')
     return p2d
 
-def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=None, share_pole=False, lon_name=None, lat_name=None, lev_name=None) :
+def point3geo (p1d, lon:bool=False, lat:bool=False, lev:bool=False, jpi:int=None, jpj:int=None, jpk:int=None, 
+               share_pole:bool=False, lon_name:'str'=None, lat_name:str=None, lev_name:str=None) :
     '''
     From 2D [..., horizon_vertical] (restart type) to 3D [..., lev, lat, lon]
 
@@ -943,7 +945,7 @@ def point3geo (p1d, lon=False, lat=False, lev=False, jpi=None, jpj=None, jpk=Non
     push_stack ( 'point3geo')
     return p3d
 
-def geo2point (p2d, cumul_poles=False, dim1d='points_physiques' ) :
+def geo2point (p2d, cumul_poles:bool=False, dim1d:str='points_physiques' ) :
     '''
     From 2D [..., lat, lon] to 1D [..., points_phyiques]
     '''
@@ -1027,7 +1029,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pop_stack ( 'geo2en')
     return pxx, pyy, pzz
 
-def limit_blon (blon, clon, lon_cen=0) :
+def limit_blon (blon, clon, lon_cen:float=0) :
     '''
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
@@ -1051,7 +1053,7 @@ def limit_blon (blon, clon, lon_cen=0) :
     pop_stack ( 'limit_blon' )
     return blon, clon
 
-def limit_lon (clon, lon_cen=0) :
+def limit_lon (clon, lon_cen:float=0) :
     '''
     From mapper https://github.com/PBrockmann/VTK_Mapper
     needed to limit excursion from center of the cell to longitude boundaries
@@ -1066,7 +1068,7 @@ def limit_lon (clon, lon_cen=0) :
     
     return clon
 
-def direction (uu, vv, unit='deg') :
+def direction (uu, vv, unit:str='deg') :
     '''
     Compute direction of a vector (angle with north)
     '''

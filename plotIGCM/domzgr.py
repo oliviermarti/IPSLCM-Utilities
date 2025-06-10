@@ -76,7 +76,7 @@ def zgr_z (config:str='orca2') :
         
         za1  = (  ppdzmin - pphmax / (jpk-1)  )               \
             / ( np.tanh((1-ppkth)/ppacr) - ppacr/(jpk   -1) * (  np.log( np.cosh( (jpk - ppkth) / ppacr) )    \
-                                                                 - np.log( np.cosh( ( 1  - ppkth) / ppacr) ) ) )
+                                                               - np.log( np.cosh( ( 1  - ppkth) / ppacr) ) ) )
         
         za0  = ppdzmin - za1 *                 np.tanh ( (1-ppkth) / ppacr )
         zsur =   - za0 - za1 * ppacr * np.log( np.cosh ( (1-ppkth) / ppacr ))
@@ -89,7 +89,7 @@ def zgr_z (config:str='orca2') :
     # Reference z-coordinate (depth - scale factor at T- and W-points)
     # ======================
     if ppkth == 0. :           #  uniform vertical grid
-        za1      = zhmax / (jpk-1)
+        za1      = pphmax / (jpk-1)
         def gdep (zz) :
             return (zz-1) * za1
         def e3 (zz) :

@@ -26,7 +26,7 @@ import time
 import copy
 import numpy as np
 import xarray as xr
-from libIGCM_utils import Container
+from libIGCM.utils import Container
 
 ## Variables exchanged between ocean and atmosphere in IPSL coupled model      
 o2a_hf = [

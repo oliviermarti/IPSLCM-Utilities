@@ -42,6 +42,12 @@ else :
 ##    
 Q_ = ureg.Quantity
 
+
+full_name = Container (
+    {'tos':{'standard_name':'sea_surface_temperature', 'Title':'Sea surface temperature'},
+     'sos':{'standard_name':'sea_surface_salinity'   , 'Title':'Sea surface salinity'   }
+     })
+
 def pmath (ptab, default=None) :
     '''
     Determines the type of tab : xarray, numpy or numpy.ma object ?
@@ -101,9 +107,11 @@ def copy_attrs (ptab, pref) :
     xr_unit   = None
     pint_unit = None
 
+    if OPTIONS.Debug : print ( f'{mtab=} {mref=} {ptab.shape=} {pref.shape=}')
+
     if mref == xr :
         if 'pint' in dir (pref) :
-         pint_unit = pref.pint.units
+            pint_unit = pref.pint.units
         else : 
             if 'units' in pref.attrs :
                 xr_unit = pref.attrs['units']
@@ -113,26 +121,22 @@ def copy_attrs (ptab, pref) :
 
     if mref == xr :
         if mtab == xr :
-            if OPTIONS.Debug :
-                print ( 'copy_attrs : ptab is xr' )
+            if OPTIONS.Debug : print ( 'copy_attrs : ptab is xr' )
             ztab = ptab
         elif mtab in [np, np.ma] :
-            if OPTIONS.Debug :
-                print ( 'copy_attrs : ptab is np or np.ma' )
+            if OPTIONS.Debug : print ( 'copy_attrs : ptab is np or np.ma' )
             if ptab.shape == pref.shape :
-                if OPTIONS.Debug :
-                    print ( 'copy_attrs : convert ptab to xarray' )
+                if OPTIONS.Debug : print ( 'copy_attrs : convert ptab to xarray' )
                 ztab = xr.DataArray (ptab, coords=pref.coords, dims=pref.dims)
                 ztab.name = pref.name
         else :
-            if OPTIONS.Debug :
-                print ( 'copy_attrs : ptab copied' )
+            if OPTIONS.Debug : print ( 'copy_attrs : ptab copied' )
             ztab = ptab
 
     if mref == xr :
-        if pint_unit :
+        if pint_unit and pint in dir (ztab) :
             ztab = ztab.pint.quantify (pint_unit)
-        if xr_unit and not pint_unit :
+        if xr_unit and not pint_unit and pint in dir (ztab) :
             ztab = ztab.pint.quantify (pint_unit)
             
     if mref in [np, np.ma] :
@@ -168,7 +172,8 @@ def distance (lat1:float, lon1:float, lat2:float, lon2:float, radius:float=1.0, 
 
     return zdistance
 
-def aire_triangle (lat0: float, lon0: float, lat1: float, lon1: float, lat2: float, lon2: float, radius:float=1.0, Debug=False) -> float :
+def aire_triangle (lat0: float, lon0: float, lat1: float, lon1: float, lat2: float, lon2: float, 
+                   radius:float=1.0, Debug:bool=False) -> float :
     '''
     Area of a triangle on the sphere
     Girard's formula

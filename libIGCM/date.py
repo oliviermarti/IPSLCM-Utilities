@@ -69,7 +69,7 @@ DA_name = [ 'DA', 'DAYS'  , 'Days'  , 'days'  , 'DAY'  , 'Day'  , 'day'  , 'DA',
 
 ## ==========================================================================
     
-def GetMonthsLengths (year, Calendar=None) :
+def GetMonthsLengths (year:int, Calendar:str=None) :
     '''
     Returns the month lengths for a given year and calendar type
     '''
@@ -87,7 +87,7 @@ def GetMonthsLengths (year, Calendar=None) :
     pop_stack ( f'GetMonthsLengths : {zlengths}' )
     return zlengths
 
-def DaysInMonth (yy, mm=None, Calendar=None) :
+def DaysInMonth (yy, mm=None, Calendar:str=None) :
     '''
     Returns the number of days in a month
     
@@ -106,7 +106,7 @@ def DaysInMonth (yy, mm=None, Calendar=None) :
     pop_stack ( f'DaysInMonth : {length}' )
     return length
     
-def DaysSinceJC (date, Calendar=None) -> int :
+def DaysSinceJC (date, Calendar:str=None) -> int :
     '''
     Calculate the days difference between a date and 00010101
 
@@ -144,7 +144,7 @@ def DaysSinceJC (date, Calendar=None) -> int :
     pop_stack ( f'DaysSinceJC : {ndays}' )
     return ndays
 
-def IsLeapYear (year : [int, str], Calendar=None) -> bool :
+def IsLeapYear (year, Calendar:str=None) -> bool :
     '''
     True if year is a leap year
     '''
@@ -190,7 +190,7 @@ def IsLeapYear (year : [int, str], Calendar=None) -> bool :
     pop_stack ( f'IsLeapYear : {zis_leap_year}' )
     return zis_leap_year
 
-def DateFormat ( date ) -> str :
+def DateFormat (date) -> str :
     '''
     Get date format. Could be 'Human' or 'Gregorian'
 
@@ -209,7 +209,7 @@ def DateFormat ( date ) -> str :
     pop_stack ( f'DateFormat : {zdate_format}' )
     return zdate_format
 
-def PrintDate ( ye, mo, da, pformat ) -> str :
+def PrintDate (ye, mo, da, pformat) -> str :
     '''
     Return a date in the requested format
     '''
@@ -222,7 +222,7 @@ def PrintDate ( ye, mo, da, pformat ) -> str :
     pop_stack ( f'PrintDate : {zPrintDate}' )
     return zPrintDate
 
-def ConvertFormatToGregorian ( date ) :
+def ConvertFormatToGregorian (date) :
     '''
     From a yyyy-mm-dd or yyymmdd date format returns a yyymmdd date format
     '''
@@ -233,7 +233,7 @@ def ConvertFormatToGregorian ( date ) :
     pop_stack ( f'ConvertFormatToGregorian : {zz}' )
     return zz
 
-def ConvertFormatToHuman ( date ) :
+def ConvertFormatToHuman (date) :
     '''
     From a yyyymmdd or yyymmdd date format returns a yyy-mm-dd date format
     '''
@@ -242,7 +242,7 @@ def ConvertFormatToHuman ( date ) :
     pop_stack ( f'ConvertFormatToHuman : {zz}' )
     return zz
 
-def GetYearMonthDay  ( date ) :
+def GetYearMonthDay  (date) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm, dd
     '''
@@ -284,7 +284,7 @@ def GetYearMonthDay  ( date ) :
     pop_stack ( f'GetYearMonthDay : {ye}, {mo}, {da}' )
     return ye, mo, da
 
-def GetYearMonth ( date ) :
+def GetYearMonth (date) :
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm
     '''
@@ -337,11 +337,11 @@ def CorrectYearMonth (ye, mo) :
     pop_stack ( 'CorrectYearMonth : {ye_new}, {mo_new}' )
     return ye_new, mo_new
 
-def CorrectYearMonthDay (ye, mo, da, Calendar=None) :
+def CorrectYearMonthDay (ye, mo, da, Calendar:str=None) :
     '''
     Correct month values outside [1,12] and day outside month length
     '''
-    push_stack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {CalendarNone=} )' )
+    push_stack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {Calendar=} )' )
 
     if not Calendar : Calendar=OPTIONS.DefaultCalendar
         
@@ -365,7 +365,7 @@ def CorrectYearMonthDay (ye, mo, da, Calendar=None) :
     pop_stack ( f'CorrectYearMonthDay : {ye_new}, {mo_new}, {da_new}' )
     return ye_new, mo_new, da_new
 
-def DateAddMonth (date, month_inc=1, Calendar=None) :
+def DateAddMonth (date, month_inc=1, Calendar:str=None) :
     '''
     Add on year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
@@ -381,7 +381,7 @@ def DateAddMonth (date, month_inc=1, Calendar=None) :
         if PeriodType == MO_name[0] :
             month_inc = PeriodLength
         else :
-            raise AttributeError ( f'Parameter {month} is not a month period' )
+            raise AttributeError ( f'Parameter {month_inc=} is not a month period' )
 
     if month_inc < 0 : ye_inc = -( -month_inc // 12)
     else             : ye_inc = month_inc // 12
@@ -401,7 +401,7 @@ def DateAddMonth (date, month_inc=1, Calendar=None) :
     pop_stack ( 'DateAddMonth : {ye_new}, {mo_new, {da_new}, {zformat}' )
     return PrintDate ( ye_new, mo_new, da_new, zformat)
 
-def DateAddPeriod ( date, period='1YE', Calendar=None ) :
+def DateAddPeriod ( date, period='1YE', Calendar:str=None ) :
     '''
     Add a period to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
@@ -427,7 +427,7 @@ def DateAddPeriod ( date, period='1YE', Calendar=None ) :
     pop_stack ( f'DateAddPeriod : {zz}' )
     return zz
     
-def SubOneDayToDate (date, Calendar=None) :
+def SubOneDayToDate (date, Calendar:str=None) :
     '''
     Substracts one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
@@ -452,7 +452,7 @@ def SubOneDayToDate (date, Calendar=None) :
     pop_stack ( f'SubOneDayToDate : {zz}' )
     return zz
 
-def AddOneDayToDate ( date, Calendar=None ) :
+def AddOneDayToDate (date, Calendar:str=None ) :
     '''
     Add one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
@@ -478,7 +478,7 @@ def AddOneDayToDate ( date, Calendar=None ) :
     pop_stack ( 'AddOneDayToDate : {zz}' )
     return zz
 
-def AddDaysToDate ( date, ndays='1D', Calendar=None ) :
+def AddDaysToDate (date, ndays='1D', Calendar:str=None ) :
     '''
     Add days to date in format [yy]yymmdd or [yy]yy-mm-dd
     Number of days migth be negative
@@ -514,7 +514,7 @@ def AddDaysToDate ( date, ndays='1D', Calendar=None ) :
     pop_stack ( f'AddDaysToDate : {zz}' )
     return zz
 
-def AddPeriodToDate ( date, period, Calendar=None ) :
+def AddPeriodToDate (date, period, Calendar:str=None ) :
     '''
     Add a period to a date.
     period is specified as '1D', '5YE', '3DA', etc ...
@@ -529,7 +529,7 @@ def AddPeriodToDate ( date, period, Calendar=None ) :
     pop_stack ( f'AddPeriodToDate : {new_date}' )
     return new_date
 
-def DaysInYear (year, Calendar=None ) -> int :
+def DaysInYear (year, Calendar:str=None ) -> int :
     '''
     Return the number of days in a year
     '''
@@ -554,7 +554,7 @@ def DaysInYear (year, Calendar=None ) -> int :
     pop_stack ( 'DaysInYear : {ndays}' )
     return ndays
 
-def DaysBetweenDate (pdate1, pdate2, Calendar=None) -> int :
+def DaysBetweenDate (pdate1, pdate2, Calendar:str=None) -> int :
   '''
   Calculates the days difference between two dates
 
@@ -590,7 +590,7 @@ def DaysBetweenDate (pdate1, pdate2, Calendar=None) -> int :
   pop_stack ( 'DaysBetweenDate : {res}' )
   return res
 
-def ConvertGregorianDateToJulian (date, Calendar=None) :
+def ConvertGregorianDateToJulian (date, Calendar:str=None) :
     '''
     Convert yyyymmdd to yyyyddd
     '''
@@ -603,7 +603,7 @@ def ConvertGregorianDateToJulian (date, Calendar=None) :
     pop_stack ( '--> ConvertGregorianDateToJulian' )
     return zz
     
-def ConvertJulianDateToGregorian (date, Calendar=None) : 
+def ConvertJulianDateToGregorian (date, Calendar:str=None) : 
     '''
     Convert yyyyddd to yyyymmdd
     '''
@@ -636,7 +636,7 @@ def ConvertJulianDateToGregorian (date, Calendar=None) :
     push_stack ( f'ConvertJulianDateToGregorian : {zz}' )
     return zz
 
-def DaysInCurrentPeriod ( startdate, period, Calendar=None ) :
+def DaysInCurrentPeriod (startdate, period, Calendar:str=None) :
     ''' 
     Give the numbers of days during the period from startdate date
     '''
@@ -721,14 +721,14 @@ def AnaPeriod (period: str) :
     pop_stack ( 'AnaPeriod' )
     return PeriodType, PeriodLength
 
-def getDigits ( s: str ) -> str :
+def getDigits (s: str) -> str :
     '''Extract digits in a string'''
     push_stack ( f'getDigits ( {s=} )' )
     zz = ''.join (i for i in s if i.isdigit())
     pop_stack ( f'getDigits : {zz}' )
     return zz
 
-def rmDigits ( s:str ) -> str :
+def rmDigits (s:str) -> str :
     '''Removes digits from a string'''
     push_stack ( f'rmDigits ( {s=} )' )
     zz =  ''.join (i for i in s if not i.isdigit())

@@ -23,13 +23,11 @@ personal.
 import os
 import re
 import json
+import cftime
+import xarray as xr
 
 import libIGCM
 from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
-
-def list_arguments(func):
-    """Renvoie les noms des arguments d'une fonction"""
-    return func.__code__.co_varnames[:func.__code__.co_argcount]
 
 class Config (libIGCM.sys.Config) :
     '''
@@ -38,8 +36,6 @@ class Config (libIGCM.sys.Config) :
     Overload libIGCM.sys.Config to add knowldege about some simulations
     described in a catalog (at json format)
     '''
-
-    #print (list_arguments(__init__))
     
     def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
                   LongName=None, ModelName=None, ShortName=None, Comment=None,
@@ -55,10 +51,14 @@ class Config (libIGCM.sys.Config) :
                   DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
                   Period=None, PeriodSE=None, Shading=None, Marker=None, Line=None,
                   OCE=None, ATM=None, CMIP6_BUF=None,
-                  IGCM_Catalog=None, IGCM_Catalog_list=None, Debug=False, **kwargs) :
+                  IGCM_Catalog=None, IGCM_Catalog_list=None, config=None, Debug=False, **kwargs) :
+        
+        ### ===========================================================================================
+        ## Read catalog of known simulations
+        push_stack ( 'libIGCM.post.__init__')
 
         OPTIONS = get_options ()
-
+        
         self.ARCHIVE              = ARCHIVE
         self.ATM                  = ATM
         self.CMIP6_BUF            = CMIP6_BUF
@@ -91,6 +91,7 @@ class Config (libIGCM.sys.Config) :
         self.MASTER               = MASTER
         self.Marker               = Marker
         self.ModelName            = ModelName
+        self.OCE                  = OCE
         self.POST_DIR             = POST_DIR
         self.Period               = Period
         self.PeriodLength         = PeriodLength
@@ -125,53 +126,84 @@ class Config (libIGCM.sys.Config) :
         self.YearEnd              = YearEnd
         self.rebuild              = rebuild
 
-        ### ===========================================================================================
-        ## Read catalog of known simulations
-        push_stack ( 'libIGCM.post.__init__')
-
-        if not IGCM_Catalog      :
-            IGCM_Catalog      = OPTIONS.IGCM_Catalog
+        for key, value in OPTIONS.items () :
+            if key in self.keys () :
+                if self[key] is None and value is not None :
+                    if OPTIONS.Debug or Debug :
+                        print ( f'from OPTIONS, setting {key=} {value=}')
+                    setattr (self, key, value)  
+            
+        if config is not None :
+            for key, value in config.items () :
+                if self[key] is None and value is not None :
+                    if OPTIONS.Debug or Debug :
+                        print ( f'from config, setting {key=} {value=}')
+                    setattr (self, key, value)       
+                    
+        if not self.IGCM_Catalog      :
+            self.IGCM_Catalog      = OPTIONS.IGCM_Catalog
         if not IGCM_Catalog_list :
-            IGCM_Catalog_list = OPTIONS.IGCM_Catalog_list
+            self.IGCM_Catalog_list = OPTIONS.IGCM_Catalog_list
         
         if OPTIONS.Debug or Debug :
-            print ( f'{IGCM_Catalog_list=}' )
-            print ( f'{IGCM_Catalog=}' )
+            print ( f'{self.IGCM_Catalog_list=}' )
+            print ( f'{self.IGCM_Catalog=}' )
 
         exp = None
 
-        if IGCM_Catalog :
-            if os.path.isfile (IGCM_Catalog) :
+        if OPTIONS.Debug or Debug :
+            print ( f'{IGCM_Catalog=}' )
+        if self.IGCM_Catalog is not None :
+            if OPTIONS.Debug or Debug :
+                print ( f'Searching for catalog file : {self.IGCM_Catalog=}' )
+            if os.path.isfile (self.IGCM_Catalog) :
                 if OPTIONS.Debug or Debug :
-                    print ( f'Catalog file : {IGCM_Catalog=}' )
-                exp_file = open (IGCM_Catalog)
+                    print ( f'Catalog file : {self.IGCM_Catalog=}' )
+                exp_file = open (self.IGCM_Catalog)
                 Experiments = json.load (exp_file)
-                if JobName in Experiments.keys () :
+                if self.JobName in Experiments.keys () :
                     exp = Experiments[JobName]
             else :
-                raise Exception ( f'libIGCM.post.Config : Catalog file not found : {IGCM_Catalog}' )
+                raise Exception ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
 
         else :
-            for cfile in OPTIONS.IGCM_Catalog_list :
+            for cfile in self.IGCM_Catalog_list :
+                if OPTIONS.Debug or Debug :
+                    print ( f'Searching for {cfile=}')
                 if os.path.isfile (cfile) :
                     if OPTIONS.Debug or Debug :
-                        print ( f'Catalog file : {cfile=}' )
+                        print ( f'Reads catalog file : {cfile=}' )
                     exp_file = open (cfile)
                     Experiments = json.load (exp_file)
-                    if JobName in Experiments.keys () :
-                        exp = Experiments[JobName]
+                    if OPTIONS.Debug or Debug :
+                        print ( f'{Experiments.keys()=}' )
+                    if self.JobName in Experiments.keys () :
+                        if OPTIONS.Debug or Debug :
+                            print (f'{self.JobName=} found')
+                        exp = Experiments[self.JobName]
                         break
 
         if OPTIONS.Debug or Debug :
-            print (f'exp before analysing : {exp=}')
-            print (f'{len(exp)}')
+            print (f'exp    before analysing (1) : {exp=}')
+            print (f'kwargs before analysing (1) : {kwargs=}')
                
-        if kwargs is not None :
-            exp.update (**kwargs)
+        if len(kwargs)>0 :
+            if exp is None :
+                if OPTIONS.Debug or Debug :
+                    print ( 'Updates exp with *kwargs')
+                exp = Container (**kwargs)
+            else :
+                if OPTIONS.Debug or Debug :
+                    print ( 'Creates exp from *kwargs')
+                exp.update (**kwargs)
+
+        if OPTIONS.Debug or Debug :
+            print (f'exp before analysing (2) : {exp=}')
+            #print (f'{len(exp)}')
                     
-        if len(exp) > 0 :
+        if exp is not None :
             if OPTIONS.Debug or Debug :
-                print ( f'Read catalog file for {JobName=}' )
+                print ( f'Read catalog file for {self.JobName=}' )
             exp = Container (**exp)
             if OPTIONS.Debug or Debug :
                 print (f'exp at start of analysing : {exp=}')
@@ -258,132 +290,144 @@ class Config (libIGCM.sys.Config) :
                                      Marker=self.Marker, Line=self.Line, OCE=self.OCE, ATM=self.ATM, CMIP6_BUF=self.R_BUF,
                                      Debug=self.Debug, **add_values)
         
-        pop_stack ( 'libIGCM.post.__init__' )
+        pop_stack ('libIGCM.post.__init__')
 
-        
-def comp ( varName ) :
-    #OPTIONS=get_options ()
-    class RegexEqual (str):
-        def __eq__(self, pattern):
-            return bool(re.search(pattern, self))
+
+def add_year (ptime_counter, year_shift=0) :
     '''
-    Find the component from the variable name
+    Add years to a time variable
+    Time variable is an xarray of cftime values
     '''
-    push_stack ( f'comp ({varName=})' )
-    Comp = None
+    dates_elements   = [ (date.year+year_shift, date.month, date.day, date.hour, date.minute, date.second, date.microsecond) for date in ptime_counter.values]
+    time_counter_new = [ cftime.datetime (*date_el, calendar='standard', has_year_zero=False) for date_el in dates_elements]
+    time_counter = xr.DataArray (time_counter_new, dims=('time_counter',), coords=(time_counter_new,))
+    time_counter.attrs.update (ptime_counter.attrs)
+    return time_counter
 
-    match RegexEqual(varName) :
-        case "Ahyb.*.*" | "Bhyb.*" | ".*_ppm" | ".*_ppb|R_.*" :
-            Comp = 'ATM'
-        case "SW.*" | "LW.*" | "[flw|fsw|sens]_[oce|lic|sic|ter]*" |  "[pourc|fract]_[oce|lic|sic|ter]" :
-            Comp = 'ATM'
-        case "w.*_[oce|sic|lic|ter]" :
-            Comp = 'ATM'
-        case "dq.*" :
-            Comp = 'ATM'
-        case "tau[xy]_[oce|ter|lic|sic]" :
-            Comp = 'ATM'
-        case ".*10m" | ".*2m" :
-            Comp = 'ATM'
-        case "rsun.*" :
-            Comp = 'ATM'
-        case 'abs550aer'| 'ages_lic'| 'ages_sic'| 'aire'| 'alb1'| 'alb1'| \
-             'alb2'| 'alb2'| 'albe_lic'| 'albe_[oce|sic|lic|ter]' | 'ale'| 'ale_.*' 'ale_wk' :
-             Comp = 'ATM'
-        case 'alp' | 'alp_bl.*' | 'bils.*' | 'bnds' | 'cape' | 'cdrh' | 'cdrm' | 'cin' | \
-             'cldh' | 'cldicemxrat' | 'cldl' | 'cldm' | 'cldq' | 'cldt' | 'cldwatmxrat' | 'co2_ppm' | 'colO3.*' | 'concbc' | \
-             'concdust' | 'concno3' | 'concoa' | 'concso4' | 'concso4' | 'concss' | 'cool_volc' :
-             Comp = 'ATM' 
-        case  '.*aer'| 'epmax' | 'evap' | 'evap_[oce|lic|ter|oce]' \
-             'evappot_[oce|lic|sic|ter]' | 'f0_th'| 'f0_th'| 'fbase'| 'fder'| 'ffonte'| 'fl'| 'flat' :
-            Comp = 'ATM' 
-        case 'fqcalving' | 'fqfonte'| 'fsnow' | \
-             'ftime_con' | 'ftime_con' | 'ftime_deepcv' | 'ftime_deepcv' | 'ftime_th' | 'ftime_th'| 'geop' | 'geoph' | 'gusts'| \
-             'heat_volc' | 'io_lat' | 'io_lon' | 'iwp' | 'lat'| 'lat_[sic|lic|oce|ter]' | 'lon' | 'lwp'| 'mass' | 'mrroli'| \
-             'msnow'| 'n2'| 'ndayrain'| 'nettop'| 'ocond'| 'od550.*_STRAT' | 'od865aer'| 'oliq'| 'ovap'| 'ozone' :
-            Comp = 'ATM'
-        case  'ozone_daylight' | 'paprs' | 'pbase' | 'phis' | 'plfc'| 'plu.*' | \
-              'pr_con_i'| 'pr_con_l' | 'pr_lsc_i' | 'pr_lsc_l' | 'precip'| 'pres'| 'presnivs'| 'prlw'| 'proba_notrig'| 'prsw'| 'prw'| 'psol'| \
-              'pt0' | 'ptop' | 'ptstar' | 'qsol'| 'qsurf'| 'radsol'| 'rain_con'| 'rain_fall'| 'random_notrig'| 're'| 'ref_liq'| \
-              'rhum' | 'rneb'| 'rsu'| 'rugs_lic'| 'rugs_oce'| 'rugs_sic'| 'rugs_ter' :
-            Comp = 'ATM'
-        case 'runofflic' | 's2' | 's_lcl' | 's_pblh' | 's_pblt' | 's_therm' | 'scon.*cbc' | 'sens'| \
-             'sicf'| 'slab_bils_oce'| 'slp'| 'snow_[oce|sic|ter|lic]'| 'solaire'| 'soll'| 'soll0'| 'sols'| \
-             'sols0'| 'stratomask'| 'sza'| 't_oce_sic'| 'taux' | 'tauy' | 'tau[xy]_[oce|sic|ter|lic]'| \
-             'temp'| 'theta'| 'tke_.*'| 'topl'| 'topl.*' | 'tops' :
-            Comp = 'ATM'
-        case 'tops.*' | 'tsol'| 'tsol_[lic|sic|ter|oce]' | '[uv]e' | '[uv]q' | 'ustar' | '[uv]wat' | \
-              've'| 'vit[uvw]' | 'wake_.*' | 'wape'| \
-              'wbeff' :
-            Comp = 'ATM'
-        case 'wstar' | 'wvapp' | 'z0h_[ter|lic|sic|oce]' | 'zm0_[ter|lic|sic|oce]' | 'zfull' | 'zmax_th' :
-            Comp = 'ATM'
-
-        case 'snow' :
-            Comp = 'ATM|SRF'
-
-        case  "so.*" | "vo.*" | "zo.*" | "NEMO*" | "e[123].*" | "tau[uv]o" | "qt_.*" :
-            Comp = 'OCE'
         
-        case  'BLT' | 'area' | 'calving' | 'depti' | 'emp' | 'emp_[oce|ice]' | 'friver' | 'hc300' | 'heatc' | 'hfcorr'|  \
-              'iceberg' | 'iceshelf' | 'mldr10_1'|  \
-              'nshfls' | 'olevel' | 'olevel_bounds' | 'qemp_[oce|ice]' | 'qt_[oce|ice]' | 'rain' | 'rsntds'| 'runoffs'|  \
-              '.*_cea' | 'thetao' | 'tinv'| 'tos' | \
-              'vfx.*' | 'wfcorr' | 'wfo' | 'ah[uv]_bbl' | 'nshfls' |  'rsntds'| \
-              'rsds' | 'emp_oce' | 'nsh*' | 'thedepth' | 'mldr10_1' | 'friver' | 'wfo'  :
-            Comp = 'OCE'
+# def comp ( varName ) :
+#     #OPTIONS=get_options ()
+#     class RegexEqual (str):
+#         def __eq__(self, pattern):
+#             return bool(re.search(pattern, self))
+#     '''
+#     Find the component from the variable name
+#     '''
+#     push_stack ( f'comp ({varName=})' )
+#     Comp = None
 
-        case 'icevol*' | 'sosaline*' :
-            Comp = 'OCE'
+#     match RegexEqual(varName) :
+#         case "Ahyb.*.*" | "Bhyb.*" | ".*_ppm" | ".*_ppb|R_.*" :
+#             Comp = 'ATM'
+#         case "SW.*" | "LW.*" | "[flw|fsw|sens]_[oce|lic|sic|ter]*" |  "[pourc|fract]_[oce|lic|sic|ter]" :
+#             Comp = 'ATM'
+#         case "w.*_[oce|sic|lic|ter]" :
+#             Comp = 'ATM'
+#         case "dq.*" :
+#             Comp = 'ATM'
+#         case "tau[xy]_[oce|ter|lic|sic]" :
+#             Comp = 'ATM'
+#         case ".*10m" | ".*2m" :
+#             Comp = 'ATM'
+#         case "rsun.*" :
+#             Comp = 'ATM'
+#         case 'abs550aer'| 'ages_lic'| 'ages_sic'| 'aire'| 'alb1'| 'alb1'| \
+#              'alb2'| 'alb2'| 'albe_lic'| 'albe_[oce|sic|lic|ter]' | 'ale'| 'ale_.*' 'ale_wk' :
+#              Comp = 'ATM'
+#         case 'alp' | 'alp_bl.*' | 'bils.*' | 'bnds' | 'cape' | 'cdrh' | 'cdrm' | 'cin' | \
+#              'cldh' | 'cldicemxrat' | 'cldl' | 'cldm' | 'cldq' | 'cldt' | 'cldwatmxrat' | 'co2_ppm' | 'colO3.*' | 'concbc' | \
+#              'concdust' | 'concno3' | 'concoa' | 'concso4' | 'concso4' | 'concss' | 'cool_volc' :
+#              Comp = 'ATM' 
+#         case  '.*aer'| 'epmax' | 'evap' | 'evap_[oce|lic|ter|oce]' \
+#              'evappot_[oce|lic|sic|ter]' | 'f0_th'| 'f0_th'| 'fbase'| 'fder'| 'ffonte'| 'fl'| 'flat' :
+        #     Comp = 'ATM' 
+        # case 'fqcalving' | 'fqfonte'| 'fsnow' | \
+        #      'ftime_con' | 'ftime_con' | 'ftime_deepcv' | 'ftime_deepcv' | 'ftime_th' | 'ftime_th'| 'geop' | 'geoph' | 'gusts'| \
+        #      'heat_volc' | 'io_lat' | 'io_lon' | 'iwp' | 'lat'| 'lat_[sic|lic|oce|ter]' | 'lon' | 'lwp'| 'mass' | 'mrroli'| \
+        #      'msnow'| 'n2'| 'ndayrain'| 'nettop'| 'ocond'| 'od550.*_STRAT' | 'od865aer'| 'oliq'| 'ovap'| 'ozone' :
+        #     Comp = 'ATM'
+        # case  'ozone_daylight' | 'paprs' | 'pbase' | 'phis' | 'plfc'| 'plu.*' | \
+        #       'pr_con_i'| 'pr_con_l' | 'pr_lsc_i' | 'pr_lsc_l' | 'precip'| 'pres'| 'presnivs'| 'prlw'| 'proba_notrig'| 'prsw'| 'prw'| 'psol'| \
+        #       'pt0' | 'ptop' | 'ptstar' | 'qsol'| 'qsurf'| 'radsol'| 'rain_con'| 'rain_fall'| 'random_notrig'| 're'| 'ref_liq'| \
+        #       'rhum' | 'rneb'| 'rsu'| 'rugs_lic'| 'rugs_oce'| 'rugs_sic'| 'rugs_ter' :
+        #     Comp = 'ATM'
+        # case 'runofflic' | 's2' | 's_lcl' | 's_pblh' | 's_pblt' | 's_therm' | 'scon.*cbc' | 'sens'| \
+        #      'sicf'| 'slab_bils_oce'| 'slp'| 'snow_[oce|sic|ter|lic]'| 'solaire'| 'soll'| 'soll0'| 'sols'| \
+        #      'sols0'| 'stratomask'| 'sza'| 't_oce_sic'| 'taux' | 'tauy' | 'tau[xy]_[oce|sic|ter|lic]'| \
+        #      'temp'| 'theta'| 'tke_.*'| 'topl'| 'topl.*' | 'tops' :
+        #     Comp = 'ATM'
+        # case 'tops.*' | 'tsol'| 'tsol_[lic|sic|ter|oce]' | '[uv]e' | '[uv]q' | 'ustar' | '[uv]wat' | \
+        #       've'| 'vit[uvw]' | 'wake_.*' | 'wape'| \
+        #       'wbeff' :
+        #     Comp = 'ATM'
+        # case 'wstar' | 'wvapp' | 'z0h_[ter|lic|sic|oce]' | 'zm0_[ter|lic|sic|oce]' | 'zfull' | 'zmax_th' :
+        #     Comp = 'ATM'
 
-        case "si.*|sn.*|ice.*|it.*" :
-            Comp = 'ICE'
+        # case 'snow' :
+        #     Comp = 'ATM|SRF'
+
+        # case  "so.*" | "vo.*" | "zo.*" | "NEMO*" | "e[123].*" | "tau[uv]o" | "qt_.*" :
+        #     Comp = 'OCE'
         
-        case 'Alkalini' | '*CHL' | 'DIC' | 'Fer' | 'NO*' | 'O2' | 'PO4' | 'Si' | 'TPP' | 'Cflx' | 'Dpco2' | 'EPC100' | 'INTPP' :
-            Comp = 'MBG'
+        # case  'BLT' | 'area' | 'calving' | 'depti' | 'emp' | 'emp_[oce|ice]' | 'friver' | 'hc300' | 'heatc' | 'hfcorr'|  \
+        #       'iceberg' | 'iceshelf' | 'mldr10_1'|  \
+    #           'nshfls' | 'olevel' | 'olevel_bounds' | 'qemp_[oce|ice]' | 'qt_[oce|ice]' | 'rain' | 'rsntds'| 'runoffs'|  \
+    #           '.*_cea' | 'thetao' | 'tinv'| 'tos' | \
+    #           'vfx.*' | 'wfcorr' | 'wfo' | 'ah[uv]_bbl' | 'nshfls' |  'rsntds'| \
+    #           'rsds' | 'emp_oce' | 'nsh*' | 'thedepth' | 'mldr10_1' | 'friver' | 'wfo'  :
+    #         Comp = 'OCE'
 
-        case "CFLUX.*" | "CO2.*" | ".*Frac" | "HARVEST.*" | "LAI.*" | "lai.*" | "NPP.*" | "VEGET.*" | ".*vegetfrac" | "TOTAL.*" | "GROWTH.*" :
-            Comp = 'SBG'
-        case 'lai' | 'alb_nir'| 'alb_vis'| 'bqsb'| 'gqsb' | 'nee' | 'temp_sol' | 'nbp'| \
-             'AGE'|  'CONTFRAC'|  'CONVFLUX'|  'GPP'| 'gpp'|  'npp'| 'HET_RESP' :
-            Comp = 'SBG'
+    #     case 'icevol*' | 'sosaline*' :
+    #         Comp = 'OCE'
+
+    #     case "si.*|sn.*|ice.*|it.*" :
+    #         Comp = 'ICE'
+        
+    #     case 'Alkalini' | '*CHL' | 'DIC' | 'Fer' | 'NO*' | 'O2' | 'PO4' | 'Si' | 'TPP' | 'Cflx' | 'Dpco2' | 'EPC100' | 'INTPP' :
+    #         Comp = 'MBG'
+
+    #     case "CFLUX.*" | "CO2.*" | ".*Frac" | "HARVEST.*" | "LAI.*" | "lai.*" | "NPP.*" | "VEGET.*" | ".*vegetfrac" | "TOTAL.*" | "GROWTH.*" :
+    #         Comp = 'SBG'
+    #     case 'lai' | 'alb_nir'| 'alb_vis'| 'bqsb'| 'gqsb' | 'nee' | 'temp_sol' | 'nbp'| \
+    #          'AGE'|  'CONTFRAC'|  'CONVFLUX'|  'GPP'| 'gpp'|  'npp'| 'HET_RESP' :
+    #         Comp = 'SBG'
             
-    pop_stack ( f"{comp=}" )
-    return Comp
+    # pop_stack ( f"{comp=}" )
+    # return Comp
 
-def VarOut2VarIn (VarOut, JobName) :
+def VarOut2VarIn (VarOut:str, JobName:str) :
     '''
     From a variable name, try to get a more standard name
     Useful because variable names may be different for different model version (mainly for NEMO)
     '''
     push_stack ( f'VarOut2VarIn ({VarOut=} {JobName=})' )
     
-    VarIn = VarOut
+    # VarIn = VarOut
 
-    match JobName :
-        case 'TR5AS-Vlr01' :	
-            match VarOut :
-                case 'siconc'   :
-                    VarIn='ice_pres'
-                #case 'ice_conc' :
-                #    VarIn='ice_pres'
-                case 'sistem'   :
-                    VarIn='tsice'    
-                case 'sithic' | 'sivolu' :
-                    VarIn='iicethic' 
-                case 'snthic' | 'snvolu' :
-                    VarIn='isnowthi' 
+    # match JobName :
+    #     case 'TR5AS-Vlr01' :	
+    #         match VarOut :
+    #             case 'siconc'   :
+    #                 VarIn='ice_pres'
+    #             #case 'ice_conc' :
+    #             #    VarIn='ice_pres'
+    #             case 'sistem'   :
+    #                 VarIn='tsice'    
+    #             case 'sithic' | 'sivolu' :
+    #                 VarIn='iicethic' 
+    #             case 'snthic' | 'snvolu' :
+    #                 VarIn='isnowthi' 
     
-        case 'TR6AV-Sr02' :
-            match VarOut :
-                case 'siconc' :
-                    VarIn='ice_pres'
-                case 'sistem' :
-                    VarIn='iicetemp'
-                case 'sithic' | 'sivolu' :
-                    VarIn='iicethic'
-                case 'snthic' | 'snvolu' :
-                    VarIn='isnowthi'
+    #     case 'TR6AV-Sr02' :
+    #         match VarOut :
+    #             case 'siconc' :
+    #                 VarIn='ice_pres'
+    #             case 'sistem' :
+    #                 VarIn='iicetemp'
+    #             case 'sithic' | 'sivolu' :
+    #                 VarIn='iicethic'
+    #             case 'snthic' | 'snvolu' :
+    #                 VarIn='isnowthi'
 
-    pop_stack ( f'VarOut2VarIn ({VarIn=})' )
-    return VarIn
+    # pop_stack ( f'VarOut2VarIn ({VarIn=})' )
+    # return VarIn
