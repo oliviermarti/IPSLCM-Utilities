@@ -242,14 +242,15 @@ for name, bas in Regions['eORCA1.4.2'].items() :
     Regions['eORCA1.4.2'][name].idyx.x = slice(bas.idyx.x.start-1, bas.idyx.x.stop-1)
     
 known_domains = Container ( 
-    { 'orca2'      : {'cfg_name':'orca2'     , 'CFG_name':'ORCA2'     , 'cd_cfg':'orca', 'kk_cfg':2, 'jpk':31, 'jpj':149, 'jpi':182, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
-      'orca2.3'    : {'cfg_name':'orca2.3'   , 'CFG_name':'ORCA2.3'   , 'cd_cfg':'orca', 'kk_cfg':2, 'jpk':31, 'jpj':149, 'jpi':182, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
-      'orca2.4'    : {'cfg_name':'orca2.4  ' , 'CFG_name':'ORCA2.4'   , 'cd_cfg':'orca', 'kk_cfg':2, 'jpk':31, 'jpj':148, 'jpi':180, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
-      'orca2.4.2'  : {'cfg_name':'orca2.4.2' , 'CFG_name':'ORCA2.4.2' , 'cd_cfg':'orca', 'kk_cfg':2, 'jpk':31, 'jpj':148, 'jpi':180, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4.2, 'Halo':False},
-      'eorca1.2'   : {'cfg_name':'eorca1.2'  , 'CFG_name':'eORCA1.2'  , 'cd_cfg':'orca', 'kk_cfg':1, 'jpk':75, 'jpj':332, 'jpi':362, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
-      'eorca1.4 '  : {'cfg_name':'eorca1.4'  , 'CFG_name':'eORCA1.4'  , 'cd_cfg':'orca', 'kk_cfg':1, 'jpk':75, 'jpj':332, 'jpi':362, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
-      'eorca1.4.0' : {'cfg_name':'eorca1.4.0', 'CFG_name':'eORCA1.4.0', 'cd_cfg':'orca', 'kk_cfg':1, 'jpk':75, 'jpj':332, 'jpi':362, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
-      'eorca1.4.2' : {'cfg_name':'eorca1.4.2', 'CFG_name':'eORCA1.4.2', 'cd_cfg':'orca', 'kk_cfg':1, 'jpk':75, 'jpj':331, 'jpi':360, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6.2, 'Halo':False},
+    { 'orca2'      : {'cfg_name':'orca2'      , 'CFG_name':'ORCA2'     , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 149, 'jpi': 182, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
+      'orca2.3'    : {'cfg_name':'orca2.3'    , 'CFG_name':'ORCA2.3'   , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 149, 'jpi': 182, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
+      'orca2.4'    : {'cfg_name':'orca2.4  '  , 'CFG_name':'ORCA2.4'   , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 148, 'jpi': 180, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
+      'orca2.4.2'  : {'cfg_name':'orca2.4.2'  , 'CFG_name':'ORCA2.4.2' , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 148, 'jpi': 180, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4.2, 'Halo':False},
+      'eorca1.2'   : {'cfg_name':'eorca1.2'   , 'CFG_name':'eORCA1.2'  , 'cd_cfg':'orca', 'kk_cfg': 1, 'jpk':75, 'jpj': 332, 'jpi': 362, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
+      'eorca1.4 '  : {'cfg_name':'eorca1.4'   , 'CFG_name':'eORCA1.4'  , 'cd_cfg':'orca', 'kk_cfg': 1, 'jpk':75, 'jpj': 332, 'jpi': 362, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
+      'eorca1.4.0' : {'cfg_name':'eorca1.4.0' , 'CFG_name':'eORCA1.4.0', 'cd_cfg':'orca', 'kk_cfg': 1, 'jpk':75, 'jpj': 332, 'jpi': 362, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
+      'eorca1.4.2' : {'cfg_name':'eorca1.4.2' , 'CFG_name':'eORCA1.4.2', 'cd_cfg':'orca', 'kk_cfg': 1, 'jpk':75, 'jpj': 331, 'jpi': 360, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6.2, 'Halo':False},
+      'eorca025'   : {'cfg_name':'eorca025'   , 'CFG_name':'eORCA025'  , 'cd_cfg':'orca', 'kk_cfg':25, 'jpk':75, 'jpj':1207, 'jpi':1442, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'F', 'nperio':6, 'aperio':6  , 'Halo':True },
     } )
 
 class Domain :
@@ -2357,7 +2358,7 @@ def lbc_plot (ptab, cd_type:str='T', psgn=1.0, sval=np.nan, Iperio:bool=None, Jp
     pop_stack ( 'lbc_plot' )
     return ztab
 
-def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, aperio:int=None, nperio:int=None, domain:Domain=None) :
+def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, aperio:int=None, nperio:int=None, domain:Domain=None, Debug=False) :
     '''
     Handles NEMO domain changes between NEMO 4.0 to NEMO 4.2
 
@@ -2375,44 +2376,49 @@ def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None,
     zdom   = Domain (ptab=ptab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo,
                      aperio=aperio, nperio=nperio, domain=domain)
     jpi    = zdom.jpi
+    jpj    = zdom.jpj
     ax, ix = find_axis (ptab, 'x')
     ay, jy = find_axis (ptab, 'y')
     psgn   = ptab.dtype.type (psgn)
-    ztab   = ptab.copy ()
+    ptab_ext = ptab
 
     t_shape = np.array (ptab.shape)
+    tjpi = jpi ; tjpj=jpj
 
     if zdom.Iperio and zdom.NFold and not zdom.Halo :
         ext_shape = t_shape.copy()
-        if 'X' in ext_shape :
+        if ax :
+            tjpi = tjpi+2
             ext_shape[ix] = ext_shape[ix] + 2
-        if 'Y' in ext_shape :
+        if ay :
+            tjpj = tjpj+1
             ext_shape[jy] = ext_shape[jy] + 1
+        if OPTIONS.Debug or Debug : print ( f'lbc_add: ext_shape = {ext_shape}' )
 
         if mmath == xr :
             ptab_ext = xr.DataArray (np.zeros (ext_shape), dims=ptab.dims)
-            if 'X' in ext_shape and 'Y' in ext_shape :
+            if ax and ay :
                 ptab_ext.values[..., :-1, 1:-1] = ptab.values.copy ()
             else :
-                if 'X' in ext_shape :
+                if ax :
                     ptab_ext.values[...,      1:-1] = ptab.values.copy ()
-                if 'Y' in ext_shape :
+                if ay :
                     ptab_ext.values[..., :-1      ] = ptab.values.copy ()
         else           :
             ptab_ext =               np.zeros (ext_shape)
-            if 'X' in ext_shape and 'Y' in ext_shape :
-                ptab_ext       [..., :-1, 1:-1] = ptab.copy ()
+            if ax and ay :
+                ptab_ext     [..., :-1, 1:-1] = ptab.copy ()
             else :
-                if 'X' in ext_shape :
+                if ax : 
                     ptab_ext [...,      1:-1] = ptab.copy ()
-                if 'Y' in ext_shape :
+                if ay : 
                     ptab_ext [..., :-1      ] = ptab.copy ()
 
-        if zdom.NFold and zdom.NFtype=='T' and not zdom.Halo :
-            ptab_ext = lbc (ptab_ext, aperio=4, cd_type=cd_type, psgn=psgn)
-        if NFold and NFtype=='F' and not Halo :
-            ptab_ext = lbc (ptab_ext, aperio=6, cd_type=cd_type, psgn=psgn)
 
+        tdom = Domain (jpi=tjpi, jpj=tjpj, domain=domain, Halo=True)
+
+        ptab_ext = lbc (ptab_ext, cd_type=cd_type, psgn=psgn, domain=tdom)
+        
         if mmath == xr :
             ptab_ext.attrs = ptab.attrs
             az = find_axis (ptab, 'z')[0]
@@ -2423,7 +2429,7 @@ def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None,
                 ptab_ext = ptab_ext.assign_coords ( {at:ptab.coords[at]} )
 
     else :
-        ptab_ext = lbc (ptab, aperio=aperio, cd_type=cd_type, psgn=psgn)
+        ptab_ext = lbc (ptab, domain=domain, cd_type=cd_type, psgn=psgn)
 
     ptab_ext = copy_attrs (ptab_ext, ptab)
     
@@ -2447,26 +2453,27 @@ def lbc_del (ptab, cd_type:str='T', psgn=1, Iperio:bool=None, Jperio:bool=None, 
     zdom   = Domain (ptab=ptab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
     jpi    = zdom.jpi
+    jpj    = zdom.jpj
     ax, ix = find_axis (ptab, 'x')
     ay, jy = find_axis (ptab, 'y')
     psgn   = ptab.dtype.type (psgn)
-    ztab   = ptab.copy ()
+    ztab   = ptab
 
     if zdom.NFold and zdom.NFtype=='T' and not zdom.Halo :
-        if ax or ay :
-            if ax and ay :
-                #ztab = lbc (ptab[..., :-1, 1:-1], aperio=aperio, cd_type=cd_type, psgn=psgn)
-                ztab = lbc (ptab.isel ({ax:slice(1,-1), ay:slice(None,-1)}), cd_type=cd_type, psgn=psgn)
-            else :
-                if ax    :
-                    ztab = lbc (ptab.isel ({ax:slice(1,-1)}    ), cd_type=cd_type, psgn=psgn)
-                if ay    :
-                    ztab = lbc (ptab.isel ({ay:slice(None,-1)}), cd_type=cd_type, psgn=psgn)
+        if ax :
+            tjpi = tjpi-2
+        if ay :
+            tjpj = tjpj-1
 
+        tdom = Domain (jpi=tjpi, jpj=tjpj, domain=domain, Halo=False)
+        
+        if ax and ay :
+            ztab = lbc (ptab.isel ({ax:slice(1,-1), ay:slice(None,-1)}), cd_type=cd_type, psgn=psgn, domain=tdom)
         else :
-            ztab = ptab
-    else :
-        ztab = ptab
+            if ax    :
+                ztab = lbc (ptab.isel ({ax:slice(1,-1)}   ), cd_type=cd_type, psgn=psgn, domain=tdom)
+            if ay    :
+                ztab = lbc (ptab.isel ({ay:slice(None,-1)}), cd_type=cd_type, psgn=psgn, domain=tdom)
 
     pop_stack ( 'lbc_del' )
     return ztab
