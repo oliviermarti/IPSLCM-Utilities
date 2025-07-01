@@ -23,90 +23,10 @@ personal. Be warned that the author himself may not respect the prerequisites.
 '''
 import copy
 import time
+from typing import Any, Self, Literal, Dict, Union, Hashable
 
 ## ============================================================================
-class Container :
-    '''
-    Void class to fill the gap between dictonnaries and spacenames
-    Class members can be accessed either with dictionnary or namespace syntax
-       i.e  <Container>['member'] or <Container>.member
-    '''
-    def update (self, dico=None, **kwargs):
-        '''Use a dictionnary to update values'''
-        if dico :
-            for attr in dico.keys () :
-                value = dico[attr]
-                if isinstance (value, dict) :
-                    super().__setattr__ (attr, Container (value))
-                else :
-                    super().__setattr__ (attr, value)
-        for key, value in kwargs.items():
-            if isinstance (value, dict) :
-                setattr (self, key, Container(value))
-            else :
-                setattr (self, key, value)
-        #self.__dict__.update (kwargs)
-            
-    def keys    (self) :
-        return self.__dict__.keys()
-    def values  (self) :
-        return self.__dict__.values()
-    def items   (self) :
-        return self.__dict__.items()
-    def dict    (self) :
-        return self.__dict__
-    def pop     (self, attr) :
-         zv = self[attr]
-         delattr (self, attr)
-         return zv
-    #def pop (self, attr) :
-    #    for element in reversed (self.storage_list) :
-    #        if element.name == attr :
-    #            return element
-    #        return None
-    def copy (self) :
-        return Container (self)
-    #def __deepcopy__(self, memo):
-    #    return Container(copy.deepcopy(self.name, memo))
-    ## Hidden functions
-    def __str__     (self) :
-        return str  (self.__dict__)
-    def __repr__    (self) :
-        return repr (self.__dict__)
-    def __name__    (self) :
-        return self.__class__.__name__
-    def __getitem__ (self, attr) :
-        return getattr (self, attr)
-    def __setitem__ (self, attr, value) :
-        if isinstance (value, dict) :
-            setattr (self, attr, Container(value))
-        else : 
-            setattr (self, attr, value)
-    def __iter__    (self) :
-        return self.__dict__.__iter__()
-    def __next__    (self) :
-        return self.__dict__.__next__()
-    def __len__     (self) :
-        return len (self.__dict__)
-    def __copy__    (self) :
-        return Container (self)
-    
-    def __init__ (self, dico=None, **kwargs) :
-        if dico :
-            zargs = dico
-        else :
-            zargs = {}
-        zargs.update (**kwargs)
-        for attr, value in zargs.items () :
-             if isinstance (value, dict) :
-                 # Dictionnaries are handeld by recursivity
-                 super().__setattr__ (attr, Container (value))
-             else :
-                 super().__setattr__ (attr, value)
-        return None
-
-## ============================================================================
-DEFAULT_OPTIONS = Container (Debug  = False,
+DEFAULT_OPTIONS = dict (Debug  = False,
                              Trace  = False,
                              Timing = None,
                              t0     = None,
@@ -133,95 +53,94 @@ OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
 
 class set_options :
     '''
-    Set options for libIGCM
+    Set OPTIONS for libIGCM
     
     See Also :
     ----------
     reset_options, get_options
     
     '''
-    def __init__ (self, **kwargs) :
-        self.old = Container ()
+    def __init__ (self:Self, **kwargs) -> None :
+        self.old = dict ()
         for k, v in kwargs.items() :
-            if k not in OPTIONS:
-                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            if k not in OPTIONS :
+                raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
         self._apply_update (kwargs)
 
-    def _apply_update (self, options_dict) :
+    def _apply_update (self:Self, options_dict=Dict) -> None :
         OPTIONS.update (options_dict)
-    def __enter__ (self) :
+    def __enter__ (self:Self) :
         return
-    def __exit__ (self, type, value, traceback) :
+    def __exit__ (self:Self, type, value, traceback) :
         self._apply_update (self.old)
 
-def get_options () -> dict :
+def get_options () -> Dict :
     '''
-    Get options for libIGCM
+    Get OPTIONS for libIGCM
 
     See Also :
     ----------
     set_options, reset_options
-
     '''
     return OPTIONS
 
-def reset_options():
+def reset_options () -> None :
     '''
-    Reset options to default_options for libIGCM
+    Reset OPTIONS to DEFAULT_OPTIONS for libIGCM
 
     See Also :
     ----------
     set_options, get_options
 
     '''
-    return set_options (**DEFAULT_OPTIONS)
+    return set_options (**DEFAULT_OPTIONS) 
 
-def return_stack () :
-    return OPTIONS.Stack
+def return_stack () -> Union[list,None] :
+    return OPTIONS['Stack']
 
-def push_stack (string:str) :
-    if OPTIONS.Depth :
-        OPTIONS.Depth += 1
+def push_stack (string:str) -> None :
+    if OPTIONS['Depth'] :
+        OPTIONS['Depth'] += 1
     else             :
-        OPTIONS.Depth = 1
-    if OPTIONS.Trace :
-        print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
+        OPTIONS['Depth'] = 1 
+    if OPTIONS['Trace'] :
+        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS.Stack :
-        OPTIONS.Stack.append (string)
+    if OPTIONS['Stack'] :
+        OPTIONS['Stack'].append (string) # type: ignore
     else             :
-        OPTIONS.Stack = [string,]
+        OPTIONS['Stack'] = [string,]
     #
-    if OPTIONS.Timing :
-        if OPTIONS.t0 :
-            OPTIONS.t0.append (time.time())
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append (time.time())
         else :
-            OPTIONS.t0 = [time.time(),]
+            OPTIONS['t0'] = [time.time(),]
 
-def pop_stack (string:str) :
-    if OPTIONS.Timing :
-        dt = time.time() - OPTIONS.t0[-1]
-        OPTIONS.t0.pop()
+def pop_stack (string:str) -> None :
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
     else :
         dt = None
-    if OPTIONS.Trace or dt :
+    if OPTIONS['Trace'] or dt :
         if dt :
             if dt < 1e-3 : 
-                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
             if dt >= 1 : 
-                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else : 
-            print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string}')
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
-    OPTIONS.Depth -= 1
-    if OPTIONS.Depth == 0 :
-        OPTIONS.Depth = None
-    OPTIONS.Stack.pop ()
-    if OPTIONS.Stack == list () :
-        OPTIONS.Stack = None
+    OPTIONS['Depth'] -= 1
+    if OPTIONS['Depth'] == 0 :
+        OPTIONS['Depth'] = None 
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () :
+        OPTIONS['Stack'] = None 
     #
     
    

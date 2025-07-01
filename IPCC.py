@@ -10,12 +10,14 @@ Includes ColorShading, ColorLine, RCPColorLine, RCPColorShading
 
 '''
 import types
+from typing import Any, Self, Literal, Dict, Union, Hashable
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 # plt.rcParams ['axes.prop_cycle'] = plt.cycler ('color', IPCC.ColorLineHexa )
 
-def color2hex ( r, g, b ) :
+def color2hex ( r:int, g:int, b:int ) -> str :
     return "#{:02X}{:02X}{:02X}".format ( int(r*255), int(g*255), int(b*255) )
 
 Color = types.SimpleNamespace ()

@@ -32,15 +32,16 @@ import subprocess
 import configparser
 import time
 import copy
+from typing import Any, Self, Literal, Dict, Union, Hashable
 import numpy as np
 import libIGCM.date
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+from libIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
 
 ## ============================================================================
-def Mach (long:bool=False) -> str :
+def Mach (long:bool=False) -> Union[str,None] :
     '''
     Find the computer we are on
 
@@ -126,66 +127,76 @@ class Config :
         IDRIS_thredds : thredds IDRIS via IPSL
     '''
     ## Public functions
-    def update (self, dico=None, **kwargs):
+    def update (self:Self, dico:Union[Dict,None]=None, **kwargs):
         '''Use a dictionnary to update values'''
-        if dico : 
+        if dico is not None : 
             for attr in dico.keys () :
                 super().__setattr__(attr, dico[attr])
         self.__dict__.update (kwargs)
-        for attr in dico.keys () :
-            super().__setattr__(attr, dico[attr])
-    def keys    (self) :
+    def keys    (self:Self) :
         return self.__dict__.keys()
-    def values  (self) :
+    def values  (self:Self) :
         return self.__dict__.values()
-    def items   (self) :
+    def items   (self:Self) :
         return self.__dict__.items()
-    def dict    (self) :
+    def dict    (self:Self) :
         return self.__dict__()
-    def pop     (self, attr) :
+    def pop     (self:Self, attr) :
         zv = self[attr]
         delattr (self, attr)
         return zv
     ## Hidden functions
-    def __str__     (self) :
+    def __str__     (self:Self) :
         return str  (self.__dict__)
-    def __repr__    (self) :
+    def __repr__    (self:Self) :
         return repr (self.__dict__)
-    def __name__    (self) :
+    def __name__    (self:Self) :
         return self.__class__.__name__
-    def __getitem__ (self, attr) :
+    def __getitem__ (self:Self, attr) :
         return getattr (self, attr)
-    def __setitem__ (self, attr, value) :
+    def __setitem__ (self, attr, value) -> None :
         setattr (self, attr, value)
-    def __iter__    (self) :
+    def __iter__    (self:Self) :
         return self.__dict__.__iter__()
-    def __next__    (self) :
+    def __next__    (self:Self) :
         return self.__dict__.__next__()
-    def __len__     (self) :
+    def __len__     (self:Self) :
         return len(self.__dict__)
-    def __copy__    (self) :
-        return Config (self)
+    def __copy__    (self:Self) :
+        return copy.deepcopy (self)
 
-    def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
-                  LongName=None, ModelName=None, ShortName=None, Comment=None,
-                  Source=None, MASTER=None, ConfigCard=None, RunCard=None, User=None, Group=None,
-                  TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
-                  ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
-                  R_FIG=None, L_EXP=None,
-                  R_SAVE=None, R_FIGR=None, R_BUF=None, R_BUFR=None, R_BUF_KSH=None,
-                  REBUILD_DIR=None, POST_DIR=None,
-                  ThreddsPrefix=None, DapPrefix=None, R_GRAF=None, DB=None,
-                  IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
-                  TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None,
-                  IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
-                  DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
-                  SeasonalFrequency=None, CalendarType=None,
-                  DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
-                  Period=None, PeriodSE=None, Shading=None, Marker=None, Line=None,
-                  OCE=None, ATM=None,
-                  CMIP6_BUF=None,Debug=False, **kwargs ) :
+    def __init__ (self:Self, 
+                  JobName:Union[str,None]=None, TagName:Union[str,None]=None, SpaceName:Union[str,None]=None, ExperimentName:Union[str,None]=None,
+                  LongName:Union[str,None]=None, ModelName:Union[str,None]=None, ShortName:Union[str,None]=None, Comment:Union[str,None]=None,
+                  Source:Union[str,None]=None, MASTER:Union[str,None]=None, 
+                  ConfigCard:Union[str,None]=None, RunCard:Union[str,None]=None,
+                  User:Union[str,None]=None, Group:Union[str,None]=None, LocalGroup:Union[str,None]=None,
+                  TGCC_User:Union[str,None]=None, TGCC_Group:Union[str,None]=None, 
+                  IDRIS_User:Union[str,None]=None, IDRIS_Group:Union[str,None]=None,
+                  ARCHIVE:Union[str,None]=None, SCRATCHDIR:Union[str,None]=None,
+                  STORAGE:Union[str,None]=None, 
+                  R_IN:Union[str,None]=None, R_OUT:Union[str,None]=None, R_FIG:Union[str,None]=None,
+                  L_EXP:Union[str,None]=None,
+                  R_SAVE:Union[str,None]=None, R_FIGR:Union[str,None]=None, R_BUF:Union[str,None]=None, 
+                  R_BUFR:Union[str,None]=None, R_BUF_KSH:Union[str,None]=None,
+                  REBUILD_DIR:Union[str,None]=None, POST_DIR:Union[str,None]=None,
+                  ThreddsPrefix:Union[str,None]=None, DapPrefix:Union[str,None]=None, R_GRAF:Union[str,None]=None, 
+                  DB:Union[str,None]=None,
+                  IGCM_OUT:Union[str,None]=None, IGCM_OUT_name:Union[str,None]=None, 
+                  rebuild:Union[str,None]=None, TmpDir:Union[str,None]=None,
+                  TGCC_ThreddsPrefix:Union[str,None]=None, TGCC_DapPrefix:Union[str,None]=None,
+                  IDRIS_ThreddsPrefix:Union[str,None]=None, IDRIS_DapPrefix:Union[str,None]=None,
+                  DateBegin:Union[str,None]=None, DateEnd:Union[str,None]=None, YearBegin:Union[str,None]=None, YearEnd:Union[str,None]=None, PeriodLength:Union[str,None]=None,
+                  SeasonalFrequency:Union[str,None]=None, CalendarType:Union[str,None]=None,
+                  DateBeginGregorian:Union[str,None]=None, DateEndGregorian:Union[str,None]=None, 
+                  FullPeriod:Union[str,None]=None, DatePattern:Union[str,None]=None,
+                  Period:Union[str,None]=None, PeriodSE:Union[str,None]=None, CumulPeriod:Union[str,None]=None, PeriodState:Union[str,None]=None,
+                  PeriodDateBegin:Union[str,None]=None, PeriodDateEnd:Union[str,None]=None,
+                  Shading:Union[str,np.ndarray,list,None]=None, Marker:Union[str,Dict,None]=None, Line:Union[str,Dict,None]=None,
+                  OCE:Union[str,None]=None, ATM:Union[str,None]=None,
+                  CMIP6_BUF:Union[str,None]=None, Debug:bool=False, **kwargs) -> None :
 
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug : # type: ignore
             print ( f'libIGCM.sys.Config : {MASTER    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
@@ -193,38 +204,38 @@ class Config :
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
    
         if not Debug               :
-            Debug               = OPTIONS.Debug
+            Debug               = OPTIONS['Debug'] # type: ignore
         if not User                :
-            User                = OPTIONS.User
+            User                = OPTIONS['User'] # type: ignore
         if not Group               :
-            Group               = OPTIONS.Group
+            Group               = OPTIONS['Group'] # type: ignore
         if not TGCC_User           :
-            TGCC_User           = OPTIONS.TGCC_User
+            TGCC_User           = OPTIONS['TGCC_User'] # type: ignore
         if not TGCC_Group          :
-            TGCC_Group          = OPTIONS.TGCC_Group
+            TGCC_Group          = OPTIONS['TGCC_Group'] # type: ignore
         if not IDRIS_User          :
-            IDRIS_User          = OPTIONS.IDRIS_User
+            IDRIS_User          = OPTIONS['IDRIS_User'] # type: ignore
         if not IDRIS_Group         :
-            IDRIS_Group         = OPTIONS.IDRIS_Group
+            IDRIS_Group         = OPTIONS['IDRIS_Group'] # type: ignore
         if not TGCC_ThreddsPrefix  :
-            TGCC_ThreddsPrefix  = OPTIONS.TGCC_ThreddsPrefix
+            TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix'] # type: ignore
         if not TGCC_DapPrefix      :
-            TGCC_DapPrefix      = OPTIONS.TGCC_DapPrefix
+            TGCC_DapPrefix      = OPTIONS['TGCC_DapPrefix'] # type: ignore
         if not IDRIS_ThreddsPrefix :
-            IDRIS_ThreddsPrefix = OPTIONS.IDRIS_ThreddsPrefix
+            IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix'] # type: ignore
         if not IDRIS_DapPrefix     :
-            IDRIS_DapPrefix     = OPTIONS.IDRIS_DapPrefix
+            IDRIS_DapPrefix     = OPTIONS['IDRIS_DapPrefix'] # type: ignore
         if not ThreddsPrefix       :
-            ThreddsPrefix       = OPTIONS.ThreddsPrefix
+            ThreddsPrefix       = OPTIONS['ThreddsPrefix'] # type: ignore
         if not DapPrefix           :
-            DapPrefix           = OPTIONS.DapPrefix
+            DapPrefix           = OPTIONS['DapPrefix'] # type: ignore
 
         if not MASTER :
             MASTER = Mach (long=False)
         if not MASTER :
             MASTER = 'Unknown'
             
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug : # type: ignore
             print ( f'libIGCM.sys.Config : {MASTER    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
@@ -240,7 +251,7 @@ class Config :
                 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # To keep capitals
+            MyReader.optionxform = str # To keep capitals # type: ignore
             MyReader.read (ConfigCard)
             
             if not JobName        :
@@ -267,11 +278,11 @@ class Config :
                 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # To keep capitals
+            MyReader.optionxform = str # type: ignore
             
-            MyReader.read (ConfigCard)
+            MyReader.read (RunCard)
 
-            if not DateBegin :
+            if not PeriodDateBegin :
                 PeriodDateBegin = MyReader['Configuration']['PeriodDateBegin']
             if not PeriodDateEnd   :
                 PeriodDateEnd   = MyReader['Configuration']['PeriodDateEnd']
@@ -303,9 +314,9 @@ class Config :
                 Group = TGCC_Group
                 
             if not ThreddsPrefix :
-                ThreddsPrefix = OPTIONS.TGCC_ThreddsPrefix
+                ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix'] # type: ignore
             if not DapPrefix     :
-                DapPrefix     = OPTIONS.TGCC_DapPrefix
+                DapPrefix     = OPTIONS['TGCC_DapPrefix'] # type: ignore
                
             if not ARCHIVE :
                 ARCHIVE = f'{DapPrefix}/store/{TGCC_User}'
@@ -324,9 +335,9 @@ class Config :
                 Group = IDRIS_Group
                 
             if not ThreddsPrefix :
-                ThreddsPrefix = OPTIONS.IDRIS_ThreddsPrefix
+                ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix'] # type: ignore
             if not DapPrefix     :
-                DapPrefix     = OPTIONS.IDRIS_DapPrefix
+                DapPrefix     = OPTIONS['IDRIS_DapPrefix'] # type: ignore
                 
             if not ARCHIVE :
                 ARCHIVE = f'{DapPrefix}/store/{IDRIS_User}'
@@ -361,7 +372,7 @@ class Config :
                 STORAGE     = ARCHIVE
             if not R_IN       :
                 R_IN        = os.path.join ( '/home', 'orchideeshare', 'igcmg', 'IGCM' )
-            if not R_GRAF or 'http' in R_GRAF :
+            if not R_GRAF or 'http' in str(R_GRAF) :
                 R_GRAF      = os.path.join ( os.path.expanduser ('~marti'), 'GRAF', 'DATA' )
             if not DB         :
                 DB          = os.path.join ( '/home', 'biomac1', 'geocean', 'ocmip'   )
@@ -389,7 +400,7 @@ class Config :
                 STORAGE     = ARCHIVE
             if not R_IN       :
                 R_IN        = os.path.join ( os.path.expanduser (f'~{User}'), 'Data', 'IGCM' )
-            if not R_GRAF or 'http' in R_GRAF :
+            if not R_GRAF or 'http' in str(R_GRAF) :
                 R_GRAF      = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DATA' )
             if not DB         :
                 DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DB' )
@@ -469,7 +480,7 @@ class Config :
                     R_FIG      = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
             if Debug :
                 print ( f'{R_FIG}' )
-            if not R_GRAF or 'http' in R_GRAF :
+            if not R_GRAF or 'http' in str(R_GRAF) :
                 if ccc_home :
                     R_GRAF     = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA')
                 else        :
@@ -513,7 +524,7 @@ class Config :
             if not R_IN       :
                 R_IN       = os.path.join ( '/', 'projsu', 'igcmg', 'IGCM' )
             #if not R_GRAF     : R_GRAF     = os.path.join ('/', 'data', 'omamce', 'GRAF', 'DATA' )
-            if not R_GRAF or 'http' in R_GRAF :
+            if not R_GRAF or 'http' in str(R_GRAF) :
                 R_GRAF     = os.path.join  ( '/', 'thredds', 'tgcc', 'work', 'p86mart', 'GRAF', 'DATA' )
             if not DB         :
                 DB         = os.path.join  ( '/', 'data', 'igcmg', 'database' )
@@ -570,11 +581,12 @@ class Config :
                 R_OUT = ARCHIVE
             if STORAGE    and not R_FIG :
                 R_FIG = STORAGE
-        if IGCM_OUT_name :
+        if R_OUT and IGCM_OUT_name :
             R_OUT = os.path.join ( R_OUT, IGCM_OUT_name )
+        if R_FIG and IGCM_OUT_name :
             R_FIG = os.path.join ( R_FIG, IGCM_OUT_name )
             
-        if SCRATCHDIR and not R_BUF :
+        if SCRATCHDIR and not R_BUF and IGCM_OUT_name :
             R_BUF  = os.path.join ( SCRATCHDIR, IGCM_OUT_name )
         if not IGCM_OUT :
             IGCM_OUT = R_OUT
@@ -596,7 +608,7 @@ class Config :
             else :
                 if STORAGE and not R_FIGR  :
                     R_FIGR      = os.path.join ( STORAGE, L_EXP )
-            if R_BUF   and not R_BUFR      :
+            if R_BUF   and not R_BUFR and IGCM_OUT_name and L_EXP :
                 R_BUFR      = os.path.join ( R_BUF  , IGCM_OUT_name, L_EXP )
             if R_BUFR  and not R_BUF_KSH   :
                 R_BUF_KSH   = os.path.join ( R_BUFR , 'Out' )
@@ -604,12 +616,12 @@ class Config :
                 REBUILD_DIR = os.path.join ( R_BUF  , L_EXP, 'REBUILD' )
             if R_BUF   and not POST_DIR    :
                 POST_DIR    = os.path.join ( R_BUF  , L_EXP, 'Out' )
-            if STORAGE and not CMIP6_BUF   :
+            if STORAGE and not CMIP6_BUF and IGCM_OUT_name  :
                 CMIP6_BUF   = os.path.join ( STORAGE, IGCM_OUT_name )
 
         ### =========
-        if Line is not None :
-            if OPTIONS.Debug :
+        if isinstance (Line, dict) :
+            if OPTIONS['Debug'] or Debug : # type: ignore
                 print ( f'{type(Line) = } - {Line =}' )
             if "color" in Line.keys () : 
                 if isinstance (Line["color"], list) :
@@ -622,15 +634,16 @@ class Config :
             if 'style' not in Line.keys() :
                 Line['style']='solid'
         else :
-            Line = Container (color='black', style='solid')
+            Line = dict (color='black', style='solid')
                                                  
         if Marker is None :
-            Marker = Container ( marker='D', fillstyle='full' )
+            Marker = dict (marker='D', fillstyle='full' )
         else : 
-            if "marker" not in Marker.keys () :
-                Marker['marker']='D'
-            if "fillstyle" not in Marker.keys() :
-                Marker['fillstyle']='full'
+            if isinstance (Marker, dict) :
+                if "marker" not in Marker.keys () :
+                    Marker['marker']='D'
+                if "fillstyle" not in Marker.keys() :
+                    Marker['fillstyle']='full'
 
         if Shading is not None :
             if isinstance (Shading, list) :
@@ -715,7 +728,7 @@ class Config :
         return None
         
 ### ===========================================================================
-def Dap2Thredds (file:str, mm=None) :
+def Dap2Thredds (file:str, mm:Union[Config,None]=None) :
     '''
     ! Convert a Dap URL to http URL
     '''
@@ -728,14 +741,14 @@ def Dap2Thredds (file:str, mm=None) :
                 zfile = zfile.replace (mm.DapPrefix       , mm.ThreddsPrefix      )
                 replaced = True
         if not replaced and mm.TGCC_DapPrefix  and mm.TGCC_ThreddsPrefix  :
-                zfile = zfile.replace (mm.TGCC_DapPrefix  , mm.TGCC_ThreddsPrefix )
+                zfile = zfile.replace (str(mm.TGCC_DapPrefix), str(mm.TGCC_ThreddsPrefix) )
                 replaced = True
         if not replaced and mm.IDRIS_DapPrefix and mm.IDRIS_ThreddsPrefix :
-            zfile = zfile.replace (mm.IDRIS_DapPrefix , mm.IDRIS_ThreddsPrefix)
+            zfile = zfile.replace (str(mm.IDRIS_DapPrefix) , str(mm.IDRIS_ThreddsPrefix))
             replaced = True
             
     if not replaced : 
-        zfile = zfile.replace ( 'dodsC', 'fileServer' )
+        zfile = zfile.replace ('dodsC', 'fileServer')
 
 
     pop_stack ( f'Dap2Thredds -> {zfile=}' )

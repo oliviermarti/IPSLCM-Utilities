@@ -24,38 +24,57 @@ personal. Be warned that the author himself may not respect the prerequisites.
 
 import copy
 import time
+from typing import Any, Self, Literal, Dict, Union, Hashable
+
 import numpy as np
 import xarray as xr
-import pint
 
-from libIGCM import utils
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+from plotIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 from plotIGCM.interp1d import interp1d
-from plotIGCM.utils import pmath, xr_quantify, xr_dequantify, pint_unit, copy_attrs, distance, aire_triangle, aire_quadri
+from plotIGCM import sphere
 
-try :
-    from pint_xarray import unit_registry as ureg
-except ImportError :
-    from pint import UnitRegistry
-    ureg = UnitRegistry()
-    pintx = False
-else :
-    pintx = True
-##    
-Q_ = ureg.Quantity
+def pmath (ptab:Union[xr.DataArray,np.ndarray], default=None) :
+    '''
+    Determines the type of tab : xarray, numpy or numpy.ma object ?
 
-## Units not recognized by pint
-try    : ureg.define ('degree_C      = degC')
-except : pass
-try    : ureg.define ('DU            = 10^-5 * m = du')
-except : pass
-try    : ureg.define ('ppb           = 10^-9 * kg/kg' )
-except : pass
-try    : ureg.define ('psu           = g/kg'   )
-except : pass
-try    : ureg.define ('degrees_east  = degree' )
-except : pass
-try    : ureg.define ('degrees_north = degree' )
-except : pass
+    Returns type : xr, np or np.ma
+    '''
+    push_stack ( f'pmmath ( ptab, {default=} )' )
+    mmath = default
+    if   isinstance (ptab, xr.core.dataarray.DataArray) :
+        mmath = xr
+    elif isinstance (ptab, xr.core.dataset.Dataset)     :
+        mmath = 'dataset'
+    elif isinstance (ptab, np.ndarray)                  :
+        mmath = np
+    elif isinstance (ptab, np.ma.MaskType)              :
+        mmath = np.ma
 
-from plotIGCM import nemo
+    pop_stack ( f'pmath : {mmath}' )
+    return mmath
+
+def copy_attrs (ptab:xr.DataArray, pref:xr.DataArray, Debug:Union[bool,None]=False) -> xr.DataArray :
+    '''
+    Copy units and attrs of pref in ptab
+    Convert from numpy to xarray if needed
+    '''
+    mtab = pmath (ptab)
+    mref = pmath (pref)
+
+    if OPTIONS['Debug'] or Debug : print ( f'{mtab=} {mref=} {ptab.shape=} {pref.shape=}')
+
+    if mref == xr :
+        if mtab == xr :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is xr' )
+            ztab = ptab
+        elif mtab in [np, np.ma] :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is np or np.ma' )
+            if ptab.shape == pref.shape :
+                if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : convert ptab to xarray' )
+                ztab = xr.DataArray (ptab, coords=pref.coords, dims=pref.dims)
+                ztab.name = pref.name
+        else :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab copied' )
+            ztab = ptab
+       
+    return ztab

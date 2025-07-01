@@ -24,9 +24,10 @@ GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
 
 '''
 import numpy as np
+import xarray as xr
 import orca
 
-def zgr_z (config:str='orca2') :
+def zgr_z (config:str='orca2') -> tuple[xr.DataArray,xr.DataArray,xr.DataArray,xr.DataArray]:
     '''
     ** Purpose :   set the depth of model levels and the resulting
     vertical scale factors.
@@ -124,5 +125,10 @@ def zgr_z (config:str='orca2') :
           
     gdepw [0] = 0.                    # force first w-level to be exactly at zero
        
+    gdept = xr.DataArray (gdept, dims=('gdept',), coords=(gdept,))
+    e3t   = xr.DataArray (e3t  , dims=('gdept',), coords=(gdept,))
+    gdepw = xr.DataArray (gdepw, dims=('gdepw',), coords=(gdepw,))
+    e3w   = xr.DataArray (e3w  , dims=('gdepw',), coords=(gdepw,))
+
     return gdept, gdepw, e3t, e3w
   

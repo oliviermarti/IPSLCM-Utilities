@@ -33,9 +33,9 @@ respects the above prerequisite.
 ## Modules                                                                     
 import time
 import copy
+from typing import Any, Self, Literal, Dict, Union, Hashable
 import numpy as np
 import xarray as xr
-import pint
 from shapely.geometry import box, Polygon
     
 try :
@@ -56,10 +56,8 @@ except ImportError as err :
     print (f'===> Warning : Module nemo : Import error of f90nml : {err}')
     f90nml = None
 
-import libIGCM
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
-#import plotIGCM
-from plotIGCM.utils import pmath, xr_quantify, xr_dequantify, pint_unit, copy_attrs, ureg, Q_
+from plotIGCM import copy_attrs
+from plotIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 
 ## Useful constants and parameters                                             
     
@@ -98,7 +96,7 @@ ROMEGA = xr.DataArray (2*np.pi/RSIDAY              , name='ROMEGA', attrs={'unit
 APERIO_VALID_RANGE = [0, 1, 4, 4.2, 5, 6, 6.2]
 
 ## Default names of dimensions                                                 
-UDIMS=Container({'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter'})
+UDIMS=dict({'x':'x', 'y':'y', 'z':'olevel', 't':'time_counter'})
 
 ## All possible names of lon/lat variables in Nemo files                       
 LONNAME=['nav_lon', 'nav_lon_T', 'nav_lon_U', 'nav_lon_V', 'nav_lon_F', 'nav_lon_W',
@@ -124,20 +122,6 @@ YUNIT = [ 'degrees_north', ]
 ZUNIT = [ 'm', 'meter', ]
 TUNIT = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
-## Units not recognized by pint                                                
-#ureg.define ('degree_C = degC')
-#ureg.define ('DU = 10^-5 * m = du')
-#ureg.define ('ppb = 10^-9 * kg/kg' )
-#if not pintx :
-#    ureg.define ('psu          = g/kg'   )
-#    ureg.define ('degree_east  = degree' )
-#    ureg.define ('degree_north = degree' )
-
-XUNIT_PINT = [ ] #ureg('degrees_east'), ]
-YUNIT_PINT = [ ] # ureg('degrees_north'), ]
-ZUNIT_PINT = [ ureg('meter'), ]
-TUNIT_PINT = [ ureg('second'), ureg('minute'), ureg('hour'), ureg('day'), ureg('month'), ureg('year'), ]
-
 ## All possibles size of dimensions in Orca files
 XLENGTH   = [ 180, 182, 360, 362, 1440, 1442 ]
 YLENGTH   = [ 148, 149, 331, 332 ]
@@ -145,41 +129,14 @@ ZLENGTH   = [ 31, 75]
 XYZLENGTH = [ [180,148,31], [182,149,31], [360,331,75], [362,332,75] ]
 
 ## T, S arrays to plot TS diagrams                                             
-#Ttab = np.linspace (-2, 40, 100) * ureg.celsius
-#Stab = np.linspace ( 0, 40, 100) * ureg.psu
+Ttab = np.linspace (-2, 40, 100)
+Stab = np.linspace ( 0, 40, 100)
 
-#Ttab = xr.DataArray (Ttab, dims=('Temperature',), coords=(Ttab,), attrs={'unit':'degrees_celcius', 'long_name':'Temperature'})
-#Stab = xr.DataArray (Stab, dims=('Salinity'   ,), coords=(Stab,), attrs={'unit':'PSU'            , 'long_name':'Salinity'   })
+Ttab = xr.DataArray (Ttab, dims=('Temperature',), coords=(Ttab,), attrs={'unit':'degrees_celcius', 'long_name':'Temperature'})
+Stab = xr.DataArray (Stab, dims=('Salinity'   ,), coords=(Stab,), attrs={'unit':'PSU'            , 'long_name':'Salinity'   })
 
-##
-s_unit = 'g/kg'
-pint_dict = {
-    'thetao'   : 'degC',
-    'so'       : s_unit,
-    'sos'      : s_unit,
-    'sssdcymax': s_unit,
-    'sssdcymin': s_unit,
-    'sssdcy'   : s_unit,
-    'sozosatr' : 'g/s' ,
-    'somesatr' : 'g/s' ,
-    'sosflxdo' : 'g/s'
-    }
-
-def qq_par (DoPint=True, Debug:bool=False) :
-    '''
-    pinfity all parameters
-    '''
-    for zz in ['RAAMO', 'RJJHH', 'RHHMM', 'RMMSS', 'RA', 'GRAV', 'RT0', 'RAU0', 'SICE', 'SOCE', 'RLEVAP', 'VKARMN', 'STEFAN', 'RHOS', 'RHOI', 'RHOW', 'RCND_I', 'CP', 'RCP', 'RCPI', 'RLSUB', 'RLFUS', 'RTMLT', 'RDAY', 'RSIYEA', 'RSIDAY', 'ROMEGA', 'RAUREF'] :
-        if DoPint : 
-            globals()[zz] = xr_quantify (globals()[zz])
-            if OPTIONS.Debug or Debug :
-                print ( f'{zz:12} : {globals()[zz].attrs["long_name"]:45} : {globals()[zz].item():12}' )
-        else : 
-            globals()[zz] = xr_dequantify  (globals()[zz])
-            if OPTIONS.Debug or Debug :
-                print ( f'{zz:12} : {globals()[zz].attrs["long_name"]:45} : {globals()[zz].item():12}' )
 ##                                                                             
-Regions = Container (
+Regions = dict (
     { 'region' : {
         'NorthAtlantic'    : {'Basin': 'North Atlantic'         , 'ColorLine':np.array ([  0, 255,   0])/255, 'Marker':'1'},
         'SubpolarNorthAtl' : {'Basin': "Subpolar North Atlantic", 'ColorLine':np.array ([  0,   0,   0])/255, 'Marker':'p'},
@@ -225,23 +182,23 @@ Regions = Container (
    }
 )
 
-Regions['eORCA1.2'] = Regions['eORCA1']
-Regions['eORCA1.4'] = Regions['eORCA1']
+Regions['eORCA1.2']   = Regions['eORCA1']
+Regions['eORCA1.4']   = Regions['eORCA1']
 Regions['eORCA1.4.2'] = Regions['eORCA1']
 
-Regions['ORCA2.3']  = Regions['ORCA2']
-Regions['ORCA2.4']  = Regions['ORCA2']
+Regions['ORCA2.3']    = Regions['ORCA2']
+Regions['ORCA2.4']    = Regions['ORCA2']
 
 for name, bas in Regions['ORCA2.4'].items() :
     #print (bas)
-    Regions['ORCA2.4'][name].idyx.y = slice(bas.idyx.y.start-1, bas.idyx.y.stop-1)
-    Regions['ORCA2.4'][name].idyx.x = slice(bas.idyx.x.start-1, bas.idyx.x.stop-1)
+    Regions['ORCA2.4'][name]['idyx']['y'] = slice(bas['idyx']['y'].start-1, bas['idyx']['y'].stop-1)
+    Regions['ORCA2.4'][name]['idyx']['x'] = slice(bas['idyx']['x'].start-1, bas['idyx']['x'].stop-1)
 for name, bas in Regions['eORCA1.4.2'].items() :
     #print (bas)
-    Regions['eORCA1.4.2'][name].idyx.y = slice(bas.idyx.y.start-1, bas.idyx.y.stop-1)
-    Regions['eORCA1.4.2'][name].idyx.x = slice(bas.idyx.x.start-1, bas.idyx.x.stop-1)
+    Regions['eORCA1.4.2'][name]['idyx']['y'] = slice(bas['idyx']['y'].start-1, bas['idyx']['y'].stop-1)
+    Regions['eORCA1.4.2'][name]['idyx']['x'] = slice(bas['idyx']['x'].start-1, bas['idyx']['x'].stop-1)
     
-known_domains = Container ( 
+known_domains = dict ( 
     { 'orca2'      : {'cfg_name':'orca2'      , 'CFG_name':'ORCA2'     , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 149, 'jpi': 182, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
       'orca2.3'    : {'cfg_name':'orca2.3'    , 'CFG_name':'ORCA2.3'   , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 149, 'jpi': 182, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
       'orca2.4'    : {'cfg_name':'orca2.4  '  , 'CFG_name':'ORCA2.4'   , 'cd_cfg':'orca', 'kk_cfg': 2, 'jpk':31, 'jpj': 148, 'jpi': 180, 'Iperio':True, 'Jperio':False, 'NFold':True, 'NFtype':'T', 'nperio':4, 'aperio':4  , 'Halo':True },
@@ -290,23 +247,25 @@ class Domain :
     def __iter__    (self) :
         return self.__dict__.__iter__()
     def __next__    (self) :
-        return self.__dict__.__next__()
+        return self['__dict__'].__next__()
     def __len__     (self) :
         return len (self.__dict__)
     def __copy__    (self) :
-        return Container (self)
+        return dict (self)
     
-    def __init__ (self, ptab=None, cfg_name:str=None, CFG_name:str=None, cd_cfg:str=None,
-                  kk_cfg:int=None, jpi:int=None, jpj:int=None, jpk:int=None,
-                  Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:str=None, nperio:int=None, aperio:float=None,
-                  Halo:bool=None, ForceDefaults:bool=False, Debug:bool=False, domain=None) :
+    def __init__ (self:Self, ptab:Union[xr.DataArray,None]=None, cfg_name:Union[str,None]=None, CFG_name:Union[str,None]=None, 
+                  cd_cfg:Union[str,None]=None, kk_cfg:Union[int,None]=None, jpi:Union[int,None]=None, jpj:Union[int,None]=None, jpk:Union[int,None]=None,
+                  Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None,
+                  nperio:Union[int,None]=None, aperio:Union[int,float,None]=None,
+                  Halo:Union[bool,None]=None, ForceDefaults:Union[bool,None]=False, Debug:Union[bool,None]=False,
+                  domain=None) -> None :
 
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug :# type: ignore
             print ( f'{ptab=}' )
             print ( f'{ptab is None = }, {ptab is not None = }, {(not (ptab is None))=}')
             
         if domain is not None :
-            if domain.cfg_name and not cfg_name : cfg_name = domain.cfg_name
+            if domain.cfg_name and cfg_name is not None : cfg_name = domain.cfg_name
             if domain.CFG_name and not CFG_name : CFG_name = domain.CFG_name
             if domain.cd_cfg   and not cd_cfg   : cd_cfg   = domain.cd_cfg
             if domain.kk_cfg   and not kk_cfg   : kk_cfg   = domain.kk_cfg
@@ -333,15 +292,16 @@ class Domain :
             CFG_name = CFG_name.upper ()
             if 'EORCA' in CFG_name :
                 CFG_name = CFG_name.replace ( "EORCA", "eORCA" )        
-            
                  
         if not (ptab is None) :
-            if OPTIONS.Debug or Debug : print ( f'{ptab.shape=}' )
+            if OPTIONS['Debug'] or Debug :
+                print ( f'{ptab.shape=}' )
             ax, ix = find_axis (ptab, 'x')
             ay, jy = find_axis (ptab, 'y')
             az, kz = find_axis (ptab, 'z')
 
-            if OPTIONS.Debug or Debug : print (f'{ax=}, {ix=}, {ay=}, {jy=}, {az=}, {kz=}')
+            if OPTIONS['Debug'] or Debug : 
+                print (f'{ax=}, {ix=}, {ay=}, {jy=}, {az=}, {kz=}')
 
             if ix is not None :  zjpi = ptab.shape[ix]
             else :               zjpi = None
@@ -350,7 +310,8 @@ class Domain :
             if kz is not None :  zjpk = ptab.shape[kz]
             else :               zjpk = None
 
-            if OPTIONS.Debug or Debug : print (f'{jpk=} {jpj=} {jpi=} {zjpk=} {zjpj=} {zjpi=}')
+            if OPTIONS['Debug'] or Debug : 
+                print (f'{jpk=} {jpj=} {jpi=} {zjpk=} {zjpj=} {zjpi=}')
 
             zerr = 0
             if jpi :
@@ -374,9 +335,11 @@ class Domain :
             if zerr > 0 :
                 raise Exception (f'Error : shape of ptab ={ptab.shape} does not match {jpk=}, {jpj=}, {jpi=}')
 
-        if OPTIONS.Debug or Debug : print (f'{jpk=} {jpj=} {jpi=}')
+        if OPTIONS['Debug'] or Debug : 
+            print (f'{jpk=} {jpj=} {jpi=}')
 
-        if OPTIONS.Debug or Debug : print ('Find by dimensions')
+        if OPTIONS['Debug'] or Debug : 
+            print ('Find by dimensions')
         if jpj == 149 and jpi == 182 :
             domain = Domain (cfg_name='orca2.3')
         if jpj == 148 and jpi == 180 :
@@ -385,7 +348,8 @@ class Domain :
             domain = Domain (cfg_name='eorca1.4.0')
         if jpj == 331 and jpi == 360 :
             domain = Domain (cfg_name='eorca1.4.2')
-        if OPTIONS.Debug or Debug : print (domain)
+        if OPTIONS['Debug'] or Debug : 
+            print (domain)
 
         if domain is not None :
             if domain.cfg_name and not cfg_name : cfg_name = domain.cfg_name
@@ -404,43 +368,49 @@ class Domain :
             if domain.Halo     and not Halo     : Halo     = domain.Halo
             if domain.ForceDefaults and not ForceDefaults : ForceDefaults=domain.ForceDefaults
 
-        if OPTIONS.Debug or Debug : print ( f'{cfg_name=} {cd_cfg=} {kk_cfg=} {Halo=} {NFtype=} {jpj=} {jpi=} {nperio=} {aperio=}' )
+        if OPTIONS['Debug'] or Debug : 
+            print ( f'{cfg_name=} {cd_cfg=} {kk_cfg=} {Halo=} {NFtype=} {jpj=} {jpi=} {nperio=} {aperio=}' )
 
-        if OPTIONS.Debug or Debug : print ('Find by configuration names')
+        if OPTIONS['Debug'] or Debug : 
+            print ('Find by configuration names')
         zf = None
         
         for zd in known_domains.values() :
-            if OPTIONS.Debug or Debug : print  ( f'handling {zd=}')
-            if cfg_name and zd.cfg_name :
-                if cfg_name.lower() == zd.cfg_name.lower () :
+            if OPTIONS['Debug'] or Debug : 
+                print  ( f'handling {zd=}')
+            if cfg_name and zd['cfg_name'] :
+                if cfg_name.lower() == zd['cfg_name'].lower () :
                     zf = zd
-            if CFG_name and zd.CFG_name :
-                if CFG_name.upper() == zd.CFG_name.upper () :
+            if CFG_name and zd['CFG_name'] :
+                if CFG_name.upper() == zd['CFG_name'].upper () :
                     zf = zd
             if not zf :
-                if cd_cfg and kk_cfg and zd.cd_cfg and zd.kk_cfg :
-                    if cd_cfg == zd.cd_cfg and kk_cfg == zd.kk_cfg :
-                        if OPTIONS.Debug or Debug : print  ( f'handling {zd.cd_cfg=} {zd.kk_cfg=} {cd_cfg=} {kk_cfg=}')
+                if cd_cfg and kk_cfg and zd['cd_cfg'] and zd['kk_cfg'] :
+                    if cd_cfg == zd['cd_cfg'] and kk_cfg == zd['kk_cfg'] :
+                        if OPTIONS['Debug'] or Debug : 
+                            print  ( f"handling {zd['cd_cfg']=} {zd['kk_cfg']=} {cd_cfg=} {kk_cfg=}")
                         zf = zd
             if zf : break
 
         if zf :
-            if OPTIONS.Debug or Debug : print  ( f'handling {cfg_name=}')
+            if OPTIONS['Debug'] or Debug : 
+                print  ( f'handling {cfg_name=}')
             if ForceDefaults or cd_cfg is None :
                 cd_cfg = 'orca'
-                if ForceDefaults or kk_cfg is None : kk_cfg = zd.kk_cfg
-                if ForceDefaults or nperio is None : nperio = zd.nperio
-                if ForceDefaults or aperio is None : aperio = zd.aperio
-                if ForceDefaults or Iperio is None : Iperio = zd.Iperio
-                if ForceDefaults or Jperio is None : Jperio = zd.Jperio
-                if ForceDefaults or NFold  is None : NFold  = zd.NFold
-                if ForceDefaults or NFtype is None : NFtype = zd.NFtype
-                if ForceDefaults or Halo   is None : Halo   = zd.Halo
-                if ForceDefaults or jpk    is None : jpk    = zd.jpk
-                if ForceDefaults or jpj    is None : jpj    = zd.jpj
-                if ForceDefaults or jpi    is None : jpi    = zd.jpi
+                if ForceDefaults or kk_cfg is None : kk_cfg = zd['kk_cfg']
+                if ForceDefaults or nperio is None : nperio = zd['nperio']
+                if ForceDefaults or aperio is None : aperio = zd['aperio']
+                if ForceDefaults or Iperio is None : Iperio = zd['Iperio']
+                if ForceDefaults or Jperio is None : Jperio = zd['Jperio']
+                if ForceDefaults or NFold  is None : NFold  = zd['NFold']
+                if ForceDefaults or NFtype is None : NFtype = zd['NFtype']
+                if ForceDefaults or Halo   is None : Halo   = zd['Halo']
+                if ForceDefaults or jpk    is None : jpk    = zd['jpk']
+                if ForceDefaults or jpj    is None : jpj    = zd['jpj']
+                if ForceDefaults or jpi    is None : jpi    = zd['jpi']
 
-        if OPTIONS.Debug or Debug : print ( 'Fill missing values' )
+        if OPTIONS['Debug'] or Debug : 
+            print ( 'Fill missing values' )
         if aperio == 4 :
             if ForceDefaults or nperio is None : nperio = 4
             if ForceDefaults or Iperio is None : Iperio = True
@@ -504,7 +474,7 @@ class Domain :
         self.Halo     = Halo
         self.ForceDefaults=ForceDefaults
                      
-def get_shape (ptab) :
+def get_shape (ptab:xr.DataArray) -> str :
     '''Get shape of ptab return a string with axes names
 
     shape may contain X, Y, Z or T
@@ -526,128 +496,120 @@ def get_shape (ptab) :
     pop_stack ( f'get_shape : {g_shape}' )
     return g_shape
 
-def find_axis (ptab:xr.DataArray, axis:str='z', back:bool=True, Debug:bool=False) :
+def find_axis (ptab:Union[xr.DataArray,xr.Dataset], axis:str='z', back:bool=True, Debug:bool=False) -> tuple[Union[str,None], Union[int,None]] :
     '''Returns name and name of the requested axis'''
     push_stack ( f'find_axis ( ptab, {axis=}, {back=}' )
     
-    mmath = pmath (ptab)
     ax, ix = None, None
 
-    ax_found, ax_name, unit_list, unit_list_pint, length = None, None, None, None, None
+    ax_found, ax_name, unit_list, length = None, None, None, None
     
     if axis in XNAME :
-        ax_found, ax_name, unit_list, unit_list_pint, length   = 'x', XNAME, XUNIT, XUNIT_PINT, XLENGTH
+        ax_found, ax_name, unit_list, length   = 'x', XNAME, XUNIT, XLENGTH
     if axis in YNAME :
-        ax_found, ax_name, unit_list, unit_list_pint, length   = 'y', YNAME, YUNIT, YUNIT_PINT, YLENGTH
+        ax_found, ax_name, unit_list, length   = 'y', YNAME, YUNIT, YLENGTH
     if axis in ZNAME :
-        ax_found, ax_name, unit_list, unit_list_pint, length   = 'z', ZNAME, ZUNIT, ZUNIT_PINT, ZLENGTH
+        ax_found, ax_name, unit_list, length   = 'z', ZNAME, ZUNIT, ZLENGTH
     if axis in TNAME :
-        ax_found, ax_name, unit_list, unit_list_pint, length   = 't', TNAME, TUNIT, TUNIT_PINT, None
+        ax_found, ax_name, unit_list, length   = 't', TNAME, TUNIT, None
     if axis in BNAME :
-        ax_found, ax_name, unit_list, unit_list_pint, length   = 'b', BNAME, None , None      , None
-    if OPTIONS.Debug :
+        ax_found, ax_name, unit_list, length   = 'b', BNAME, None , None
+    if OPTIONS['Debug'] or Debug :
         if ax_name is not None :
-            print ( f'Working on axis found by name : {axis=} : {ax_name=} {unit_list=} {unit_list_pint=} {length=}' )
+            print ( f'Working on axis found by name : {axis=} : {ax_name=} {unit_list=} {length=}' )
 
-    if mmath in [xr, 'dataset'] :
-        # Try by 'axis' attribute
-        if ix is None :
-            if OPTIONS.Debug or Debug :
-                print ( 'ix not found - 1' )
-            for ii, dim in enumerate (ptab.dims) :
-                if OPTIONS.Debug or Debug :
-                    print ( f'{ii=} {dim=}' )
-                if 'axis' in ptab.coords[dim].attrs.keys() :
-                    l_axis = ptab.coords[dim].attrs['axis']
-                    if OPTIONS.Debug :
-                        print ( f'Rule 1 : Trying {ii=} {dim=} {l_axis=}' )
-                    if l_axis in ax_name and l_axis == 'X' :
-                        if OPTIONS.Debug :
-                            print ( f'Rule 1 : xaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
-                        ix, ax = (ii, dim)
-                    if l_axis in ax_name and l_axis == 'Y' :
-                        if OPTIONS.Debug :
-                            print ( f'Rule 1 : yaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
-                        ix, ax = (ii, dim)
-                    if l_axis in ax_name and l_axis == 'Z' :
-                        if OPTIONS.Debug :
-                            print ( f'Rule 1 : zaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
-                        ix, ax = (ii, dim)
-                    if l_axis in ax_name and l_axis == 'T' :
-                        if OPTIONS.Debug :
-                            print ( f'Rule 1 : taxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
-                        ix, ax = (ii, dim)
+    # Try by 'axis' attribute
+    if ix is None :
+        if OPTIONS['Debug'] or Debug :
+            print ( 'ix not found - 1' )
+        for ii, dim in enumerate (ptab.dims) :
+            if OPTIONS['Debug'] or Debug :
+                print ( f'{ii=} {dim=}' )
+            if 'axis' in ptab.coords[dim].attrs.keys() :
+                l_axis = ptab.coords[dim].attrs['axis']
+                if OPTIONS['Debug'] or Debug :
+                    print ( f'Rule 1 : Trying {ii=} {dim=} {l_axis=}' )
+                if l_axis in ax_name and l_axis == str('X') :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f'Rule 1 : xaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                    ix, ax = (ii, dim)
+                if l_axis in ax_name and l_axis == str('Y') :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f'Rule 1 : yaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                    ix, ax = (ii, dim)
+                if l_axis in ax_name and l_axis == str('Z') :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f'Rule 1 : zaxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                    ix, ax = (ii, dim)
+                if l_axis in ax_name and l_axis == str('T') :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f'Rule 1 : taxis found by attribute : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                    ix, ax = (ii, dim)
 
-        # Try by name
-        if OPTIONS.Debug or Debug :
-            print ( 'Try by name')
-        if ix is None :
-            for ii, dim in enumerate (ptab.dims) :
-                if OPTIONS['Debug'] :
-                    print ( f'{ii=} {dim=}' )
-                if dim in ax_name :
-                    if OPTIONS.Debug :
-                        print ( f'Rule 2 : {dim=} axis found by name in : {ax_name=}' )
-                    ix, ax = ii, dim
+    # Try by name
+    if OPTIONS['Debug'] or Debug :
+        print ( 'Try by name')
+    if ix is None :
+        for ii, dim in enumerate (ptab.dims) :
+            if OPTIONS['Debug'] or Debug :
+                print ( f'{ii=} {dim=}' )
+            if dim in ax_name :
+                if OPTIONS['Debug'] or Debug :
+                    print ( f'Rule 2 : {dim=} axis found by name in : {ax_name=}' )
+                ix, ax = ii, dim
 
- 
-        # If not found, try by units
-        if ix is None  :
-            for ii, dim in enumerate (ptab.dims) :
-                if 'units' in ptab.coords[dim].attrs.keys() :
-                    zunit =  str(ptab.coords[dim].attrs['units'])
-                    if unit_list :
-                        for name in unit_list :
-                            if name in zunit :
-                                if OPTIONS.Debug :
-                                    print ( f'Rule 3 : {name=} found by unit : {axis=} : {unit_list=} {ii=} {dim=}' )
-                                ix, ax = ii, dim
 
-    # If numpy array or dimension not found, try by length
-    if mmath not in [xr, 'dataset'] or not ix :
+    # If not found, try by units
+    if ix is None  :
+        for ii, dim in enumerate (ptab.dims) :
+            if 'units' in ptab.coords[dim].attrs.keys() :
+                zunit =  str(ptab.coords[dim].attrs['units'])
+                if unit_list :
+                    for name in unit_list :
+                        if name in zunit :
+                            if OPTIONS['Debug'] or Debug :
+                                print ( f'Rule 3 : {name=} found by unit : {axis=} : {unit_list=} {ii=} {dim=}' )
+                            ix, ax = ii, dim
+
+    # If dimension not found, try by length
+    if not ix :
         if not length is None :
-            if mmath in [xr, 'dataset'] :
-                l_shape =[ len (x) for x in ptab.dims ]
-            else :
-                l_shape = ptab.shape
+            l_shape = list(ptab.sizes)
             for nn in np.arange ( len(l_shape) ) :
                 if l_shape[nn] in length :
                     ix = nn
                     ax = None
-                    if OPTIONS.Debug :
+                    if OPTIONS['Debug'] or Debug :
                         print ( f'Rule 4 : {ax_name=} axis found by length : {axis=} : {XNAME=} {ix=} {ax=}' )
 
     if ix and back :
-        if mmath in [xr, 'dataset'] :
-            ix -= len (ptab.dims)
-        else :
-            ix -= len (ptab.shape)
+        ix -= len (ptab.dims)
 
     pop_stack ( f'find_axis : {ax}, {ix}' )
     return ax, ix
 
-def find_axis_bounds (ds:xr.DataArray|xr.Dataset, axis:str='z', Debug:bool=False) :
+def find_axis_bounds (ds:Union[xr.DataArray,xr.Dataset], axis:str='z', Debug:bool=False) -> tuple :
     '''
     Find axis and associated bounds
     '''
     push_stack ( f'find_axis_bounds ( ds, {axis=}' )
 
     ax, ix = find_axis (ds, axis)
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{ax=} {ix=}' )
 
     ab   = None
     bdim = None
     for bname in BNAME :
         zname = f'{ax}_{bname}'
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug :
             print ( f'{zname=}' )
         for var in ds.variables :
             if zname == var :
                 ab = zname
 
     for bname in ['axis_nbounds'] :
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug :
             print ( f'{bname=}' )
         for var in ds.variables :
             if bname == var :
@@ -662,14 +624,15 @@ def find_axis_bounds (ds:xr.DataArray|xr.Dataset, axis:str='z', Debug:bool=False
 
     return ax, ab, bdim
 
-def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None, 
-                    glonu:xr.DataArray=None, glatu:xr.DataArray=None, 
-                    glonv:xr.DataArray=None, glatv:xr.DataArray=None,
-                    glonf:xr.DataArray=None, glatf:xr.DataArray=None,
-                    rpoint:str=None,
-                    Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:str=None, Halo:bool=None, 
-                    aperio:float=None, domain:Domain=None,
-                    close:bool=False, first:bool=True, positive:bool=True, vertex2d:bool=False, Debug:bool=False) :
+def build_bounds2d (glont:Union[xr.DataArray,None]=None, glatt:Union[xr.DataArray,None]=None, 
+                    glonu:Union[xr.DataArray,None]=None, glatu:Union[xr.DataArray,None]=None, 
+                    glonv:Union[xr.DataArray,None]=None, glatv:Union[xr.DataArray,None]=None,
+                    glonf:Union[xr.DataArray,None]=None, glatf:Union[xr.DataArray,None]=None,
+                    rpoint:Union[str,None]=None, 
+                    Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None,
+                    NFtype:Union[str,None]=None, Halo:Union[bool,None]=None,
+                    aperio:Union[int,float,None]=None, domain:Union[Domain,None]=None,
+                    close:bool=False, first:bool=True, positive:bool=True, vertex2d:bool=False, Debug:bool=False) -> tuple[xr.DataArray|None, xr.DataArray|None]|None :
     '''
     Builds arrays of corners for each point (T, U, V or F)
 
@@ -687,11 +650,12 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
     Corners dimension 'bounds' is the last dimension
     if first is True, it is the first dimension
    
-    If rpoint is set to any in ['T', 'U', 'V'n 'F'], returns bounds_lon{rpoint}, bounds_lat{rpoint}
+    If rpoint is set to any in ['T', 'U', 'V', 'F'], returns bounds_lon{rpoint}, bounds_lat{rpoint}
     Else, returns bounds_lont, bounds_latt, bounds_lonu, bounds_latu, bounds_lonv, bounds_latv, bounds_lonf, bounds_latf
     (some arrays set to None when the computation is not possible)
     '''
-    zdom= Domain (Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, aperio=aperio, domain=domain)
+    zdom= Domain (Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
+                  aperio=aperio, domain=domain)
 
     if not glont is None :
         zdom  = Domain (glont, domain=zdom)
@@ -705,29 +669,29 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
                 if not glonf is None :
                     zdom  = Domain (glonf, domain=zdom)
 
-    if not glont is None :
+    if glont is not None :
         axt, ixt = find_axis (glont, 'x')
         ayt, iyt = find_axis (glont, 'y')
         glont = lbc (glont, domain=zdom, cd_type='T')
-    if not glont is None :
+    if glont is not None :
         glatt = lbc (glatt, domain=zdom, cd_type='T')
-    if not glonu is None :
+    if glonu is not None :
         axu, ixu = find_axis (glonu, 'x')
         ayu, iyu = find_axis (glonu, 'y')
         glonu = lbc (glonu, domain=zdom, cd_type='U')
-    if not glatu is None :
+    if glatu is not None :
         glatu = lbc (glatu, domain=zdom, cd_type='U')
-    if not glonv is None :
+    if glonv is not None :
         axv, ixv = find_axis (glonv, 'x')
         ayv, iyv = find_axis (glonv, 'y')
         glonv = lbc (glonv, domain=zdom, cd_type='V')
-    if not glatv is None :
+    if glatv is not None :
         glatv = lbc (glatv, domain=zdom, cd_type='V')
-    if not glonf is None :
+    if glonf is not None :
         axf, ixf = find_axis (glonf, 'x')
         ayf, iyf = find_axis (glonf, 'y')
         glonf = lbc (glonf, domain=zdom, cd_type='F')
-    if not glatf is None :
+    if glatf is not None :
         glatf = lbc (glatf, domain=zdom, cd_type='F')
         
     jpj, jpi = zdom.jpj, zdom.jpi
@@ -754,7 +718,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
             nver_list.append ({'bounds':-1})
 
     if not (glonf is None and glatf is None) :
-        if not glont is None :
+        if glont is not None :
             if first : 
                 bounds_lont = nver_coord * glont * np.nan
             else :
@@ -764,7 +728,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
                 bounds_lont = nver_coord * glonf * np.nan
             else : 
                 bounds_lont = glonf * nver_coord * np.nan
-        if not glatt is None :
+        if glatt is not None :
             if first : 
                 bounds_latt = nver_coord * glatt * np.nan
             else : 
@@ -806,7 +770,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
         bounds_latt = None
 
     if not (glonv is None and glatv is None) : 
-        if not glonu is None :
+        if glonu is not None :
             if first : 
                 bounds_lonu = nver_coord * glonu * np.nan
             else :
@@ -816,7 +780,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
                 bounds_lonu = nver_coord * glonv * np.nan
             else : 
                 bounds_lonu = glonv * nver_coord * np.nan
-        if not glatu is None :
+        if glatu is not None :
             if first : 
                 bounds_latu = nver_coord * glatu * np.nan
             else : 
@@ -841,13 +805,13 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
         
         bounds_lonu = lbc (bounds_lonu, domain=zdom)
         bounds_latu = lbc (bounds_latu, domain=zdom)
-        if not glonu is None :
+        if glonu is not None :
             bounds_lonu = clo_lon (bounds_lonu, glonu)
             bounds_lonu.attrs.update (glonu.attrs)
         else :            
             bounds_lonu = clo_lon (bounds_lonu, glonv)
             bounds_lonu.attrs.update (glonv.attrs)
-        if not glatu is None :
+        if glatu is not None :
             bounds_latu.attrs.update (glatu.attrs)
         else : 
             bounds_latu.attrs.update (glatv.attrs)
@@ -856,7 +820,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
         bounds_latu = None
 
     if not (glonu is None and glatu is None) :        
-        if not glonv is None :
+        if glonv is not None :
             if first : 
                 bounds_lonv = nver_coord * glonv * np.nan
             else :
@@ -866,7 +830,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
                 bounds_lonv = nver_coord * glonu * np.nan
             else : 
                 bounds_lonv = glonu * nver_coord * np.nan
-        if not glatv is None :
+        if glatv is not None :
             if first : 
                 bounds_latv = nver_coord * glatv * np.nan
             else : 
@@ -906,7 +870,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
         bounds_latv = None
 
     if not (glont is None and glatt is None ): 
-        if not glonf is None :
+        if glonf is not None :
             if first : 
                 bounds_lonf = nver_coord * glonf * np.nan
             else :
@@ -916,7 +880,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
                 bounds_lonf = nver_coord * glont * np.nan
             else : 
                 bounds_lonf = glont * nver_coord * np.nan
-        if not glatf is None :
+        if glatf is not None :
             if first : 
                 bounds_latf = nver_coord * glatf * np.nan
             else : 
@@ -967,7 +931,7 @@ def build_bounds2d (glont:xr.DataArray=None, glatt:xr.DataArray=None,
         if rpoint in ['f', 'F'] :
             return bounds_lonf, bounds_latf
 
-def close_bounds (blon, blat=None) :
+def close_bounds (blon:xr.DataArray, blat:Union[xr.DataArray,None]=None) -> xr.DataArray :
     '''
     Close each polygon by adding the first point at the end of the polygon
     '''
@@ -980,12 +944,12 @@ def close_bounds (blon, blat=None) :
     else :
         return blon
 
-def build_bounds1d (b2d, Debug:bool=False) :
+def build_bounds1d (b2d:xr.DataArray, Debug:bool=False) -> xr.DataArray :
        
     az, ik = find_axis (b2d, 'z')
     ab, lk = find_axis (b2d, 'axis_nbounds')
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{az=} {ik=} {ab=} {lk=}')
     lshape = list(b2d.shape)
     lshape [ik] = lshape[ik]+1
@@ -1013,13 +977,13 @@ def build_bounds1d (b2d, Debug:bool=False) :
     
     # var, var_bnds1d, bdim = find_axis_bounds (ds, axis)
 
-    # if OPTIONS.Debug or Debug :
+    # if OPTIONS['Debug'] or Debug :
     #     print ( f'{bdim=}')
     # if bdim : 
     #     az, kz = find_axis ( ds[var], axis)
     #     ab, kb = find_axis ( ds[var_bnds1d], bdim)
         
-    #     if OPTIONS.Debug :
+    #     if OPTIONS['Debug'] or Debug :
     #         print (var, var_bnds1d, bdim, az, kz, ab, kb )
         
     #     lshape = list(ds[var].shape)
@@ -1035,7 +999,7 @@ def build_bounds1d (b2d, Debug:bool=False) :
 
     # return depth_bnds1d
 
-def add_bounds1d (ds, Debug:bool=True) :
+def add_bounds1d (ds:xr.Dataset, Debug:bool=True) -> xr.Dataset : 
     '''
     Add bounds variable for T and Z axis, at the XGCM format
     '''
@@ -1046,7 +1010,7 @@ def add_bounds1d (ds, Debug:bool=True) :
     z_bnds = build_bounds1d (ds, 'z')
     t_bnds = build_bounds1d (ds, 't')
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{az=} {ik=} {at=} {il=} {z_bnds=} {t_bnds=}' )
     
     if z_bnds is not None :
@@ -1068,7 +1032,7 @@ def add_bounds1d (ds, Debug:bool=True) :
         
 #         return grid
 
-def fixed_lon (plon, center_lon:float=0.0) :
+def fixed_lon (plon:xr.DataArray, center_lon:float=0.0, Debug:bool=False) -> xr.DataArray :
     '''
     Returns corrected longitudes for nicer plots
 
@@ -1079,28 +1043,22 @@ def fixed_lon (plon, center_lon:float=0.0) :
     See https://gist.github.com/pelson/79cf31ef324774c97ae7
     '''
     push_stack ( f'fixed_lon ( plon, {center_lon=}' )
-    mmath = pmath (plon)
+
     ax, ix = find_axis (plon, axis='x', back=True)
     ay, iy = find_axis (plon, axis='x', back=True)
 
-    if mmath == xr :
-        f_lon = plon.values.copy ()
-    else          :
-        f_lon = plon.copy ()
+    f_lon = plon.values.copy ()
 
-    if OPTIONS.Debug :
-        print ( f'fixed_lon : {mmath=}' )
-    
-    f_lon = mmath.where (f_lon > center_lon+180., f_lon-360., f_lon)
-    f_lon = mmath.where (f_lon < center_lon-180., f_lon+360., f_lon)
+    f_lon = xr.where (f_lon > center_lon+180., f_lon-360., f_lon)
+    f_lon = xr.where (f_lon < center_lon-180., f_lon+360., f_lon)
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'fixed_lon : {type(f_lon)=}' )
     
     for i, start in enumerate (np.argmax (np.abs (np.diff (f_lon, axis=ix)) > 180., axis=ix)) :
         f_lon [..., i, start+1:] += 360
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'fixed_lon : {type(f_lon)=}' )
 
     # Special case for eORCA025
@@ -1109,13 +1067,13 @@ def fixed_lon (plon, center_lon:float=0.0) :
     if f_lon.shape [ix] == 1440 :
         f_lon [..., -1, :] = f_lon [..., -2, :]
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'fixed_lon : {type(f_lon)=}' )
 
     if f_lon.min () > center_lon       : f_lon += -360.
     if f_lon.max () < center_lon       : f_lon +=  360.
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'fixed_lon : {type(f_lon)=}' )
 
     if f_lon.min () < center_lon-360. : f_lon +=  360.
@@ -1145,8 +1103,8 @@ def fixed_lon (plon, center_lon:float=0.0) :
 #     pop_stack ( 'bounds_clolon : b_clolon' )
 #     return b_clolon
 
-def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, t:str=None, 
-                xgrid:str=None, use_xgcm:bool=False, Debug:bool=False) :
+def unify_dims (dd:Union[xr.DataArray,xr.Dataset], x:Union[str,None]=None, y:Union[str,None]=None, z:Union[str,None]=None, t:Union[str,None]=None, 
+                xgrid:Union[str,None]=None, use_xgcm:bool=False, Debug:bool=False) -> Union[xr.DataArray,xr.Dataset] :
     '''
     Rename dimensions to unify them between NEMO versions
     If xgrid is set, force to xgcm standard
@@ -1223,12 +1181,12 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
                     y = None
 
         if x :
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug :
                 print ( f"unify_dims : working on {x=}" )
 
             xx, ii = find_axis (dd, 'x')
             if xx and xx != x :
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {xx} renamed to {x}" )
                 dd = dd.rename ({xx:x})
                 dd[x].attrs.update ({'axis':'X', 'name':x})
@@ -1241,11 +1199,11 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
                     dd['x_f'] = np.arange (len(dd[x])) + 0.5
 
         if y :
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug :
                 print ( f"unify_dims : working on {y=}" )
             yy, jj = find_axis (dd, 'y')
             if yy and yy != y  :
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {yy} renamed to {y}" )
                 dd = dd.rename ( {yy:y} )
                 dd[y].attrs.update ({'axis':'Y', 'name':y})
@@ -1258,11 +1216,11 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
                     dd['y_f'] = np.arange (len(dd[y])) + 0.5
 
         if z :
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug :
                 print ( f"unify_dims : working on {z=}" )
             zz, kk = find_axis (dd, 'z')
             if zz and zz != z :
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {zz} renamed to {z}" )
                 dd = dd.rename ({zz:z})
                 dd[z].attrs.update ({'axis':'Z', 'name':z})
@@ -1277,11 +1235,11 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
                         dd[z].attrs['bounds'] = new_bv
 
         if t :
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug :
                 print ( f"unify_dims : working on {t=}" )
             tt, ll = find_axis (dd, 't')
             if tt and tt != t :
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {tt} renamed to {t}" )
                 dd = dd.rename ({tt:t})
                 dd[t].attrs.update ({'axis':'T', 'name':t})
@@ -1295,7 +1253,7 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
 
         if use_xgcm :
             fg = None
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug :
                 print ( f'{dd.dims=} {("x_c" in list(dd.dims))=} {"y_c" in dd.dims=}')
                 print ( f'{dd.coords=}')
             if 'x_c' in dd.dims and 'y_c' in dd.dims :
@@ -1306,14 +1264,17 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
                 fg = 'V'
             if 'x_f' in dd.dims and 'y_f' in dd.dims :
                 fg = 'F'
-            if OPTIONS.Debug or Debug : print ( f'{fg=}')
+            if OPTIONS['Debug'] or Debug : 
+                print ( f'{fg=}')
             if fg : 
                 for xg in '', '_T', '_U', '_V', '_F' :
-                    if OPTIONS.Debug or Debug : print ( f'1 {fg=} {xg=}')
+                    if OPTIONS['Debug'] or Debug : 
+                        print ( f'1 {fg=} {xg=}')
                     for cc in ['lat', 'nav_lat', 'lon', 'nav_lon' ] :
-                        if OPTIONS.Debug or Debug : print ( f'2 {fg=} {cc=}', f'{cc}{xg}', f'{cc}_{fg}' )
+                        if OPTIONS['Debug'] or Debug : 
+                            print ( f'2 {fg=} {cc=}', f'{cc}{xg}', f'{cc}_{fg}' )
                         if f'{cc}{xg}' in dd.coords and f'{cc}{xg}' != f'{cc}_{fg}' :
-                            if OPTIONS.Debug or Debug :
+                            if OPTIONS['Debug'] or Debug :
                                 print ( f'{cc}{xg}', '->', f'{cc}_{fg}' )
                             dd = dd.rename ( {f'{cc}{xg}':f'{cc}_{fg}'})
 
@@ -1339,9 +1300,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset, x:str=None, y:str=None, z:str=None, 
     return dd
 
 
-def lbcu (ptab, x=None, y=None, z=None, t=None, use_xgcm:str=None, cd_type='T', psgn:int=1, nemo_4U_bug:bool=False,
-          Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-          aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False, btype='lbc') :
+def lbcu (ptab:xr.DataArray, x:Union[str,None]=None, y:Union[str,None]=None, z:Union[str,None]=None, t:Union[str,None]=None, use_xgcm:Union[bool,None]=None, cd_type:str='T', psgn:int=1, nemo_4U_bug:bool=False,
+          Iperio:Union[bool,None]=None, Jperio:Union[bool,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+          aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False, btype:str='lbc') -> xr.DataArray :
     '''
     Performs both lbc and unify_dims operations
     See theses functions for details
@@ -1376,7 +1337,6 @@ if SimpleImputer :
         values
         '''
         push_stack ( f'fill_empty ( ptab, {sval=} {transpose=}' )
-        mmath = pmath (ptab)
 
         imp = SimpleImputer (missing_values=sval, strategy='mean')
         if transpose :
@@ -1386,9 +1346,8 @@ if SimpleImputer :
             imp.fit (ptab)
             ztab = imp.transform (ptab)
 
-        if mmath == xr :
-            ztab = xr.DataArray (ztab, dims=ztab.dims, coords=ztab.coords)
-            ztab.attrs.update (ptab.attrs)
+        ztab = xr.DataArray (ztab, dims=ztab.dims, coords=ztab.coords)
+        ztab.attrs.update (ptab.attrs)
 
         pop_stack ( 'fill_empty : ztab' )
         return ztab
@@ -1409,24 +1368,32 @@ if SimpleImputer :
         zlon = plat.where (plon != sval, zval)
         
         je = jeq (plat)
-        if OPTIONS.Debug or Debug : print ( f'{je=}')
+        if OPTIONS['Debug'] or Debug : 
+            print ( f'{je=}')
 
         imp = SimpleImputer (missing_values=zval, strategy='mean')
-        if OPTIONS.Debug or Debug : print ( 'imp.fit on longitude')
+        if OPTIONS['Debug'] or Debug : 
+            print ( 'imp.fit on longitude')
         imp.fit (plon)
-        if OPTIONS.Debug : print ( 'imp.transform on longitude')
+        if OPTIONS['Debug'] or Debug : 
+            print ( 'imp.transform on longitude')
         zlon = imp.transform (plon)
-        if OPTIONS.Debug or Debug : print (f'{type(zlon)=} {zlon.shape=} {plon.shape}')
-        if OPTIONS.Debug or Debug : print ( 'imp.fit on latitude')
+        if OPTIONS['Debug'] or Debug : 
+            print (f'{type(zlon)=} {zlon.shape=} {plon.shape}')
+            print ( 'imp.fit on latitude')
         imp.fit (plat.T)
-        if OPTIONS.Debug or Debug : print ( 'imp.transform on latitude')
+        if OPTIONS['Debug'] or Debug : 
+            print ( 'imp.transform on latitude')
         zlat = imp.transform (zlat.T).T
-        if OPTIONS.Debug or Debug : print (f'{type(zlat)=} {zlat.shape} {plat.shape}')
+        if OPTIONS['Debug'] or Debug : 
+            print (f'{type(zlat)=} {zlat.shape} {plat.shape}')
         
-        if OPTIONS.Debug or Debug : print ( 'copy attrs on longitude')
+        if OPTIONS['Debug'] or Debug : 
+            print ( 'copy attrs on longitude')
         zlon = copy_attrs (zlon, plon)
 
-        if OPTIONS.Debug or Debug : print ( 'copy attrs on latitude')
+        if OPTIONS['Debug'] or Debug : 
+            print ( 'copy attrs on latitude')
         if je >= 0 :
             zlat[...,je,:] = 0.0
         zlat = copy_attrs (zlat, plat)
@@ -1443,7 +1410,6 @@ if SimpleImputer :
         lon/lat values
         '''
         push_stack ( f'fill_bounds_lonlat (pbounds_lon, pbounds_lat, {sval=}' )
-        mmath = pmath (pbounds_lon)
         
         z_bounds_lon = np.empty_like (pbounds_lon)
         z_bounds_lat = np.empty_like (pbounds_lat)
@@ -1456,13 +1422,12 @@ if SimpleImputer :
             imp.fit (pbounds_lat[:,:,n].T)
             z_bounds_lat[:,:,n] = imp.transform (pbounds_lat[:,:,n].T).T
             
-        if mmath == xr :
-            z_bounds_lon = xr.DataArray (pbounds_lon, dims=pbounds_lon.dims,
-                                            coords=pbounds_lon.coords)
-            z_bounds_lat = xr.DataArray (pbounds_lat, dims=pbounds_lat.dims,
-                                            coords=pbounds_lat.coords)
-            z_bounds_lon.attrs.update (pbounds_lat.attrs)
-            z_bounds_lat.attrs.update (pbounds_lat.attrs)
+        z_bounds_lon = xr.DataArray (pbounds_lon, dims=pbounds_lon.dims,
+                                     coords=pbounds_lon.coords)
+        z_bounds_lat = xr.DataArray (pbounds_lat, dims=pbounds_lat.dims,
+                                     coords=pbounds_lat.coords)
+        z_bounds_lon.attrs.update (pbounds_lat.attrs)
+        z_bounds_lat.attrs.update (pbounds_lat.attrs)
 
         pop_stack ( 'fill_bounds_lonlat' )
         return z_bounds_lon, z_bounds_lat
@@ -1543,29 +1508,24 @@ else :
         pop_stack ( 'fill_bounds_lonlat [void version]' )
         return pbounds_lon, pbounds_lat
 
-def jeq (plat) :
+def jeq (plat:xr.DataArray, Debug=False) -> int:
     '''
     Returns j index of equator in the grid
 
     lat : latitudes of the grid. At least 2D.
     '''
     push_stack ( 'jeq (plat) ' )
-    mmath = pmath (plat)
     ay, jy = find_axis (plat, 'y')
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{ay=}, {jy=}, {plat.shape=}' )
 
-    if mmath == xr :
-        aa = np.argmin (np.abs (plat.values), axis=jy)
-        jj = int (np.nanmean (np.where (aa!=0, aa, np.nan)))
-    else           :
-        aa = np.argmin (np.abs (plat[...,:,0]))
-        jj = int (np.nanmean (np.where (aa!=0, aa, np.nan)))
+    aa = np.argmin (np.abs (plat.values), axis=jy)
+    jj = int (np.nanmean (np.where (aa!=0, aa, np.nan)))
 
     pop_stack ( f'jeq : {jj}' )
     return jj
 
-def lon1d (plon, plat=None) :
+def lon1d (plon:xr.DataArray, plat:Union[xr.DataArray,None]=None) :
     '''
     Returns 1D longitude for simple plots.
 
@@ -1573,7 +1533,7 @@ def lon1d (plon, plat=None) :
     plat (optionnal) : latitudes of the grid
     '''
     push_stack ( 'lon1d (plon, plat) ' ) 
-    mmath = pmath (plon)
+   
     jpj, jpi  = plon.shape [-2:]
     if np.max (plat) :
         je     = jeq (plat)
@@ -1585,15 +1545,14 @@ def lon1d (plon, plat=None) :
         dlon   = (plon [..., jpj//3, 1].copy() - plon [..., jpj//3, 0].copy()).values.item()
         lon_1d = np.linspace ( start=lon0, stop=lon0+360.+2*dlon, num=jpi )
 
-    if mmath == xr :
-        lon_1d = xr.DataArray (lon_1d, dims=('lon',), coords=(lon_1d,))
-        lon_1d.attrs.update (plon.attrs)
-        lon_1d.attrs.update ({'units': 'degrees_east', 'standard_name':'longitude', 'long_name':'Longitude'})
+    lon_1d = xr.DataArray (lon_1d, dims=('lon',), coords=(lon_1d,))
+    lon_1d.attrs.update (plon.attrs)
+    lon_1d.attrs.update ({'units': 'degrees_east', 'standard_name':'longitude', 'long_name':'Longitude'})
 
     pop_stack ( 'lon_1d' )
     return lon_1d
 
-def latreg (plat, diff=0.1, Debug:bool=False) :
+def latreg (plat:xr.DataArray, diff:float=0.1, Debug:bool=False) :
     '''
     Returns maximum j index where gridlines are along latitudes
     in the northern hemisphere
@@ -1602,20 +1561,20 @@ def latreg (plat, diff=0.1, Debug:bool=False) :
     diff [optional] : tolerance
     '''
     push_stack ( f'latreg ( plat, {diff=}' )
-    #mmath = pmath (plat)
+
     ax, ix = find_axis (plat, 'x')
     ay, iy = find_axis (plat, 'y')
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'Found axis : {ax=} {ix=} {ay=} {iy=}' )
 
     if diff is None :
         dy = np.mean (np.abs (plat - np.roll (plat,shift=1,axis=iy, roll_coords=False)))
-        if OPTIONS.Debug :
+        if OPTIONS['Debug'] or Debug :
             print ( f'latreg : {dy=}' )
         diff = dy/100.
 
     je = jeq (plat)
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{je=}')
     if ix and plat.shape[ix] > 1 : 
         #jreg   = np.where (plat[...,je:,:].max(axis=ix) -
@@ -1631,39 +1590,31 @@ def latreg (plat, diff=0.1, Debug:bool=False) :
     pop_stack ( f'latreg : {jreg=}, {lareg=}' )
     return jreg, lareg
 
-def lat1d (plat, Debug:bool=False) :
+def lat1d (plat:xr.DataArray, Debug:bool=False) :
     '''
     Returns 1D latitudes for zonal means and simple plots.
 
     plat : latitudes of the grid (2D)
     '''
     push_stack ( 'lat1d ( plat )' )
-    mmath = pmath (plat)
+
     ax, ix = find_axis (plat, 'x')
     ay, iy = find_axis (plat, 'y')
     jpj = plat.shape[iy]
-    zu = pint_unit (plat)
 
     dy = (plat.max() - plat.min())/plat.shape[iy]
-    #if OPTIONS.Debug or Debug :
+    #if OPTIONS['Debug'] or Debug :
     #    print (f'{dy = }' )
-    if zu :
-        dy = dy*ureg(zu)
     je     = jeq (plat)
 
-    if zu :
-        lat_N = np.minimum (90.0*ureg(zu), plat.max()+dy)
-    else  :
-        lat_N = np.minimum (90.0, plat.max()+dy)
-    #if OPTIONS.Debug or Debug :
+    lat_N = np.minimum (90.0, plat.max()+dy)
+    #if OPTIONS['Debug'] or Debug :
     #    print (f'{lat_N=}') 
     
     if ix :
         lat_eq = plat[...,je,:].mean(axis=ix)
     else  :
         lat_eq = plat[...,je]
-    if zu :
-        lat_eq = lat_eq*ureg (zu)
                                   
     jreg, lat_reg = latreg (plat)
     if ix :
@@ -1680,14 +1631,14 @@ def lat1d (plat, Debug:bool=False) :
     else :
         yrange = (lat_N-lat_reg).values.item() # V or F grid
 
-    #if OPTIONS.Debug or Debug :
+    #if OPTIONS['Debug'] or Debug :
     #    print (f'{lat_N} {jreg=} {lat_reg=} {dy=} {dys=} {yrange=}')
     newlat = lat_reg + yrange * xr.DataArray ((np.arange(jpj)-jreg)/(jpj-jreg-1), dims=(ay,))
-    #if OPTIONS.Debug or Debug :
+    #if OPTIONS['Debug'] or Debug :
     #    print (f'{newlat=}')
     
     if jpj-1 > jreg :
-        lat_1d = mmath.where (lat_ave<lat_reg, lat_ave, newlat)
+        lat_1d = xr.where (lat_ave<lat_reg, lat_ave, newlat)
     else :
         lat_1d = lat_ave
 
@@ -1697,22 +1648,19 @@ def lat1d (plat, Debug:bool=False) :
     # Cherche la décroissance
     js = np.diff(lat_1d).argmin()
     ys = np.maximum (-89, lat_1d[js+1].values.item()-5.)
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{js=} {lat_1d[js]=} {lat_1d[js+1]=} {ys=}')
         print (f'{lat_1d[0:js+3]=}')
     lat_1d [0:js+1] = np.linspace(-89.0, ys, js+1)
 
-    if mmath == xr :
-        lat_1d = xr.DataArray (lat_1d.values, dims=('lat',), coords=(lat_1d,))
-        lat_1d.attrs.update (plat.attrs)
-        lat_1d.attrs.update ( {'units':'degrees_north', 'standard_name':'latitude', 'long_name':'Latitude'})
-        if zu :
-            lat_1d = xr_quantify (lat_1d)
+    lat_1d = xr.DataArray (lat_1d.values, dims=('lat',), coords=(lat_1d,))
+    lat_1d.attrs.update (plat.attrs)
+    lat_1d.attrs.update ( {'units':'degrees_north', 'standard_name':'latitude', 'long_name':'Latitude'})
 
     pop_stack ( 'lat1d' )
     return lat_1d
 
-def latlon1d (plat, plon) :
+def latlon1d (plat:xr.DataArray, plon:xr.DataArray) -> xr.DataArray :
     '''
     Returns simple latitude and longitude (1D) for simple plots.
 
@@ -1725,7 +1673,7 @@ def latlon1d (plat, plon) :
     pop_stack ( 'latlon1d' )
     return zla, zlo
 
-def ff (plat) :
+def ff (plat:xr.DataArray) -> xr.DataArray :
     '''
     Returns Coriolis factor
     '''
@@ -1734,7 +1682,7 @@ def ff (plat) :
     pop_stack ( 'ff' )
     return zff
 
-def beta (plat) :
+def beta (plat:xr.DataArray) -> xr.DataArray :
     '''
     Return Beta factor (derivative of Coriolis factor)
     '''
@@ -1743,29 +1691,29 @@ def beta (plat) :
     pop_stack ( 'beta' )
     return zbeta
 
-def mask_lonlat (ptab, x0, x1, y0, y1, lon, lat, sval=np.nan) :
+def mask_lonlat (ptab:xr.DataArray, x0:xr.DataArray, x1:xr.DataArray, y0:xr.DataArray, y1:xr.DataArray,
+                 lon:xr.DataArray, lat:xr.DataArray, sval:float=np.nan) -> xr.DataArray :
     '''
     Returns masked values outside a lat/lon box
     '''
     push_stack ( f'mask_lonlat  (ptab, {x0=}, {x1=}, {y0=}, {y1=}, lon, lat, {sval=}' )
-    mmath = pmath (ptab)
-    if mmath == xr :
-        lon = lon.copy().to_masked_array()
-        lat = lat.copy().to_masked_array()
+   
+    zlon = lon.copy().to_masked_array()
+    zlat = lat.copy().to_masked_array()
 
-    mask = np.logical_and (np.logical_and(lat>y0, lat<y1),
+    mask = np.logical_and (np.logical_and(zlat>y0, zlat<y1),
                 np.logical_or (np.logical_or (
-                np.logical_and (lon>x0, lon<x1),
-                np.logical_and (lon+360.>x0, lon+360.<x1)),
-                np.logical_and (lon-360.>x0, lon-360.<x1)))
-    tab = mmath.where (mask, ptab, sval)
+                np.logical_and (zlon>x0, zlon<x1),
+                np.logical_and (zlon+360.>x0, zlon+360.<x1)),
+                np.logical_and (zlon-360.>x0, zlon-360.<x1)))
+    tab = xr.where (mask, ptab, sval)
 
     pop_stack ( 'mask_lonlat' )
     return tab
 
-def extend (ptab, blon=False, jplus:int=25, jpi:int=None, 
-            Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None,
-            aperio:int=None, domain:Domain=None) :
+def extend (ptab:xr.DataArray, blon:bool=False, jplus:int=25, jpi:Union[int,None]=None, 
+            Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None,
+            aperio:Union[int,float,None]=None, domain:Union[Domain,None]=None) -> xr.DataArray :
     '''
     Returns extended field eastward to have better plots,
     and box average crossing the boundary
@@ -1785,7 +1733,6 @@ def extend (ptab, blon=False, jplus:int=25, jpi:int=None,
     '''
     push_stack ( f'extend ( ptab, {blon=}, {jplus=}, {jpi=}, {aperio=}' )
     zdom   = Domain (ptab=ptab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, aperio=aperio, domain=domain)
-    mmath = pmath (ptab)
     ix, ax = find_axis (ptab, 'x')
     
     if ptab.shape[-1] == 1 :
@@ -1808,30 +1755,25 @@ def extend (ptab, blon=False, jplus:int=25, jpi:int=None,
             if zdom.Iperio and zdom.NFold : # aperio in [4, 6] : # OPA case with two halo points for periodicity
                 # Perfect, except at the pole that should be masked by lbc_plot
                 istart, le, la = 1, jpi-2, 1
-            if mmath == xr :
-                tabex = np.concatenate (
-                     (ptab.values[..., istart   :istart+le+1    ] + xplus,
-                      ptab.values[..., istart+la:istart+la+jplus]         ),
-                      axis=ix)
-                lon    = ptab.dims[-1]
-                new_coords = []
-                for coord in ptab.dims :
-                    if coord == lon :
-                        new_coords.append (np.arange( tabex.shape[-1]))
-                    else            :
-                        new_coords.append ( ptab.coords[coord].values)
+
+            tabex = np.concatenate (
+                (ptab.values[..., istart   :istart+le+1    ] + xplus,
+                 ptab.values[..., istart+la:istart+la+jplus]         ),
+                axis=ix)
+            lon    = ptab.dims[-1]
+            new_coords = []
+            for coord in ptab.dims :
+                if coord == lon :
+                    new_coords.append (np.arange( tabex.shape[-1]))
+                else            :
+                    new_coords.append ( ptab.coords[coord].values)
                 tabex = xr.DataArray ( tabex, dims=ptab.dims,
                                            coords=new_coords )
-            else :
-                tabex = np.concatenate (
-                    (ptab [..., istart   :istart+le+1    ] + xplus,
-                     ptab [..., istart+la:istart+la+jplus]          ),
-                     axis=ix)
 
     pop_stack ( 'extend' )
     return tabex
 
-def orca2reg (dd, lat_name:str=None, lon_name:str=None, y_name:str=None, x_name:str=None) :
+def orca2reg (dd:xr.DataArray, lat_name:Union[str,None]=None, lon_name:Union[str,None]=None, y_name:Union[str,None]=None, x_name:Union[str,None]=None, Debug:bool=True) -> xr.DataArray :
     '''
     Assign an ORCA dataset on a regular grid.
 
@@ -1858,7 +1800,7 @@ def orca2reg (dd, lat_name:str=None, lon_name:str=None, y_name:str=None, x_name:
             if yn in dd.variables :
                 lat_name = yn
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( 'orga2reg : ' )
         print ( f'{dd.dims=}'   )
         print ( f'{x_name=} {y_name=}' )
@@ -1892,8 +1834,9 @@ def orca2reg (dd, lat_name:str=None, lon_name:str=None, y_name:str=None, x_name:
     pop_stack ( 'orca2reg' )
     return zdd
 
-def lbc (ptab, cd_type=None, psgn=1, nemo_4U_bug=False, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None,
-         Halo:bool=None, aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def lbc (ptab:xr.DataArray, cd_type:Union[str,None]=None, psgn=1, nemo_4U_bug:bool=False, 
+         Iperio:Union[bool,None]=None, Jperio:Union[bool,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None,
+         Halo:Union[bool,None]=None, aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Set periodicity on input field
 
@@ -1910,179 +1853,107 @@ def lbc (ptab, cd_type=None, psgn=1, nemo_4U_bug=False, Iperio:bool=None, Jperio
     ax, ix = find_axis (ptab, 'x')
     ay, jy = find_axis (ptab, 'y')
     psgn   = ptab.dtype.type (psgn)
-    mmath  = pmath (ptab)
 
-    if not cd_type :
+    if not cd_type  :
         if 'x_c' in ptab.dims and 'y_c' in ptab.dims : cd_type = 'T'
         if 'x_f' in ptab.dims and 'y_c' in ptab.dims : cd_type = 'U'
         if 'x_c' in ptab.dims and 'y_f' in ptab.dims : cd_type = 'V'
         if 'x_f' in ptab.dims and 'y_f' in ptab.dims : cd_type = 'T'
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{jpi=} {zdom.Iperio=} {zdom.Jperio=} {zdom.NFold=} {zdom.NFtype=} {zdom.Halo=} {ax=} {ay=} {ix=} {jy=}')
-        print ( f'{mmath = }  {(mmath==xr)=}')
 
-    if mmath == xr :
-        ztab  = ptab.copy ()
-        zmath = mmath
-    else :
-        dims=[]
-        for ii in range (ptab.ndim) :
-            dims.append (f'a{ii}')
-        if ix : ax=dims[ix]
-        if jy : ay=dims[jy]
-        ztab = xr.DataArray (ptab, dims=dims)
-        zmath = xr
-
+    ztab  = ptab.copy ()
+   
     if ax :
         #
         #> East-West boundary conditions
         # ------------------------------
         if zdom.Iperio and zdom.Halo :
         # ... cyclic
-            if zmath == xr :
-                ztab[{ax: 0}] = ztab[{ax:-2}]
-                ztab[{ax:-1}] = ztab[{ax:1}]
-            else :
-                ztab [..., 0] = ztab [...,-2]
-                ztab [...,-1] = ztab [..., 1]
-
+            ztab[{ax: 0}] = ztab[{ax:-2}]
+            ztab[{ax:-1}] = ztab[{ax:1}]
+        
         if ay :
             #
             #> North-South boundary conditions
             # --------------------------------
-            if zdom.NFold and zdom.NFtype == 'T' and zdom.Halo :  # North fold T-point pivot
+            if zdom.NFold and zdom.NFtype == 'T' and zdom.Halo : # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
-                    if zmath == xr : 
-                        ztab [{ay:-1, ax:slice(1,None)}     ] = psgn * ztab [{ay:-3, ax:slice(-1,0,-1)}    ].data
-                        ztab [{ay:-1, ax:0}                 ] = psgn * ztab [{ay:-3, ax:2}        ]
-                        ztab [{ay:-2, ax:slice(jpi//2,None)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2,0,-1)}].data
-                    else :
-                        ztab [..., -1, 1:       ] = psgn * ztab [..., -3, -1:0:-1      ]
-                        ztab [..., -1, 0        ] = psgn * ztab [..., -3, 2            ]
-                        ztab [..., -2, jpi//2:  ] = psgn * ztab [..., -2, jpi//2:0:-1  ]
+                    ztab [{ay:-1, ax:slice(1,None)}     ] = psgn * ztab [{ay:-3, ax:slice(-1,0,-1)}    ].data
+                    ztab [{ay:-1, ax:0}                 ] = psgn * ztab [{ay:-3, ax:2}        ]
+                    ztab [{ay:-2, ax:slice(jpi//2,None)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2,0,-1)}].data
                 if cd_type == 'U' :
-                    if zmath == xr :
-                        ztab [{ay:-1, ax:slice( 0,-1)}] = psgn * ztab [{ay:-3, ax:slice(-1,0,-1)}].data
-                        ztab [{ay:-1, ax:0}           ] = psgn * ztab [{ay:-3, ax:1}   ].data
-                        ztab [{ay:-1, ax:-1}          ] = psgn * ztab [{ay:-3, ax:-2}  ].data
-                    else :
-                        ztab [..., -1, 0:-1     ] = psgn * ztab [..., -3, -1:0:-1      ].data
-                        ztab [..., -1,  0       ] = psgn * ztab [..., -3,  1           ].data
-                        ztab [..., -1, -1       ] = psgn * ztab [..., -3, -2           ].data
+                    ztab [{ay:-1, ax:slice( 0,-1)}] = psgn * ztab [{ay:-3, ax:slice(-1,0,-1)}].data
+                    ztab [{ay:-1, ax:0}           ] = psgn * ztab [{ay:-3, ax:1}   ].data
+                    ztab [{ay:-1, ax:-1}          ] = psgn * ztab [{ay:-3, ax:-2}  ].data
 
                     if nemo_4U_bug :
-                        if zmath == xr :
-                            ztab [{ay:-2, ax:slice(jpi//2+1,-1)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2-2,0,-1)}].data
-                            ztab [{ay:-2, ax:jpi//2-1}          ] = psgn * ztab [{ay:-2, ax:jpi//2}              ].data
-                        else :
-                            ztab [..., -2, jpi//2+1:-1] = psgn * ztab [..., -2, jpi//2-2:0:-1].data
-                            ztab [..., -2, jpi//2-1   ] = psgn * ztab [..., -2, jpi//2       ]
+                        ztab [{ay:-2, ax:slice(jpi//2+1,-1)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2-2,0,-1)}].data
+                        ztab [{ay:-2, ax:jpi//2-1}          ] = psgn * ztab [{ay:-2, ax:jpi//2}              ].data
                     else :
-                        if zmath == xr :
-                            ztab [{ay:-2, ax:slice(jpi//2-1,-1)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2,0,-1)}].data
-                        else :
-                            ztab [..., -2, jpi//2-1:-1] = psgn * ztab [..., -2, jpi//2:0:-1]
+                        ztab [{ay:-2, ax:slice(jpi//2-1,-1)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2,0,-1)}].data
                             
                 if cd_type == 'V' :
-                    if zmath == xr :
-                        ztab [{ay:-2, ax:slice(1,None)}] = psgn * ztab [{ay:-3, ax:slice(jpi-1,0,-1)}].data
-                        ztab [{ay:-1, ax:slice(1,None)}] = psgn * ztab [{ay:-4, ax:slice(-1,0,-1)}   ].data
-                        ztab [{ay:-1, ax:0}            ] = psgn * ztab [{ay:-4, ax:2}               ]
-                    else :
-                        ztab [..., -2, 1:       ] = psgn * ztab [..., -3, jpi-1:0:-1]
-                        ztab [..., -1, 1:       ] = psgn * ztab [..., -4, -1:0:-1   ]
-                        ztab [..., -1, 0        ] = psgn * ztab [..., -4, 2         ]
+                    ztab [{ay:-2, ax:slice(1,None)}] = psgn * ztab [{ay:-3, ax:slice(jpi-1,0,-1)}].data
+                    ztab [{ay:-1, ax:slice(1,None)}] = psgn * ztab [{ay:-4, ax:slice(-1,0,-1)}   ].data
+                    ztab [{ay:-1, ax:0}            ] = psgn * ztab [{ay:-4, ax:2}               ]
 
                 if cd_type == 'F' :
-                    if zmath == xr :
-                        ztab [{ay:-2, ax:slice(0,-1)}] = psgn * ztab [{ay:-3, ax:slice(-1,0,-1)}].data
-                        ztab [{ay:-1, ax:slice(0,-1)}] = psgn * ztab [{ay:-4, ax:slice(-1,0,-1)}].data
-                        ztab [{ay:-1, ax: 0}         ] = psgn * ztab [{ay:-4, ax: 1}            ]
-                        ztab [{ay:-1, ax:-1}         ] = psgn * ztab [{ay:-4, ax:-2}            ]
-                    else :
-                        ztab [..., -2, 0:-1     ] = psgn * ztab [..., -3, -1:0:-1]
-                        ztab [..., -1, 0:-1     ] = psgn * ztab [..., -4, -1:0:-1]
-                        ztab [..., -1,  0       ] = psgn * ztab [..., -4,  1     ]
-                        ztab [..., -1, -1       ] = psgn * ztab [..., -4, -2     ]
+                    ztab [{ay:-2, ax:slice(0,-1)}] = psgn * ztab [{ay:-3, ax:slice(-1,0,-1)}].data
+                    ztab [{ay:-1, ax:slice(0,-1)}] = psgn * ztab [{ay:-4, ax:slice(-1,0,-1)}].data
+                    ztab [{ay:-1, ax: 0}         ] = psgn * ztab [{ay:-4, ax: 1}            ]
+                    ztab [{ay:-1, ax:-1}         ] = psgn * ztab [{ay:-4, ax:-2}            ]
 
             if zdom.NFold and zdom.NFtype == 'T' and not zdom.Halo :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
-                    if zmath == xr:
-                        ztab [{ay:-1, ax:slice(jpi//2,None)} ] = psgn * ztab [{ay:-1, ax:slice(jpi//2,0,-1)}].data
-                    else :
-                        ztab [..., -1, jpi//2: ] = psgn * ztab [...,-1, jpi//2:0:-1]
+                    ztab [{ay:-1, ax:slice(jpi//2,None)} ] = psgn * ztab [{ay:-1, ax:slice(jpi//2,0,-1)}].data
                 if cd_type == 'U' :
-                    if zmath == xr:
-                        ztab [{ay:-1, ax:slice(jpi//2-1,-1)}] = psgn * ztab [{ay:-1, ax:slice(jpi//2,0,-1)}].data
-                    else :
-                        ztab [-1, jpi//2-1:-1] = psgn * ztab [...,-1, jpi//2:0:-1]
+                    ztab [{ay:-1, ax:slice(jpi//2-1,-1)}] = psgn * ztab [{ay:-1, ax:slice(jpi//2,0,-1)}].data
                 if cd_type == 'V' :
-                    if zmath == xr:
-                        ztab [{ay:-1, ax:slice(1,None)}] = psgn * ztab [{ay:-2, ax:slice(jpi-1,0,-1)} ].data
-                    else :
-                        ztab [...,-1, 1:] = psgn * ztab [...,-2, jpi-1:0:-1 ]
+                    ztab [{ay:-1, ax:slice(1,None)}] = psgn * ztab [{ay:-2, ax:slice(jpi-1,0,-1)} ].data
 
                 if cd_type == 'F' :
-                    if zmath == xr:
-                        ztab [{ay:-1, ay:slice(0,-1)}     ] = psgn * ztab [{ay:-2, ax:slice(-1,0,-1)} ]
-                    else :
-                        ztab [...,-1, 0:-1     ] = psgn * ztab [...,-2, -1:0:-1 ]
+                    ztab [{ay:-1, ay:slice(0,-1)}     ] = psgn * ztab [{ay:-2, ax:slice(-1,0,-1)} ]
 
-            if zdom.NFold and zdom.NFtype == 'F' and zdom.Halo  :            #  North fold F-point pivot
+            if zdom.NFold and zdom.NFtype == 'F' and zdom.Halo  : #  North fold F-point pivot
                 if cd_type in ['T', 'W']  :
-                    if zmath == xr :
-                        ztab [{ay:-1, ax:slice(0,None)}] = psgn * ztab [{ay:-2, ax:slice(-1,None,-1)}].data
-                    else: 
-                        ztab [...,-1, 0:] = psgn * ztab [...,-2, -1::-1]
+                    ztab [{ay:-1, ax:slice(0,None)}] = psgn * ztab [{ay:-2, ax:slice(-1,None,-1)}].data
 
                 if cd_type == 'U' :
-                    if zmath == xr :
-                        ztab [{ay:-1, ax:slice(0,-1)}] = psgn * ztab [{ay:-2, ax:slice(-2,None,-1)}].data
-                        ztab [{ay:-1, ax:-1}         ] = psgn * ztab [{ay:-2, ax:0}                ]
-                    else :
-                        ztab [...,-1, 0:-1] = psgn * ztab [..., -2, -2::-1]
-                        ztab [...,-1, -1  ] = psgn * ztab [..., -2, 0     ]
+                    ztab [{ay:-1, ax:slice(0,-1)}] = psgn * ztab [{ay:-2, ax:slice(-2,None,-1)}].data
+                    ztab [{ay:-1, ax:-1}         ] = psgn * ztab [{ay:-2, ax:0}                ]
 
                 if cd_type == 'V' :
-                    if zmath == xr :
-                        ztab [{ay:-1, ax:slice(0,None)}     ] = psgn * ztab [{ay:-3, ax:slice(-1,None,-1)}       ].data
-                        ztab [{ay:-2, ax:slice(jpi//2,None)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2-1,None,-1)} ].data
-                    else :
-                        ztab [...,-1, 0:     ] = psgn * ztab [...,-3, -1::-1       ]
-                        ztab [...,-2, jpi//2:] = psgn * ztab [...,-2, jpi//2-1::-1 ]
+                    ztab [{ay:-1, ax:slice(0,None)}     ] = psgn * ztab [{ay:-3, ax:slice(-1,None,-1)}       ].data
+                    ztab [{ay:-2, ax:slice(jpi//2,None)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2-1,None,-1)} ].data
 
                 if cd_type == 'F' :
-                    if zmath == xr :
-                        ztab [{ay:-1, ax:slice(0,-1)}     ] = psgn * ztab [{ay:-3, ax:slice(-2,None,-1)}].data
-                        ztab [{ay:-1, ax:-1}              ] = psgn * ztab [{ay:-3, ax:0}                ]
-                        ztab [{ay:-2, ax:slice(jpi//2,-1)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2-2,None,-1)} ].data
-                    else :
-                        ztab [..., -1, 0:-1     ] = psgn * ztab [..., -3, -2::-1       ]
-                        ztab [..., -1, -1       ] = psgn * ztab [..., -3, 0            ]
-                        ztab [..., -2, jpi//2:-1] = psgn * ztab [..., -2, jpi//2-2::-1 ]
+                    ztab [{ay:-1, ax:slice(0,-1)}     ] = psgn * ztab [{ay:-3, ax:slice(-2,None,-1)}].data
+                    ztab [{ay:-1, ax:-1}              ] = psgn * ztab [{ay:-3, ax:0}                ]
+                    ztab [{ay:-2, ax:slice(jpi//2,-1)}] = psgn * ztab [{ay:-2, ax:slice(jpi//2-2,None,-1)} ].data
+
+            if zdom.NFold and zdom.NFtype == 'F' and not zdom.Halo  : #  North fold F-point pivot
+                if cd_type == 'V' :
+                    ztab [{ay:-1, ax:slice(jpi//2,None)}] = psgn * ztab [{ay:-1, ax:slice(jpi//2-1,None,-1)} ].data
+
+                if cd_type == 'F' :
+                    ztab [{ay:-1, ax:slice(jpi//2,-1)}] = psgn * ztab [{ay:-1, ax:slice(jpi//2-2,None,-1)} ].data
 
             #
             #> East-West boundary conditions
             # ------------------------------
             if zdom.Iperio and zdom.Halo :
                 # ... cyclic
-                if zmath == xr :
-                    ztab[{ax: 0}] = ztab[{ax:-2}]
-                    ztab[{ax:-1}] = ztab[{ax: 1}]
-                else :
-                    ztab[...,:, 0] = ztab[...,:,-2]
-                    ztab[...,:,-1] = ztab[...,:, 1]
-
-
-    if pmath (ptab) != xr and zmath == xr :
-        ztab = ztab.values
-        
+                ztab[{ax: 0}] = ztab[{ax:-2}]
+                ztab[{ax:-1}] = ztab[{ax: 1}]
+       
     pop_stack ( 'lbc' )
     return ztab
 
-def lbc_mask (ptab, cd_type:str='T', sval=np.nan, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None,
-              Halo:bool=None, aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def lbc_mask (ptab:xr.DataArray, cd_type:str='T', sval:float=np.nan,
+              Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None,
+              Halo:bool=False, aperio:Union[int,float,None]=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
     '''
     Mask fields on duplicated points
 
@@ -2099,7 +1970,6 @@ def lbc_mask (ptab, cd_type:str='T', sval=np.nan, Iperio:bool=None, Jperio:bool=
     ax, ix = find_axis (ptab, 'x')
     ay, jy = find_axis (ptab, 'y')
     ztab   = ptab.copy ()
-    mmath  = pmath (ptab)
 
     if not cd_type :
         if 'x_c' in ptab.dims and 'y_c' in ptab.dims : cd_type = 'T'
@@ -2113,115 +1983,74 @@ def lbc_mask (ptab, cd_type:str='T', sval=np.nan, Iperio:bool=None, Jperio:bool=
         # ------------------------------
         if zdom.Iperio and zdom.Halo :
             # ... cyclic
-            if mmath == xr :
-                ztab[{ax: 0}] = sval
-                ztab[{ax:-1}] = sval
-            else :
-                ztab [...,  0] = sval
-                ztab [..., -1] = sval
+            ztab[{ax: 0}] = sval
+            ztab[{ax:-1}] = sval
 
         if ay :
             #
             #> South (in which aperio cases ?)
             # --------------------------------
             if zdom.Halo and not zdom.Jperio :
-                if mmath == xr :
-                    ztab [{ay:0}]    = sval
-                else :
-                    ztab [..., 0, :] = sval
+                ztab [{ay:0}]    = sval
             #
             #> North-South boundary conditions
             # --------------------------------
             if zdom.NFold and zdom.NFtype=='T' and zdom.Halo :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
-                    if mmath == xr : 
-                        ztab [{ay:-1}                       ] = sval
-                        ztab [{ay:-2, ax:slice(jpi//2,None)}] = sval
-                    else :
-                        ztab [..., -1,  :         ] = sval
-                        ztab [..., -2, :jpi//2    ] = sval
+                    ztab [{ay:-1}                       ] = sval
+                    ztab [{ay:-2, ax:slice(jpi//2,None)}] = sval
 
                 if cd_type == 'U' :
-                    if mmath == xr :
-                        ztab [{ay:-1}                         ] = sval
-                        ztab [{ay:-2, ax:slice(jpi//2+1,None)}] = sval
-                    else :
-                        ztab [..., -1,  :         ] = sval
-                        ztab [..., -2, jpi//2+1:  ] = sval
+                    ztab [{ay:-1}                         ] = sval
+                    ztab [{ay:-2, ax:slice(jpi//2+1,None)}] = sval
 
                 if cd_type == 'V' :
-                    if mmath == xr :
-                        ztab [{ay:-2}       ] = sval
-                        ztab [{ay:-1}       ] = sval
-                    else :
-                        ztab [..., -2, :    ] = sval
-                        ztab [..., -1, :    ] = sval
+                    ztab [{ay:-2}       ] = sval
+                    ztab [{ay:-1}       ] = sval
 
                 if cd_type == 'F' :
-                    if mmath == xr :
-                        ztab [{ay:-2}       ] = sval
-                        ztab [{ay:-1}       ] = sval
-                    else :
-                        ztab [..., -2, :    ] = sval
-                        ztab [..., -1, :    ] = sval
+                    ztab [{ay:-2}       ] = sval
+                    ztab [{ay:-1}       ] = sval
 
             if zdom.NFold and zdom.NFtype=='T' and not zdom.Halo :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
-                    if mmath == xr : 
-                        ztab [{ay:-1, ax:slice(jpi//2,None)} ] = sval
-                    else :
-                        ztab [..., -1, jpi//2  :  ] = sval
+                    ztab [{ay:-1, ax:slice(jpi//2,None)} ] = sval
                 if cd_type == 'U' :
-                    if mmath == xr : 
-                        ztab [{ax:-1, ax:slice(jpi//2-1,-1)}] = sval
-                    else :
-                        ztab [..., -1, jpi//2-1:-1] = sval
+                    ztab [{ax:-1, ax:slice(jpi//2-1,-1)}] = sval
                 if cd_type == 'V' :
-                    if mmath == xr : 
-                        ztab [{ay:-1, ax:slice(1,None)} ] = sval
-                    else :
-                        ztab [..., -1, 1:         ] = sval
+                    ztab [{ay:-1, ax:slice(1,None)} ] = sval
                 if cd_type == 'F' :
-                    if mmath == xr : 
-                        ztab [{ay:-1, ax:slice(0,-1)}] = sval
-                    else :
-                        ztab [..., -1, 0:-1       ] = sval
+                    ztab [{ay:-1, ax:slice(0,-1)}] = sval
 
             if zdom.NFold and zdom.NFtype=='F' and zdom.Halo  :            #  North fold F-point pivot
                 if cd_type in ['T', 'W']  :
-                    if mmath == xr : 
-                        ztab [{ay:-1}       ] = sval
-                    else :
-                        ztab [..., -1,      ] = sval
+                    ztab [{ay:-1}       ] = sval
 
                 if cd_type == 'U' :
-                    if mmath == xr : 
-                        ztab [{ay:-1, ax:slice(0,-1)}] = sval
-                        ztab [{ay:-1, ay:-1}         ] = sval
-                    else :
-                        ztab [..., -1, 0:-1     ] = sval
-                        ztab [..., -1, -1       ] = sval
+                    ztab [{ay:-1, ax:slice(0,-1)}] = sval
+                    ztab [{ay:-1, ay:-1}         ] = sval
 
                 if cd_type == 'V' :
-                    if mmath == xr : 
-                        ztab [{ay:-1}                        ] = sval
-                        ztab [{ay:-2, ax:slice(jpi//2,None)} ] = sval
-                    else :
-                        ztab [..., -1, 0:       ] = sval
-                        ztab [..., -2, jpi//2:  ] = sval
+                    ztab [{ay:-1}                        ] = sval
+                    ztab [{ay:-2, ax:slice(jpi//2,None)} ] = sval
 
                 if cd_type == 'F' :
-                    if mmath == xr : 
-                        ztab [{ay:-1, ax:slice(0,None)}     ] = sval
-                        ztab [{ay:-2, ax:slice(jpi//2+1,-1)}] = sval
-                    else :
-                        ztab [..., -1, :       ] = sval
-                        ztab [..., -2, jpi//2+1:-1] = sval
+                    ztab [{ay:-1, ax:slice(0,None)}     ] = sval
+                    ztab [{ay:-2, ax:slice(jpi//2+1,-1)}] = sval
+
+            if zdom.NFold and zdom.NFtype=='F' and not zdom.Halo  :            #  North fold F-point pivot
+                if cd_type == 'V' :
+                    ztab [{ay:-1, ax:slice(jpi//2,None)} ] = sval
+
+                if cd_type == 'F' :
+                    ztab [{ay:-1, ax:slice(jpi//2+1,-1)}] = sval
 
     pop_stack ( 'lbc_mask' )
     return ztab
 
-def lbc_plot (ptab, cd_type:str='T', psgn=1.0, sval=np.nan, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, aperio:int=None, nperio:int=None, Halo:bool=None, domain:Domain=None) :
+def lbc_plot (ptab:xr.DataArray, cd_type:str='T', psgn:float=1.0, sval:float=np.nan,
+              Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None, aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, 
+              Halo:bool=None, domain:Union[Domain,None]=None, Debug:bool=False) :
     '''
     Set periodicity on input field, for plotting for any cartopy projection
 
@@ -2241,11 +2070,7 @@ def lbc_plot (ptab, cd_type:str='T', psgn=1.0, sval=np.nan, Iperio:bool=None, Jp
     ax, ix = find_axis (ptab, 'x')
     ay, jy = find_axis (ptab, 'y')
     psgn   = ptab.dtype.type (psgn)
-    mmath  = pmath(ptab)
     ztab   = ptab.copy ()
-
-    if 'pint' in dir(ztab) and not isinstance (sval, pint.Quantity) and 'pint' not in dir(sval) :
-        sval = sval * ureg (ztab.pint.units)
 
     if ax :
         #
@@ -2253,112 +2078,70 @@ def lbc_plot (ptab, cd_type:str='T', psgn=1.0, sval=np.nan, Iperio:bool=None, Jp
         # ------------------------------
         if zdom.Iperio and zdom.Halo :
             # ... cyclic
-            if mmath == xr :
-                ztab [{ax: 0}] = ztab [{ax:-2}]
-                ztab [{ax:-1}] = ztab [{ax: 1}]
-            else :
-                ztab [..., :,  0] = ztab [..., :, -2]
-                ztab [..., :, -1] = ztab [..., :,  1]
+            ztab [{ax: 0}] = ztab [{ax:-2}]
+            ztab [{ax:-1}] = ztab [{ax: 1}]
 
         if ay :
             #> Masks south
             # ------------
             if not zdom.Jperio :
-                if mmath == xr :
-                    ztab [{ay:0}] = sval
-                else :
-                    ztab [..., 0, : ] = sval
+                ztab [{ay:0}] = sval
 
             #
             #> North-South boundary conditions
             # --------------------------------
             if zdom.NFold and zdom.NFtype=='T' and zdom.Halo :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
-                    if mmath == xr :
-                        ztab [{ay:-1}                     ] = sval
-                        ztab [{ay:-2, ax:slice(0,jpi//2)} ] = sval
-                    else :
-                        ztab [..., -1,  :      ] = sval
-                        #ztab [..., -2, jpi//2: ] = sval
-                        ztab [..., -2, :jpi//2 ] = sval # Give better plots than above
+                    ztab [{ay:-1}                     ] = sval
+                    ztab [{ay:-2, ax:slice(0,jpi//2)} ] = sval
                 if cd_type == 'U' :
-                    if mmath == xr :
-                        ztab [{ay:-1}] = sval
-                    else :
-                        ztab [..., -1, : ] = sval
+                    ztab [{ay:-1}] = sval
 
                 if cd_type == 'V' :
-                    if mmath == xr :
-                        ztab [{ay:-2}] = sval
-                        ztab [{ay:-1}] = sval
-                    else :
-                        ztab [..., -2, : ] = sval
-                        ztab [..., -1, : ] = sval
+                    ztab [{ay:-2}] = sval
+                    ztab [{ay:-1}] = sval
 
                 if cd_type == 'F' :
-                    if mmath == xr :
-                        ztab [{ay:-2} ] = sval
-                        ztab [{ay:-1} ] = sval
-                    else :
-                        ztab [..., -2, : ] = sval
-                        ztab [..., -1, : ] = sval
+                    ztab [{ay:-2} ] = sval
+                    ztab [{ay:-1} ] = sval
 
             if zdom.NFold and zdom.NFtype=='T' and not zdom.Halo :  # North fold T-point pivot
                 if cd_type in [ 'T', 'W' ] : # T-, W-point
-                    if mmath == xr :
-                        ztab [{ay:-1, ax:slice(jpi//2,None)}  ] = sval
-                    else :
-                        ztab [..., -1, jpi//2:  ] = sval
+                    ztab [{ay:-1, ax:slice(jpi//2,None)}  ] = sval
                 if cd_type == 'U' :
-                    if mmath == xr :
-                        ztab [{ay:-1, ax:slice(jpi//2-1,-1)}] = sval
-                    else :
-                        ztab [..., -1, jpi//2-1:-1] = sval
+                    ztab [{ay:-1, ax:slice(jpi//2-1,-1)}] = sval
                 if cd_type == 'V' :
-                    if mmath == xr: 
-                        ztab [{ay:-1, ax:slice(1,None)} ] = sval
-                    else :
-                        ztab [..., -1, 1:       ] = sval
+                    ztab [{ay:-1, ax:slice(1,None)} ] = sval
                 if cd_type == 'F' :
-                    if mmath == xr :
-                        ztab [{ay:-1, ax:slice(0,-1)} ] = sval
-                    else :
-                        ztab [..., -1, 0:-1     ] = sval
+                    ztab [{ay:-1, ax:slice(0,-1)} ] = sval
 
             if zdom.NFold and zdom.NFtype=='F' and zdom.Halo :            #  North fold F-point pivot
                 if cd_type in ['T', 'W']  :
-                    if mmath == xr :
-                        ztab [{ay:-1}] = sval
-                    else :
-                        ztab [..., -1, : ] = sval
+                    ztab [{ay:-1}] = sval
 
                 if cd_type == 'U' :
-                    if mmath == xr :
-                        ztab [{ay:-1}] = sval
-                    else :
-                        ztab [..., -1, : ] = sval
+                    ztab [{ay:-1}] = sval
 
                 if cd_type == 'V' :
-                    if mmath == xr :
-                        ztab [{ay:-1}                        ] = sval
-                        ztab [{ay:-2, ax:slice(jpi//2,None)} ] = sval
-                    else :
-                        ztab [..., -1, :        ] = sval
-                        ztab [..., -2, jpi//2:  ] = sval
+                    ztab [{ay:-1}                        ] = sval
+                    ztab [{ay:-2, ax:slice(jpi//2,None)} ] = sval
 
                 if cd_type == 'F' :
-                    if mmath == xr:
-                        ztab [{ay:-1}                       ] = sval
-                        ztab [{ay:-2, ax:slice(jpi//2+1,-1)}] = sval
-                    else :
-                        ztab [..., -1, :          ] = sval
-                        ztab [..., -2, jpi//2+1:-1] = sval
-                        
+                    ztab [{ay:-1}                       ] = sval
+                    ztab [{ay:-2, ax:slice(jpi//2+1,-1)}] = sval
+
+            if zdom.NFold and zdom.NFtype=='F' and not zdom.Halo :            #  North fold F-point pivot
+                if cd_type == 'V' :
+                    ztab [{ay:-1, ax:slice(jpi//2,None)} ] = sval
+
+                if cd_type == 'F' :
+                    ztab [{ay:-1, ax:slice(jpi//2+1,-1)}] = sval      
 
     pop_stack ( 'lbc_plot' )
     return ztab
 
-def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, aperio:int=None, nperio:int=None, domain:Domain=None, Debug=False) :
+def lbc_add (ptab:xr.DataArray, cd_type:str=None, psgn=1, Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None, 
+             Halo:Union[bool,None]=None, aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) :
     '''
     Handles NEMO domain changes between NEMO 4.0 to NEMO 4.2
 
@@ -2372,7 +2155,6 @@ def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None,
     See NEMO documentation for further details
     '''
     push_stack ( f'lbc_add ( ptab, {aperio=}, {cd_type=}, {psgn=} )' )
-    mmath = pmath (ptab)
     zdom   = Domain (ptab=ptab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo,
                      aperio=aperio, nperio=nperio, domain=domain)
     jpi    = zdom.jpi
@@ -2393,50 +2175,38 @@ def lbc_add (ptab, cd_type:str=None, psgn=1, Iperio:bool=None, Jperio:bool=None,
         if ay :
             tjpj = tjpj+1
             ext_shape[jy] = ext_shape[jy] + 1
-        if OPTIONS.Debug or Debug : print ( f'lbc_add: ext_shape = {ext_shape}' )
+        if OPTIONS['Debug'] or Debug :
+            print ( f'lbc_add: ext_shape = {ext_shape}' )
 
-        if mmath == xr :
-            ptab_ext = xr.DataArray (np.zeros (ext_shape), dims=ptab.dims)
-            if ax and ay :
-                ptab_ext.values[..., :-1, 1:-1] = ptab.values.copy ()
-            else :
-                if ax :
-                    ptab_ext.values[...,      1:-1] = ptab.values.copy ()
-                if ay :
-                    ptab_ext.values[..., :-1      ] = ptab.values.copy ()
-        else           :
-            ptab_ext =               np.zeros (ext_shape)
-            if ax and ay :
-                ptab_ext     [..., :-1, 1:-1] = ptab.copy ()
-            else :
-                if ax : 
-                    ptab_ext [...,      1:-1] = ptab.copy ()
-                if ay : 
-                    ptab_ext [..., :-1      ] = ptab.copy ()
-
+        ptab_ext = xr.DataArray (np.zeros (ext_shape), dims=ptab.dims)
+        if ax and ay :
+            ptab_ext.values[..., :-1, 1:-1] = ptab.values.copy ()
+        else :
+            if ax :
+                ptab_ext.values[...,      1:-1] = ptab.values.copy ()
+            if ay :
+                ptab_ext.values[..., :-1      ] = ptab.values.copy ()
 
         tdom = Domain (jpi=tjpi, jpj=tjpj, domain=domain, Halo=True)
 
         ptab_ext = lbc (ptab_ext, cd_type=cd_type, psgn=psgn, domain=tdom)
         
-        if mmath == xr :
-            ptab_ext.attrs = ptab.attrs
-            az = find_axis (ptab, 'z')[0]
-            at = find_axis (ptab, 't')[0]
-            if az :
-                ptab_ext = ptab_ext.assign_coords ( {az:ptab.coords[az]} )
-            if at :
-                ptab_ext = ptab_ext.assign_coords ( {at:ptab.coords[at]} )
-
-    else :
-        ptab_ext = lbc (ptab, domain=domain, cd_type=cd_type, psgn=psgn)
+        ptab_ext.attrs = ptab.attrs
+        az = find_axis (ptab, 'z')[0]
+        at = find_axis (ptab, 't')[0]
+        if az :
+            ptab_ext = ptab_ext.assign_coords ( {az:ptab.coords[az]} )
+        if at :
+            ptab_ext = ptab_ext.assign_coords ( {at:ptab.coords[at]} )
 
     ptab_ext = copy_attrs (ptab_ext, ptab)
     
     pop_stack ( 'lbc_add' )
     return ptab_ext
 
-def lbc_del (ptab, cd_type:str='T', psgn=1, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, aperio:int=None, nperio:int=None, domain:Domain=None) :
+def lbc_del (ptab:xr.DataArray, cd_type:str='T', psgn:Union[int,float]=1, Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, 
+             NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, 
+             Halo:Union[bool,None]=None, aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None) :
     '''
     Handles NEMO domain changes between NEMO 4.0 to NEMO 4.2
 
@@ -2478,7 +2248,7 @@ def lbc_del (ptab, cd_type:str='T', psgn=1, Iperio:bool=None, Jperio:bool=None, 
     pop_stack ( 'lbc_del' )
     return ztab
 
-def lbc_index (jj, ii, jpj:int, jpi:int, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None,
+def lbc_index (jj:int, ii:int, jpj:int, jpi:int, cd_type:str='T', Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None, Halo:bool=None,
                 aperio:int=None, nperio:int=None, domain:Domain=None) :
     '''
     For indexes of a NEMO point, give the corresponding point
@@ -2500,23 +2270,20 @@ def lbc_index (jj, ii, jpj:int, jpi:int, cd_type:str='T', Iperio:bool=None, Jper
     ## lbc Fortran routine from NEMO : starts indexes at 1
     jy, ix = jj+1, ii+1
 
-    mmath = pmath (jj)
-    if not mmath :
-        mmath=np
 
     #
     #> East-West boundary conditions
     # ------------------------------
     if zdom.Iperio and zdom.Halo : 
         #... cyclic
-        ix = mmath.where (ix==jpi, 2   , ix)
-        ix = mmath.where (ix== 1 ,jpi-1, ix)
+        ix = xr.where (ix==jpi, 2   , ix)
+        ix = xr.where (ix== 1 ,jpi-1, ix)
 
     #
     def mod_ij (cond, jy_new, ix_new) :
         push_stack ( 'mod_ij (cond, jy_new, ix_new)' )
-        jy_r = mmath.where (cond, jy_new, jy)
-        ix_r = mmath.where (cond, ix_new, ix)
+        jy_r = xr.where (cond, jy_new, jy)
+        ix_r = xr.where (cond, ix_new, ix)
         pop_stack ( 'mod_ij' )
         return jy_r, ix_r
     #
@@ -2580,7 +2347,8 @@ def lbc_index (jj, ii, jpj:int, jpi:int, cd_type:str='T', Iperio:bool=None, Jper
     pop_stack ( f'lbc_index = {jy}, {ix}' )
     return jy, ix
 
-def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:bool=False, out=None, Debug:bool=False, ay=None, ax=None) :
+def find_ji (lat_data:xr.DataArray, lon_data:xr.DataArray, lat_grid:xr.DataArray, lon_grid:xr.DataArray, mask:Union[xr.DataArray,float]=1.0,
+             drop_duplicates:bool=False, out:Union[str,None]=None, ay:Union[str,None]=None, ax:Union[str,None]=None, Debug:bool=True) :
     '''
     Description: seeks J,I indices of the grid point which is the closest
        of a given point
@@ -2608,9 +2376,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:b
     if not ax :
         ax, ix = find_axis (lon_grid, 'x')
     
-    #mmath = pmath (lat_grid)
-
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( 'find_ji' )
         print ( f'{lat_data=}' )
         print ( f'{lon_data=}' )
@@ -2622,20 +2388,19 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:b
                + np.cos (np.deg2rad(lat_data)) * np.cos (np.deg2rad(lat_grid)) *
                  np.cos (np.deg2rad((lon_data-lon_grid))) )
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{type(arg)=} {arg.shape=}' )
     
     # Send masked points to 'infinite'
     distance = np.arccos (arg) + 4.0*np.pi*(1.0-mask)
-    distance = xr_quantify (distance)
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{type(distance)=} {distance.shape=}' )
 
     # Truncates to alleviate precision problem encountered with some grids
     prec = int (1E7)
     distance = (distance*prec).astype(int) / prec
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug:
         print ( f'{type(distance)=} {distance.shape=}' )
         
     # Compute index minimum of distance
@@ -2649,7 +2414,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:b
         for ji in np.arange (nn) :
             jimin[ji] = distance[ji].argmin()
     finally : 
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug :
             print ( f'{type(jimin)=} {jimin.shape}' )
             print ( f'{jimin=}' )
 
@@ -2657,7 +2422,7 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:b
     jmin = jimin // jpi
     imin = jimin - jmin*jpi
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{jmin=}' )
         print ( f'{imin=}' )
         
@@ -2672,8 +2437,6 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:b
     if   out == 'dict'                   :
         zdict = {ay:jmin, ax:imin}
         return zdict
-    elif out in ['container', 'Container', 'cont', 'Cont'] :
-        return Container (**{ay:jmin, ax:imin})
     elif out in ['array', 'numpy', 'np'] :
         return np.array (jmin), np.array (imin)
     elif out in ['xarray', 'xr']         :
@@ -2687,8 +2450,9 @@ def find_ji (lat_data, lon_data, lat_grid, lon_grid, mask=1.0, drop_duplicates:b
     else                                 :
         return jmin, imin
 
-def curl (tx, ty, e1u, e2v, e1f, e2f, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-          aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def curl (tx:xr.DataArray, ty:xr.DataArray, e1u:xr.DataArray, e2v:xr.DataArray, e1f:xr.DataArray, e2f:xr.DataArray,
+          Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+          aperio:Union[int,float]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Returns curl of a horizontal vector field defined on the C-grid
     '''
@@ -2721,7 +2485,7 @@ def curl (tx, ty, e1u, e2v, e1f, e2f, Iperio:bool=None, Jperio:bool=None, NFold:
     pop_stack ( 'curl' )
     return zcurl
 
-def div (ux, uy, e1t, e2t, e1v, e2u, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
+def div (ux, uy, e1t, e2t, e1v, e2u, Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None, Halo:bool=None, 
          aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
     '''
     Returns divergence of a horizontal vector field defined on the C-grid
@@ -2737,14 +2501,14 @@ def div (ux, uy, e1t, e2t, e1v, e2u, Iperio:bool=None, Jperio:bool=None, NFold:b
     axv, ixv = find_axis (uy , 'x')
     ayv, jyv = find_axis (uy , 'y')
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{axt=} {ayt} {axu=} {ayu=} {axv=} {ayv=}')
 
     ux_0    = lbc_add (ux*e2u , domain=zdom, cd_type='U', psgn=-1)
     uy_0    = lbc_add (uy*e1v , domain=zdom, cd_type='V', psgn=-1)
     e1e2t_0 = lbc_add (e1t*e2t, domain=zdom, cd_type='T', psgn= 1)
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{ux_0.dims=} {uy_0.dims=} {e1e2t_0.dims=}')
 
     ux_1 = ux_0.roll ({ayu:1})
@@ -2752,22 +2516,22 @@ def div (ux, uy, e1t, e2t, e1v, e2u, Iperio:bool=None, Jperio:bool=None, NFold:b
     ux_1 = lbc (ux_1, domain=zdom, cd_type='U', psgn=-1)
     uy_1 = lbc (uy_1, domain=zdom, cd_type='V', psgn=-1)
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{ux_1.dims=} {uy_1.dims=} {e1e2t_0.dims=}')
     
     zdivu = ux_0 - ux_1
     zdivv = uy_0 - uy_1
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{zdivu.dims=} {zdivv.dims=}')
     zdivu = zdivu.assign_coords ( {axu:axt} )
     zdivv = zdivv.assign_coords ( {ayv:ayt} )
 
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{zdivu.dims=} {zdivv.dims=}')
     
     zdiv = (zdivu + zdivv)/e1e2t_0
     
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{zdiv.dims=}')
 
     mask = np.logical_or (
@@ -2782,7 +2546,7 @@ def div (ux, uy, e1t, e2t, e1v, e2u, Iperio:bool=None, Jperio:bool=None, NFold:b
     pop_stack ( 'zdiv' )
     return zdiv
 
-def geo2en (pxx, pyy, pzz, glam, gphi) :
+def geo2en (pxx:xr.DataArray, pyy:xr.DataArray, pzz:xr.DataArray, glam:xr.DataArray, gphi:xr.DataArray) -> xr.DataArray :
     '''
     Change vector from geocentric to east/north
 
@@ -2802,7 +2566,7 @@ def geo2en (pxx, pyy, pzz, glam, gphi) :
     pop_stack ( geo2en )
     return pte, ptn
 
-def en2geo (pte, ptn, glam, gphi) :
+def en2geo (pte:xr.DataArray, ptn:xr.DataArray, glam:xr.DataArray, gphi:xr.DataArray) -> xr.DataArray :
     '''
     Change vector from east/north to geocentric
 
@@ -2824,7 +2588,7 @@ def en2geo (pte, ptn, glam, gphi) :
     pop_stack ( 'en2geo' )
     return pxx, pyy, pzz
 
-def clo_lon (lon, lon0:float=0., rad:bool=False, deg:bool=True) :
+def clo_lon (lon:xr.DataArray, lon0:Union[float,xr.DataArray]=0., rad:bool=False, deg:bool=True) -> xr.DataArray :
     '''
     Choose closest to lon0 longitude, adding/substacting 360.
     if needed
@@ -2832,25 +2596,24 @@ def clo_lon (lon, lon0:float=0., rad:bool=False, deg:bool=True) :
     push_stack ( f'clo_lon (lon, {lon0=}, {rad=}, {deg=} )' )
     if rad and deg :
         raise 
-    mmath = pmath (lon, np)
     if rad :
         lon_range = 2.*np.pi
     if deg :
         lon_range = 360.
     c_lon = lon
-    c_lon = mmath.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
-    c_lon = mmath.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
-    c_lon = mmath.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
-    c_lon = mmath.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
     if c_lon.shape == () :
         c_lon = c_lon.item ()
-    if mmath == xr and lon.attrs :
+    if lon.attrs :
         c_lon.attrs.update (lon.attrs)
 
     pop_stack ( 'clo_lon' )
     return c_lon
 
-def index2depth (pk, gdept_0) :
+def index2depth (pk:xr.DataArray, gdept_0:float) -> np.ndarray :
     '''
     From index (real, continuous), get depth
 
@@ -2866,7 +2629,7 @@ def index2depth (pk, gdept_0) :
     gz = (1.0-zz)*gdept_0[k0]+ zz*gdept_0[k1]
     return gz.values
 
-def depth2index (pz, gdept_0) :
+def depth2index (pz:xr.DataArray, gdept_0:float) -> np.ndarray :
     '''
     From depth, get index (real, continuous)
 
@@ -2892,7 +2655,7 @@ def depth2index (pz, gdept_0) :
     idk = xr.where ( np.isnan(idk), idk1, idk)
     return idk.values
 
-def index2depth_panels (pk, gdept_0:float, depth0:float, fact:float) :
+def index2depth_panels (pk:xr.DataArray, gdept_0:float, depth0:float, fact:float) -> np.ndarray :
     '''
     From  index (real, continuous), get depth, with bottom part compressed
 
@@ -2910,7 +2673,7 @@ def index2depth_panels (pk, gdept_0:float, depth0:float, fact:float) :
     gz = xr.where ( gz<depth0, gz, depth0 + (gz-depth0)*fact)
     return gz.values
 
-def depth2index_panels (pz, gdept_0:float, depth0:float, fact:float) :
+def depth2index_panels (pz:xr.DataArray, gdept_0:float, depth0:float, fact:float) -> np.ndarray :
     '''
     From  index (real, continuous), get depth, with bottom part compressed
 
@@ -2941,7 +2704,7 @@ def depth2index_panels (pz, gdept_0:float, depth0:float, fact:float) :
     idk = xr.where ( np.isnan(idk), idk1, idk)
     return idk.values
 
-def depth2comp (pz, depth0, fact:float ) :
+def depth2comp (pz:xr.DataArray, depth0:float, fact:float, Debug=False) -> np.ndarray :
     '''
     Form depth, get compressed depth, with bottom part compressed
 
@@ -2957,14 +2720,14 @@ def depth2comp (pz, depth0, fact:float ) :
     else :
         zz   = pz
     gz = np.where ( zz>depth0, (zz-depth0)*fact+depth0, zz)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'depth2comp : {gz=}' )
     if type (pz) in [int, float] :
         return gz.item()
     else                         :
         return gz
 
-def comp2depth (pz, depth0, fact:float ) :
+def comp2depth (pz:xr.DataArray, depth0:float, fact:float ) -> np.ndarray :
     '''
     Form compressed depth, get depth, with bottom part compressed
 
@@ -2984,7 +2747,7 @@ def comp2depth (pz, depth0, fact:float ) :
 
     return gz
 
-def index2lon (pi, plon_1d) :
+def index2lon (pi:xr.DataArray, plon_1d:xr.DataArray) -> np.ndarray :
     '''
     From index (real, continuous), get longitude
 
@@ -3001,7 +2764,7 @@ def index2lon (pi, plon_1d) :
     gx  = (1.0-xx)*plon_1d[i0]+ xx*plon_1d[i1]
     return gx.values
 
-def lon2index (px, plon_1d) :
+def lon2index (px:xr.DataArray, plon_1d:xr.DataArray) -> np.ndarray :
     '''
     From longitude, get index (real, continuous)
 
@@ -3028,7 +2791,7 @@ def lon2index (px, plon_1d) :
     idi = xr.where ( np.isnan(idi), idi1, idi)
     return idi.values
 
-def index2lat (pj, plat_1d) :
+def index2lat (pj:xr.DataArray, plat_1d:xr.DataArray) -> np.ndarray :
     '''
     From index (real, continuous), get latitude
 
@@ -3045,7 +2808,7 @@ def index2lat (pj, plat_1d) :
     gy  = (1.0-yy)*plat_1d[j0]+ yy*plat_1d[j1]
     return gy.values
 
-def lat2index (py, plat_1d) :
+def lat2index (py:xr.DataArray, plat_1d:xr.DataArray) -> np.ndarray[int] :
     '''
     From latitude, get index (real, continuous)
 
@@ -3070,9 +2833,11 @@ def lat2index (py, plat_1d) :
     idj = xr.where ( np.isnan(idj), idj1, idj)
     return idj.values
 
-def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
-                glamf, gphif, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None,
-                aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def angle_full (glamt:xr.DataArray, gphit:xr.DataArray, glamu:xr.DataArray, gphiu:xr.DataArray,
+                glamv:xr.DataArray, gphiv:xr.DataArray, glamf:xr.DataArray, gphif:xr.DataArray,
+                Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None,
+                aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False
+) -> tuple [xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     Computes sinus and cosinus of model line direction with
     respect to east
@@ -3081,7 +2846,6 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     zdom   = Domain (ptab=glamt, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
 
-    mmath = pmath (glamt)
     ax, ix = find_axis (glamt, 'x')
     ay, iy = find_axis (glamt, 'y')
 
@@ -3117,8 +2881,8 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     # j-direction: v-point segment direction (around T-point)
     zlam = zlamv
     zphi = zphiv
-    zlan = np.roll ( zlamv, axis=iy, shift=1)  # glamv (ji,jj-1)
-    zphh = np.roll ( zphiv, axis=iy, shift=1)  # gphiv (ji,jj-1)
+    zlan = np.roll (zlamv, axis=iy, shift=1)  # glamv (ji,jj-1)
+    zphh = np.roll (zphiv, axis=iy, shift=1)  # gphiv (ji,jj-1)
     zxvvt =  2.0 * np.cos (np.deg2rad(zlam)) * np.tan (np.pi/4. - np.deg2rad(zphi/2.)) \
           -  2.0 * np.cos (np.deg2rad(zlan)) * np.tan (np.pi/4. - np.deg2rad(zphh/2.))
     zyvvt =  2.0 * np.sin (np.deg2rad(zlam)) * np.tan (np.pi/4. - np.deg2rad(zphi/2.)) \
@@ -3181,21 +2945,21 @@ def angle_full (glamt, gphit, glamu, gphiu, glamv, gphiv,
     gsinf = lbc_del (gsinf, cd_type='F', psgn=-1., domain=zdom)
     gcosf = lbc_del (gcosf, cd_type='F', psgn=-1., domain=zdom)
 
-    if mmath == xr :
-        gsint = gsint.assign_coords (glamt.coords)
-        gcost = gcost.assign_coords (glamt.coords)
-        gsinu = gsinu.assign_coords (glamu.coords)
-        gcosu = gcosu.assign_coords (glamu.coords)
-        gsinv = gsinv.assign_coords (glamv.coords)
-        gcosv = gcosv.assign_coords (glamv.coords)
-        gsinf = gsinf.assign_coords (glamf.coords)
-        gcosf = gcosf.assign_coords (glamf.coords)
+    gsint = gsint.assign_coords (glamt.coords)
+    gcost = gcost.assign_coords (glamt.coords)
+    gsinu = gsinu.assign_coords (glamu.coords)
+    gcosu = gcosu.assign_coords (glamu.coords)
+    gsinv = gsinv.assign_coords (glamv.coords)
+    gcosv = gcosv.assign_coords (glamv.coords)
+    gsinf = gsinf.assign_coords (glamf.coords)
+    gcosf = gcosf.assign_coords (glamf.coords)
 
     pop_stack ( 'angle_full' )
     return gsint, gcost, gsinu, gcosu, gsinv, gcosv, gsinf, gcosf
 
-def angle (glam, gphi, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-           aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def angle (glam:xr.DataArray, gphi:xr.DataArray, cd_type:str='T',
+           Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None, Halo:bool=None, 
+           aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:Union[bool,None]=False) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Computes sinus and cosinus of model line direction with
     respect to east
@@ -3204,7 +2968,6 @@ def angle (glam, gphi, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFol
     zdom   = Domain (ptab=glam, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
 
-    mmath = pmath (glam)
     ax, ix = find_axis (glam, 'x')
     ay, iy = find_axis (glam, 'y')
     
@@ -3234,17 +2997,15 @@ def angle (glam, gphi, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFol
     gsin = lbc_del (gsin, cd_type=cd_type, domain=zdom, psgn=-1.)
     gcos = lbc_del (gcos, cd_type=cd_type, domain=zdom, psgn=-1.)
 
-    if mmath == xr :
-        gsin = gsin.assign_coords ( glam.coords )
-        gcos = gcos.assign_coords ( glam.coords )
-
-        #gsin = unify_dims (glam, **gsin.dims)
+    gsin = gsin.assign_coords ( glam.coords )
+    gcos = gcos.assign_coords ( glam.coords )
 
     pop_stack ( 'angle' )
     return gsin, gcos
 
-def rot_en2ij ( u_e, v_n, gsin, gcos, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-               aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def rot_en2ij ( u_e:xr.DataArray, v_n:xr.DataArray, gsin:xr.DataArray, gcos:xr.DataArray,
+                cd_type:str='T', Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+                aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False)  -> (xr.DataArray, xr.DataArray) :
     '''
     Rotates the Repere: Change vector componantes between
     geographic grid --> stretched coordinates grid.
@@ -3264,8 +3025,9 @@ def rot_en2ij ( u_e, v_n, gsin, gcos, cd_type:str='T', Iperio:bool=None, Jperio:
     pop_stack ( 'rot_en2ij' )
     return u_i, v_j
 
-def rot_ij2en ( u_i, v_j, gsin, gcos, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None,
-               aperio:int=None,  domain:Domain=None, Debug:bool=False) :
+def rot_ij2en ( u_i:xr.DataArray, v_j:xr.DataArray, gsin:xr.DataArray, gcos:xr.DataArray, 
+               cd_type:str='T', Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:bool=None, NFtype:str=None, Halo:bool=None,
+               aperio:int=None,  domain:Domain=None, Debug:bool=False) -> (xr.DataArray, xr.DataArray) :
     '''
     Rotates the Repere: Change vector componantes from
     stretched coordinates grid --> geographic grid
@@ -3284,8 +3046,9 @@ def rot_ij2en ( u_i, v_j, gsin, gcos, cd_type:str='T', Iperio:bool=None, Jperio:
     pop_stack ( 'rot_ij2en' )
     return u_e, v_n
 
-def rot_uv2en (uo, vo, gsint, gcost, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None,
-                aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def rot_uv2en (uo:xr.DataArray, vo:xr.DataArray, gsint:xr.DataArray, gcost:xr.DataArray,
+                Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None,
+                aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Rotate the Repere: Change vector componantes from
     stretched coordinates grid --> geographic grid
@@ -3311,8 +3074,9 @@ def rot_uv2en (uo, vo, gsint, gcost, Iperio:bool=None, Jperio:bool=None, NFold:b
     pop_stack ( 'rot_uv2en' )
     return u_e, v_n
 
-def rot_uv2enf (uo, vo, gsinf, gcosf, zdim=None, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-                aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def rot_uv2enf (uo:xr.DataArray, vo:xr.DataArray, gsinf:xr.DataArray, gcosf:xr.DataArray,
+                zdim:Union[str,None]=None, Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+                aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Rotates the Repere: Change vector componantes from
     stretched coordinates grid --> geographic grid
@@ -3338,16 +3102,17 @@ def rot_uv2enf (uo, vo, gsinf, gcosf, zdim=None, Iperio:bool=None, Jperio:bool=N
     pop_stack ( 'rot_uv2enf' )
     return u_e, v_n
 
-def u2t (utab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False ) :
+def u2t (utab:xr.DataArray, psgn:float=-1.0, zdim:Union[str,None]=None, action:str='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:Union[bool,None]=False ) -> xr.DataArray :
     '''
     Interpolates an array from U grid to T grid (i-mean)
     '''
     push_stack ( f'u2t (utab, {psgn=}, {action=} )' )
     zdom   = Domain (ptab=utab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (utab)
-    utab_0 = mmath.where ( np.isnan(utab), 0., utab)
+
+    utab_0 = xr.where ( np.isnan(utab), 0., utab)
     utab_0 = lbc_add (utab_0, domain=zdom, cd_type='U', psgn=psgn)
     ax, ix = find_axis (utab_0, 'x')
     az, iz = find_axis (utab_0, 'z')
@@ -3365,26 +3130,25 @@ def u2t (utab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperi
     else :
         ttab = lbc_del (utab_0, domain=zdom, cd_type='T', psgn=psgn)
 
-    if mmath == xr :
-        if ax :
-            ttab = ttab.assign_coords({ax:np.arange (ttab.shape[ix])+1.})
-        if zdim and az :
-            if az != zdim :
-                ttab = ttab.rename( {az:zdim})
+    if ax :
+        ttab = ttab.assign_coords({ax:np.arange (ttab.shape[ix])+1.})
+    if zdim and az :
+        if az != zdim :
+            ttab = ttab.rename( {az:zdim})
                 
     pop_stack ( 'u2t' )
     return ttab
 
-def v2t (vtab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None,
-          aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def v2t (vtab:xr.DataArray, psgn:float=-1.0, zdim:Union[str,None]=None, action:str='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None,
+          aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from V grid to T grid (j-mean)
     '''
     push_stack ( f'v2t (vtab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
-    mmath  = pmath (vtab)
     zdom   = Domain (ptab=vtab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo,
                       aperio=aperio, nperio=nperio, domain=domain)
-    vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
+    vtab_0 = xr.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0, domain=zdom, cd_type='V', psgn=psgn)
     ay, jy = find_axis (vtab_0, 'y')
     az, iz = find_axis (vtab_0, 'z')
@@ -3401,26 +3165,25 @@ def v2t (vtab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperi
     else :
         ttab = lbc_del (vtab_0, domain=zdom, cd_type='T', psgn=psgn)
 
-    if mmath == xr :
-        if ay :
-            ttab = ttab.assign_coords({ay:np.arange(ttab.shape[jy])+1.})
-        if zdim and az :
-            if az != zdim :
-                ttab = ttab.rename( {az:zdim})
+    if ay :
+        ttab = ttab.assign_coords({ay:np.arange(ttab.shape[jy])+1.})
+    if zdim and az :
+        if az != zdim :
+            ttab = ttab.rename( {az:zdim})
                 
     pop_stack ( 'v2t' )
     return ttab
 
-def f2t (ftab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def f2t (ftab:xr.DataArray, psgn:float=1.0, zdim:Union[str,None]=None, action='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain|None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from F grid to T grid (i- and j- means)
     '''
     push_stack ( f'f2t (ftab, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=ftab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (ftab)
-    ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
+    ftab_0 = xr.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0, domain=zdom, cd_type='F', psgn=psgn)
     ttab = v2t (f2v (ftab_0, domain=zdom, psgn=psgn, zdim=zdim, action=action),
                              domain=zdom, psgn=psgn, zdim=zdim, action=action)
@@ -3430,17 +3193,17 @@ def f2t (ftab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio
     pop_stack ( 'f2t' )
     return ttab
 
-def t2u (ttab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def t2u (ttab:xr.DataArray, psgn:float=1.0, zdim:Union[str,None]=None, action:Union[str,None]='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:Union[bool,None]=False) -> xr.DataArray :
     '''
     Interpolates an array from T grid to U grid (i-mean)
     '''
     push_stack ( f't2u (ttab, {psgn=}, {zdim=}, {action=} )' )
 
-    mmath = pmath (ttab)
     zdom   = Domain (ptab=ttab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
+    ttab_0 = xr.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0, domain=zdom, cd_type='T', psgn=psgn)
     ax, ix = find_axis (ttab_0, 'x')
     az, iz = find_axis (ttab_0, 'z')
@@ -3457,28 +3220,27 @@ def t2u (ttab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio
     else :
         utab = lbc_del (ttab_0, domain=zdom, cd_type='U', psgn=psgn)
 
-    if mmath == xr :
-        if ax :
-            utab = utab.assign_coords({ax:np.arange(utab.shape[ix])+1.})
-            if 'x_c' in utab.dims :
-                utab = utab.rename ({'x_c':'x_f'})
-        if zdim and az :
-            if az != zdim :
-                utab = utab.rename( {az:zdim})
+    if ax :
+        utab = utab.assign_coords({ax:np.arange(utab.shape[ix])+1.})
+        if 'x_c' in utab.dims :
+            utab = utab.rename ({'x_c':'x_f'})
+    if zdim and az :
+        if az != zdim :
+            utab = utab.rename( {az:zdim})
 
     pop_stack ( 't2u' )
     return utab
 
-def t2v (ttab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def t2v (ttab:xr.DataArray, psgn:float=1.0, zdim=None, action='ave',
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from T grid to V grid (j-mean)
     '''
     push_stack ( f't2v (ttab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=ttab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (ttab)
-    ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
+    ttab_0 = xr.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 ,domain=zdom, cd_type='T', psgn=psgn)
     ay, jy = find_axis (ttab_0, 'y')
     az, jz = find_axis (ttab_0, 'z')
@@ -3495,28 +3257,27 @@ def t2v (ttab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio
     else :
         vtab = lbc_del (ttab_0, domain=zdom, cd_type='V', psgn=psgn)
 
-    if mmath == xr :
-        if ay :
-            vtab = vtab.assign_coords({ay:np.arange(vtab.shape[jy])+1.})
-            if 'y_c' in vtab.dims :
-                vtab = vtab.rename ({'y_c':'y_f'})
-        if zdim and az :
-            if az != zdim :
-                vtab = vtab.rename( {az:zdim})
+    if ay :
+        vtab = vtab.assign_coords({ay:np.arange(vtab.shape[jy])+1.})
+        if 'y_c' in vtab.dims :
+            vtab = vtab.rename ({'y_c':'y_f'})
+    if zdim and az :
+        if az != zdim :
+            vtab = vtab.rename( {az:zdim})
  
     pop_stack ( 't2v' )
     return vtab
 
-def v2f (vtab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def v2f (vtab:xr.DataArray, psgn:float=-1.0, zdim:Union[str,None]=None, action:str='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from V grid to F grid (i-mean)
     '''
     push_stack ( f'v2f (vtab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=vtab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (vtab)
-    vtab_0 = mmath.where ( np.isnan(vtab), 0., vtab)
+    vtab_0 = xr.where ( np.isnan(vtab), 0., vtab)
     vtab_0 = lbc_add (vtab_0 , domain=zdom, cd_type='V', psgn=psgn)
     ax, ix = find_axis (vtab_0, 'x')
     az, jz = find_axis (vtab_0, 'z')
@@ -3533,30 +3294,29 @@ def v2f (vtab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperi
     else :
         ftab = lbc_del (vtab_0, domain=zdom, cd_type='F', psgn=psgn)
 
-    if mmath == xr :
-        if ax :
-            ftab = ftab.assign_coords({ax:np.arange(ftab.shape[ix])+1.})
-            if 'y_c' in ftab.dims :
-                ftab = ftab.rename ({'x_c':'x_f'})
-        if zdim and az :
-            if az != zdim :
-                ftab = ftab.rename( {az:zdim})
+    if ax :
+        ftab = ftab.assign_coords({ax:np.arange(ftab.shape[ix])+1.})
+        if 'y_c' in ftab.dims :
+            ftab = ftab.rename ({'x_c':'x_f'})
+    if zdim and az :
+        if az != zdim :
+            ftab = ftab.rename( {az:zdim})
 
     ftab = lbc_del (ftab, domain=zdom, cd_type='F', psgn=psgn)
     
     pop_stack ( 'v2f' )
     return ftab
 
-def u2f (utab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def u2f (utab:xr.DataArray, psgn:float=-1.0, zdim:Union[xr.DataArray,None]=None, action:str='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from U grid to F grid i-mean)
     '''
     push_stack ( f'u2f (utab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=utab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo,
                       aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (utab)
-    utab_0 = mmath.where ( np.isnan(utab), 0., utab)
+    utab_0 = xr.where ( np.isnan(utab), 0., utab)
     utab_0 = lbc_add (utab_0 , domain=zdom, cd_type='U', psgn=psgn)
     ay, jy = find_axis (utab_0, 'y')
     az, kz = find_axis (utab_0, 'z')
@@ -3573,28 +3333,27 @@ def u2f (utab, psgn:float=-1.0, zdim=None, action='ave', Iperio:bool=None, Jperi
     else :
         ftab = lbc_del (utab_0, domain=zdom, cd_type='F', psgn=psgn)
 
-    if mmath == xr :
-        if ay :
-            ftab = ftab.assign_coords({ay:np.arange(ftab.shape[jy])+1.})
-            if 'y_c' in ftab.dims :
-                utab = utab.rename ({'y_c':'y_f'})
-        if zdim and az :
-            if az != zdim :
-                ftab = ftab.rename( {az:zdim})
+    if ay :
+        ftab = ftab.assign_coords({ay:np.arange(ftab.shape[jy])+1.})
+        if 'y_c' in ftab.dims :
+            utab = utab.rename ({'y_c':'y_f'})
+    if zdim and az :
+        if az != zdim :
+            ftab = ftab.rename( {az:zdim})
     
     pop_stack ( 'u2f' )
     return ftab
 
-def t2f (ttab, psgn:float=1.0, zdim=None, action='mean', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def t2f (ttab:xr.DataArray, psgn:float=1.0, zdim:Union[xr.DataArray,None]=None, action:str='mean', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array on T grid to F grid (i- and j- means)
     '''
     push_stack ( f't2f (utab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=ttab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath  = pmath (ttab)
-    ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
+    ttab_0 = xr.where ( np.isnan(ttab), 0., ttab)
     ttab_0 = lbc_add (ttab_0 , zdom=zdom, cd_type='T', psgn=psgn)
     ftab = t2u (u2f (ttab, domain=zdom, psgn=psgn, zdim=zdim, action=action),
                            domain=zdom, psgn=psgn, zdim=zdim, action=action)
@@ -3604,16 +3363,16 @@ def t2f (ttab, psgn:float=1.0, zdim=None, action='mean', Iperio:bool=None, Jperi
     pop_stack ( 'v2f' )
     return ftab
 
-def f2u (ftab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def f2u (ftab:xr.DataArray, psgn:float=1.0, zdim:Union[str,None]=None, action:str='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array on F grid to U grid (j-mean)
     '''
     push_stack ( f'f2u (utab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=ftab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (ftab)
-    ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
+    ftab_0 = xr.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , domain=zdom, cd_type='F', psgn=psgn)
     ay, jy = find_axis (ftab_0, 'y')
     az, kz = find_axis (ftab_0, 'z')
@@ -3630,26 +3389,25 @@ def f2u (ftab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio
     else :
         utab = lbc_del (ftab_0, domain=zdom, cd_type='U', psgn=psgn)
 
-    if mmath == xr :
-        utab = utab.assign_coords({ay:np.arange(ftab.shape[jy])+1.})
-        if 'y_f' in utab.dims :
-            utab = utab.rename ({'y_f':'y_c'})
-        if zdim and az and az != zdim :
-            utab = utab.rename( {az:zdim})
+    utab = utab.assign_coords({ay:np.arange(ftab.shape[jy])+1.})
+    if 'y_f' in utab.dims :
+        utab = utab.rename ({'y_f':'y_c'})
+    if zdim and az and az != zdim :
+        utab = utab.rename( {az:zdim})
 
     pop_stack ( 'f2u' )
     return utab
 
-def f2v (ftab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def f2v (ftab:xr.DataArray, psgn:float=1.0, zdim:Union[xr.DataArray,None]=None, action:str='ave', 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from F grid to V grid (i-mean)
     '''
     push_stack ( f'f2v (ftab, {aperio=}, {psgn=}, {zdim=}, {action=} )' )
     zdom   = Domain (ptab=ftab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)
-    mmath = pmath (ftab)
-    ftab_0 = mmath.where ( np.isnan(ftab), 0., ftab)
+    ftab_0 = xr.where ( np.isnan(ftab), 0., ftab)
     ftab_0 = lbc_add (ftab_0 , domain=zdom, cd_type='F', psgn=psgn)
     ax, ix = find_axis (ftab_0, 'x')
     az, kz = find_axis (ftab_0, 'z')
@@ -3666,25 +3424,24 @@ def f2v (ftab, psgn:float=1.0, zdim=None, action='ave', Iperio:bool=None, Jperio
     else :
         vtab = lbc_del (ftab_0, domain=zdom, cd_type='V', psgn=psgn)
 
-    if mmath == xr :
-        vtab = vtab.assign_coords({ax:np.arange(ftab.shape[ix])+1.})
-        if 'x_f' in ftab.dims :
-            vtab = vtab.rename ({'x_f':'x_c'})
-        if zdim and az :
-            if az != zdim :
-                vtab = vtab.rename( {az:zdim})
+    vtab = vtab.assign_coords({ax:np.arange(ftab.shape[ix])+1.})
+    if 'x_f' in ftab.dims :
+        vtab = vtab.rename ({'x_f':'x_c'})
+    if zdim and az :
+        if az != zdim :
+            vtab = vtab.rename( {az:zdim})
 
     pop_stack ( 'f2v' )
     return vtab
 
-def w2t (wtab, zcoord=None, zdim=None, sval=np.nan) :
+def w2t (wtab:xr.DataArray, zcoord:Union[xr.DataArray,None]=None, zdim:Union[xr.DataArray,None]=None, 
+         sval:float=np.nan) -> xr.DataArray :
     '''
     Interpolates an array on W grid to T grid (k-mean)
     sval is the bottom value
     '''
     push_stack ( f'w2t (wtab, {zcoord=}, {zdim=}, {sval=} )' )
-    mmath = pmath (wtab)
-    wtab_0 = mmath.where ( np.isnan(wtab), 0., wtab)
+    wtab_0 = xr.where ( np.isnan(wtab), 0., wtab)
 
     az, kz = find_axis (wtab_0, 'z')
 
@@ -3693,22 +3450,20 @@ def w2t (wtab, zcoord=None, zdim=None, sval=np.nan) :
     else :
         ttab = wtab_0
 
-    if mmath == xr :
-        ttab[{az:kz}] = sval
-        if zdim and az :
-            if az != zdim :
-                ttab = ttab.rename ( {az:zdim} )
-        if zcoord is not None :
-            ttab = ttab.assign_coords ( {zdim:zcoord} )
-        if 'z_f' in utab.dims :
-            utab = utab.rename ({'z_f':'z_c'})
-    else :
-        ttab[..., -1, :, :] = sval
+    ttab[{az:kz}] = sval
+    if zdim and az :
+        if az != zdim :
+            ttab = ttab.rename ( {az:zdim} )
+    if zcoord is not None :
+        ttab = ttab.assign_coords ( {zdim:zcoord} )
+    if 'z_f' in utab.dims :
+        utab = utab.rename ({'z_f':'z_c'})
 
     pop_stack ( 'w2t' )
     return ttab
 
-def t2w (ttab, zcoord=None, zdim=None, sval=np.nan, extrap_surf=False) :
+def t2w (ttab:xr.DataArray, zcoord:Union[xr.DataArray,None]=None, zdim:Union[str,None]=None, 
+         sval:float=np.nan, extrap_surf:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from T grid to W grid (k-mean)
 
@@ -3716,37 +3471,28 @@ def t2w (ttab, zcoord=None, zdim=None, sval=np.nan, extrap_surf=False) :
     if extrap_surf==True, surface value is taken from 1st level value.
     '''
     push_stack ( f't2w (utab, {zcoord=}, {zdim=}, {sval=}, {extrap_surf=} )' )
-    mmath = pmath (ttab)
-    ttab_0 = mmath.where ( np.isnan(ttab), 0., ttab)
+    ttab_0 = xr.where ( np.isnan(ttab), 0., ttab)
     az, kz = find_axis (ttab_0, 'z')
     wtab = 0.5 * ( ttab_0 + np.roll (ttab_0, axis=kz, shift=1) )
 
-    if mmath == xr :
-        if extrap_surf :
-            wtab[{az:0}] = ttab[{az:0}]
-        else           :
-            wtab[{az:0}] = sval
-    else :
-        if extrap_surf :
-            wtab[..., 0, :, :] = ttab[..., 0, :, :]
-        else           :
-            wtab[..., 0, :, :] = sval
+    if extrap_surf :
+        wtab[{az:0}] = ttab[{az:0}]
 
-    if mmath == xr :
-        if zdim and az and az != zdim :
-            wtab = wtab.rename ( {az:zdim})
-        if zcoord is not None :
-            wtab = wtab.assign_coords ( {zdim:zcoord})
-        else :
-            wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz])+1.} )
-        if 'z_c' in utab.dims :
-            utab = utab.rename ({'z_c':'z_f'})
+    if zdim and az and az != zdim :
+        wtab = wtab.rename ( {az:zdim})
+    if zcoord is not None :
+        wtab = wtab.assign_coords ( {zdim:zcoord})
+    else :
+        wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz])+1.} )
+    if 'z_c' in utab.dims :
+        utab = utab.rename ({'z_c':'z_f'})
 
     pop_stack ( 't2w' )
     return wtab
 
-def fill (ptab, cd_type:str='T', npass:int=1, sval=np.nan, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-          aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def fill (ptab:xr.DataArray, cd_type:str='T', npass:int=1, sval=np.nan, 
+          Iperio:Union[bool,None]=None, Jperio:Union[bool,None]=None, NFold:bool=None, NFtype:str=None, Halo:bool=None, 
+          aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Fills np.nan values with mean of neighbours
 
@@ -3757,7 +3503,6 @@ def fill (ptab, cd_type:str='T', npass:int=1, sval=np.nan, Iperio:bool=None, Jpe
     push_stack ( f'fill (ptab, {aperio=}, {cd_type=}, {npass=}, {sval=} ) ')
     zdom   = Domain (ptab=ptab, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, 
                      aperio=aperio, nperio=nperio, domain=domain)    
-    mmath  = pmath (ptab)
     ax, ix = find_axis (ptab, 'x')
     ay, jy = find_axis (ptab, 'y')
     
@@ -3776,13 +3521,13 @@ def fill (ptab, cd_type:str='T', npass:int=1, sval=np.nan, Iperio:bool=None, Jpe
         ztab = ptab
 
     if np.isnan (sval) :
-        ztab   = mmath.where (np.isnan(ztab), np.nan, ztab)
+        ztab   = xr.where (np.isnan(ztab), np.nan, ztab)
     else :
-        ztab   = mmath.where (ztab==sval    , np.nan, ztab)
+        ztab   = xr.where (ztab==sval    , np.nan, ztab)
 
     for _ in np.arange (npass) :
-        zmask = mmath.where ( np.isnan(ztab), 0., 1.   )
-        ztab0 = mmath.where ( np.isnan(ztab), 0., ztab )
+        zmask = xr.where ( np.isnan(ztab), 0., 1.   )
+        ztab0 = xr.where ( np.isnan(ztab), 0., ztab )
         # Compte du nombre de voisins
         zcount = 1./6. * ( zmask \
           + np.roll(zmask, shift=1, axis=ix) + np.roll(zmask, shift=-1, axis=ix) \
@@ -3805,16 +3550,16 @@ def fill (ptab, cd_type:str='T', npass:int=1, sval=np.nan, Iperio:bool=None, Jpe
         zcount = lbc (zcount, domain=ldom, cd_type=cd_type)
         znew   = lbc (znew  , domain=ldom, cd_type=cd_type)
 
-        ztab = mmath.where (np.logical_and (zmask==0., zcount>0), znew/zcount, ztab)
+        ztab = xr.where (np.logical_and (zmask==0., zcount>0), znew/zcount, ztab)
 
-    ztab = mmath.where (zcount==0, sval, ztab)
+    ztab = xr.where (zcount==0, sval, ztab)
     if do_perio :
         ztab = lbc_del (ztab, domain=ldom)
 
     pop_stack ( 'fill' )
     return ztab
 
-def correct_uv (u, v, lat) :
+def correct_uv (u:xr.DataArray, v:xr.DataArray, lat:xr.DataArray) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Corrects a Cartopy bug in orthographic projection
 
@@ -3842,7 +3587,7 @@ def correct_uv (u, v, lat) :
     pop_stack ( 'correct_uv' )
     return uc, vc
 
-def norm_uv (u, v) :
+def norm_uv (u:xr.DataArray, v:xr.DataArray) -> xr.DataArray :
     '''Returns norm of a 2 components vector
     '''
     push_stack ( 'norm_uv (u, v)' )
@@ -3850,7 +3595,7 @@ def norm_uv (u, v) :
     pop_stack ( 'norm_uv' )
     return zz
 
-def normalize_uv (u, v) :
+def normalize_uv (u:xr.DataArray, v:xr.DataArray) -> (xr.DataArray, xr.DataArray) :
     '''Normalizes 2 components vector
     '''
     push_stack ( 'normalize_uv (u, v)' )
@@ -3860,7 +3605,7 @@ def normalize_uv (u, v) :
     pop_stack ( 'normalize_uv' )
     return uu, vv
 
-def zonmean (var, bb, plat1d) :
+def zonmean (var:xr.DataArray, bb:xr.DataArray, plat1d:xr.DataArray, Debug:bool=False) -> xr.DataArray :
     '''
     Computes the meridonal stream function
 
@@ -3869,7 +3614,7 @@ def zonmean (var, bb, plat1d) :
     '''
     push_stack ( 'zonmean (vv, bb, plat1d)' )
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{bb.dims = } {bb.shape=}' )
         print ( f'{var.dims = } {var.shape}' )
 
@@ -3880,23 +3625,23 @@ def zonmean (var, bb, plat1d) :
     ldims = UDIMS.copy()
     ldims.update ({'x':ax, 'y':ay, 'z':az})
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'zonmean : {ldims=}' )
     
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('zonmean : zonal mean of volume')
     zon_bb  = unify_dims (bb, **ldims).sum(dim=ldims['x'], min_count=1, keep_attrs=True)
     zon_bb  = zon_bb.where (zon_bb>0., np.nan)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'zonmean : {zon_bb.dims = }' )
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('zonmean : zonal mean of variable')
     zon_var = (var * unify_dims (bb, **ldims)).sum(dim=ldims['x'], min_count=1, keep_attrs=True) / zon_bb
     zon_var = zon_var.where ( np.logical_not(np.isnan(zon_bb)), np.nan)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'zonmean : {zon_var.dims = }' )
     
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( 'zonmean : Change coords')
     zon_var = zon_var.assign_coords ( {ldims['y']:(ldims['y'], plat1d.values)} )
     zon_var = zon_var.rename ( {ldims['y']:'lat'} )
@@ -3909,7 +3654,8 @@ def zonmean (var, bb, plat1d) :
     pop_stack ( 'zon' )
     return zon_var
 
-def msf (vv, e1v_e3v, plat1d, depthw, south:bool=None) :
+def msf (vv:xr.DataArray, e1v_e3v:xr.DataArray, plat1d:xr.DataArray, depthw:xr.DataArray, 
+         south:Union[bool,None]=None, Debug:Union[bool,None]=True) -> xr.DataArray :
     '''
     Computes the meridonal stream function
 
@@ -3948,14 +3694,14 @@ def msf (vv, e1v_e3v, plat1d, depthw, south:bool=None) :
         south = -30
     
     if south :
-        if OPTIONS.Debug :
+        if OPTIONS['Debug'] or Debug :
             print ( f'Masque south of {south}')
         zomsf = zomsf.where (zomsf.lat > south, np.nan)
 
     pop_stack ( 'msf' )
     return zomsf
 
-def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None, Debug:bool=False) :
+def zmsf_index (zmsf:Union[xr.DataArray,None], name:str="nadw", latname:str='nav_lat', lat:Union[xr.DataArray,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Compute index of zonal meridional stream function
     
@@ -3982,20 +3728,20 @@ def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None, Debug:bool=False
     
     zlat1d   = lat1d  (zmsf[latname])
     zmsf_lat = unify_dims (zmsf, **UDIMS)
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print (f'{zmsf_lat.dims=} , {UDIMS=}')
     if not lat is None :
         zmsf_lat = zmsf_lat.assign_coords ( {'y':lat.values} )
     else : 
         zmsf_lat = zmsf_lat.assign_coords ( {UDIMS['y']:zlat1d.values} )
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{ylim=} - {zlim=}' )
         print ( f'{zlat1d=}' )
         print ( f'{zmsf_lat.y}' )
         print ( f'{zmsf_lat.olevel}' )
 
     za = zmsf_lat.sel ({UDIMS['z']:zlim})
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{za.shape=}')
         print ( f'{za=}')
         
@@ -4006,8 +3752,9 @@ def zmsf_index (zmsf, name="nadw", latname='nav_lat', lat=None, Debug:bool=False
     pop_stack ('zmsf_index')
     return index_ocean
 
-def bsf (uu, e2u_e3u, mask, bsf0=None, Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-         aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def bsf (uu:xr.DataArray, e2u_e3u:xr.DataArray, mask:xr.DataArray, bsf0:Union[list,Dict,None]=None, 
+         Iperio:Union[int,None]=None, Jperio:Union[int,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+         aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Computes the barotropic stream function
 
@@ -4023,7 +3770,7 @@ def bsf (uu, e2u_e3u, mask, bsf0=None, Iperio:bool=None, Jperio:bool=None, NFold
 
     u_e2u_e3u       = uu * e2u_e3u
     u_e2u_e3u.attrs = uu.attrs
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{u_e2u_e3u.dims=} {mask.dims=}' )
 
     ax, ix = find_axis (u_e2u_e3u, 'y')
@@ -4031,16 +3778,16 @@ def bsf (uu, e2u_e3u, mask, bsf0=None, Iperio:bool=None, Jperio:bool=None, NFold
     az, kz = find_axis (u_e2u_e3u, 'z')
 
     zbsf = -u_e2u_e3u.cumsum (dim=ay, keep_attrs=True )
-    if OPTIONS.Debug or Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'1 - {zbsf.dims=}' )
     zbsf = zbsf.sum (dim=az, keep_attrs=True)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'2 - {zbsf.dims=}' )
-    if bsf0 : 
+    if bsf0 is not None : 
         zbsf = zbsf - zbsf.isel (bsf0)
 
     zbsf = zbsf.where (mask !=0, np.nan)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug : #type: ignore
         print ( f'3 - {zbsf.dims=}' )
     zbsf.attrs.update (uu.attrs)
     zbsf.attrs['standard_name'] = 'stfbaro'
@@ -4052,7 +3799,7 @@ def bsf (uu, e2u_e3u, mask, bsf0=None, Iperio:bool=None, Jperio:bool=None, NFold
     return zbsf
     
 if f90nml :
-    def namelist_read (ref=None, cfg=None, out='dict', flat=False) :
+    def namelist_read (ref:Union[str,None]=None, cfg:Union[str,None]=None, out:str='dict', flat:bool=False, Debug:bool=False) :
         '''
         Read NEMO namelist(s) and return either a dictionnary or an xarray dataset
 
@@ -4080,7 +3827,7 @@ if f90nml :
                 nml_cfg = cfg
 
         if out == 'dict' :
-            dict_namelist = Container ()
+            dict_namelist = dict()
         if out == 'xr'   :
             xr_namelist = xr.Dataset ()
 
@@ -4095,30 +3842,30 @@ if f90nml :
             list_comment.append ('cfg')
 
         for nml, comment in zip (list_nml, list_comment) :
-            if OPTIONS.Debug :
+            if OPTIONS['Debug'] or Debug :
                 print (comment)
             if flat and out =='dict' :
                 for nam in nml.keys () :
-                    if OPTIONS.Debug :
+                    if OPTIONS['Debug'] or Debug :
                         print (nam)
                     for value in nml[nam] :
                         if out == 'dict' :
                             dict_namelist[value] = nml[nam][value]
-                        if OPTIONS.Debug :
+                        if OPTIONS['Debug'] or Debug :
                             print (nam, ':', value, ':', nml[nam][value])
             else :
                 for nam in nml.keys () :
-                    if OPTIONS.Debug :
+                    if OPTIONS['Debug'] or Debug :
                         print (nam)
                     if out == 'dict' :
                         if nam not in dict_namelist.keys () :
-                            dict_namelist[nam] = Container ()
+                            dict_namelist[nam] = dict ()
                     for value in nml[nam] :
                         if out == 'dict' :
                             dict_namelist[nam][value] = nml[nam][value]
                         if out == 'xr'   :
                             xr_namelist[value] = nml[nam][value]
-                        if OPTIONS.Debug :
+                        if OPTIONS['Debug'] or Debug : 
                             print (nam, ':', value, ':', nml[nam][value])
 
         pop_stack ( 'namelist_read' )
@@ -4127,7 +3874,7 @@ if f90nml :
         if out == 'xr'   :
             return xr_namelist
 else :
-     def namelist_read (ref=None, cfg=None, out='dict', flat=False) :
+     def namelist_read (ref:Union[str,None]=None, cfg:Union[str,None]=None, out:str='dict', flat:bool=False) :
         '''
         Shadow version of namelist read, when f90nm module was not found
 
@@ -4142,8 +3889,9 @@ else :
         print ( f'{ref=} {cfg=} {out=} {flat=}' )
         pop_stack ( 'namelist_read [void version]' )
 
-def fill_closed_seas (imask, cd_type:str='T', Iperio:bool=None, Jperio:bool=None, NFold:bool=None, NFtype:bool=None, Halo:bool=None, 
-                      aperio:int=None, nperio:int=None, domain:Domain=None, Debug:bool=False) :
+def fill_closed_seas (imask:xr.DataArray, cd_type:str='T', 
+                      Iperio:Union[bool,None]=None, Jperio:Union[bool,None]=None, NFold:Union[bool,None]=None, NFtype:Union[str,None]=None, Halo:Union[bool,None]=None, 
+                      aperio:Union[int,float,None]=None, nperio:Union[int,None]=None, domain:Union[Domain,None]=None, Debug:bool=False) -> xr.DataArray :
     '''
     Fill closed seas with image processing library
 
@@ -4156,6 +3904,7 @@ def fill_closed_seas (imask, cd_type:str='T', Iperio:bool=None, Jperio:bool=None
     from scipy import ndimage
 
     imask_filled = ndimage.binary_fill_holes ( lbc (imask, domain=zdom, cd_type=cd_type))
+    imask_filled = xr.DataArray (imask_filled, coords=imask.coords, dims=imask.dims)
     imask_filled = lbc (imask_filled, domain=zdom, cd_type=cd_type)
 
     pop_stack ( 'fill_closed_seas' )
@@ -4222,7 +3971,7 @@ EOS003 = -2.3342758797e-02
 EOS103 = -1.8507636718e-02
 EOS013 =  3.7969820455e-01
 
-def rhop (ptemp, psal) :
+def rhop (ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
     '''
     Returns potential density referenced to surface
 
@@ -4244,8 +3993,8 @@ def rhop (ptemp, psal) :
     pop_stack ( 'rhop' )
     return prhop
 
-def rho (pdep, ptemp, psal) :
-    '''
+def rho (pdep:xr.DataArray, ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
+    ''' 
     Returns in situ density
 
     Computation from NEMO code

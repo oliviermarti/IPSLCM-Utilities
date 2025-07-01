@@ -24,9 +24,10 @@ personal.
 
 import time
 import copy
+from typing import Any, Self, Literal, Dict, Union, Hashable
+
 import numpy as np
 import xarray as xr
-from libIGCM.utils import Container
 
 ## Variables exchanged between ocean and atmosphere in IPSL coupled model      
 o2a_hf = [
@@ -70,20 +71,20 @@ a2o_hf = a2o_hf_wind + a2o_hf_ext
 a2o    = a2o_day     + a2o_hf
 
 # Build dictionnaries for correspondance between ocean and atmosphere variables.
-a2o_d = Container ()
-a2o_r = Container ()
+a2o_d = dict ()
+a2o_r = dict ()
 for avar, ovar in a2o :
     a2o_d[avar] = ovar
     a2o_r[ovar] = avar
 
-o2a_d = Container ()
-o2a_r = Container ()
+o2a_d = dict ()
+o2a_r = dict ()
 for ovar, avar in o2a :
     o2a_d[ovar] = avar
     o2a_r[avar] = ovar
 
 ### OASIS internal options                                                     
-DEFAULT_OPTIONS = Container (Debug  = False,
+DEFAULT_OPTIONS = dict (Debug  = False,
                      Trace  = False,
                      Timing = None,
                      t0     = None,
@@ -96,7 +97,7 @@ class set_options :
     Set options for oasis
     '''
     def __init__ (self, **kwargs) :
-        self.old = Container ()
+        self.old = dict ()
         for k, v in kwargs.items() :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -128,47 +129,47 @@ def return_stack () :
     return OPTIONS['Stack']
 
 def push_stack (string:str) :
-    if OPTIONS.Depth :
-        OPTIONS.Depth += 1
+    if OPTIONS['Depth'] :
+        OPTIONS['Depth'] += 1
     else             :
-        OPTIONS.Depth = 1
-    if OPTIONS.Trace :
-        print ( '  '*(OPTIONS.Depth-1), f'-->{__name__}.{string}' )
+        OPTIONS['Depth'] = 1
+    if OPTIONS['Trace'] :
+        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS.Stack :
-        OPTIONS.Stack.append (string)
+    if OPTIONS['Stack'] :
+        OPTIONS['Stack'].append (string)
     else             :
-        OPTIONS.Stack = [string,]
+        OPTIONS['Stack'] = [string,]
     #
-    if OPTIONS.Timing :
-        if OPTIONS.t0 :
-            OPTIONS.t0.append ( time.time() )
+    if OPTIONS['Timing'] :
+        if OPTIONS['t0'] :
+            OPTIONS['t0'].append ( time.time() )
         else :
-            OPTIONS.t0 = [ time.time(), ]
+            OPTIONS['t0'] = [ time.time(), ]
 
 def pop_stack (string:str) :
-    if OPTIONS.Timing :
-        dt = time.time() - OPTIONS.t0[-1]
-        OPTIONS.t0.pop()
+    if OPTIONS['Timing'] :
+        dt = time.time() - OPTIONS['t0'][-1]
+        OPTIONS['t0'].pop()
     else :
         dt = None
     if OPTIONS['Trace'] or dt :
         if dt : 
             if dt < 1e-3 : 
-                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
             if dt >= 1 : 
-                print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string} : time: {dt*1  :5.1f} second')
+                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1  :5.1f} second')
         else : 
-            print ( '  '*(OPTIONS.Depth-1), f'<--{__name__}.{string}')
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
-    OPTIONS.Depth -= 1
-    if OPTIONS.Depth == 0 :
-        OPTIONS.Depth = None
-    OPTIONS.Stack.pop ()
-    if OPTIONS.Stack == list () :
-        OPTIONS.Stack = None
+    OPTIONS['Depth'] -= 1
+    if OPTIONS['Depth'] == 0 :
+        OPTIONS['Depth'] = None
+    OPTIONS['Stack'].pop ()
+    if OPTIONS['Stack'] == list () :
+        OPTIONS['Stack'] = None
     #
 
 ## ============================================================================
@@ -191,7 +192,7 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
     pop_stack ( 'compute_links')
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
-def rmp_remap (ptab, d_rmp, sval=np.nan) :
+def rmp_remap (ptab, d_rmp, sval=np.nan, Debug=False) :
     '''
     Remap a field using OASIS rmpfile
 
@@ -227,26 +228,26 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
         print ('Dimensions do not match')
         raise Exception ("Error in module: " + __name__ + ", file: " + __file__ + ", function: " + rmp_remap.__name__)
        
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('grid sizes      : ', src_grid_size, dst_grid_size)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('num_links       : ', num_links)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('src dimensions  : ', src_ny, src_nx)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('dst dimensions  : ', dst_ny, dst_nx)
 
     # Get information to create the destination field
     src_shape_2D   = list (ptab.shape)
     dst_shape_2D   = src_shape_2D[:-2] + [dst_ny, dst_nx]
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('shapes  2D      : ', src_shape_2D, dst_shape_2D)   
 
     src_shape_1D = src_shape_2D[:-2] + [src_ny*src_nx]
     dst_shape_1D = dst_shape_2D[:-2] + [dst_ny*dst_nx]
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('shapes  1D      : ', src_shape_1D, dst_shape_1D)   
     
     src_dims_2D = list (ptab.dims) 
@@ -256,9 +257,9 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     dst_dims_2D = dst_dims_2D + ['y', 'x']
     dst_dims_1D = dst_dims_2D[:-2] + ['xy']
     
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
         
     src_coords_2D = ptab.coords
@@ -273,9 +274,9 @@ def rmp_remap (ptab, d_rmp, sval=np.nan) :
     ## Creates an array to mask destinations points with no value assigned by the interpolation
     dst_mask_1D = np.full (dst_shape_1D, np.nan)
     
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ("shape fields 1D : ", np.prod(src_field_1D.shape), np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
 
     # Interpolate
@@ -297,7 +298,7 @@ def progress (percent=0, width=30) :
         #print ('\r[', '#' * left, ' ' * right, ']', f' {percent:.0f}%',  sep='', end='', flush=True)
         print ( '\r[', '#' * left, ' ' * right, '] {:4d}%'.format(percent),  sep='', end='', flush=True)
 
-def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval=np.nan) :
+def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_address, remap_matrix, sval=np.nan, Debug=False) :
     '''
     Remap a field using interpolation weights and addresses
 
@@ -326,13 +327,13 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
     dst_field = np.zeros ( (dst_shape) )
     dst_mask  = np.full  ( (dst_shape), np.nan)
      
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ("\nStarting interpolation")
     t_start = time.time ()
     t_0     = t_start
    
     for link in np.arange (num_links) :
-        if OPTIONS.Debug :
+        if OPTIONS['Debug'] or Debug :
             if link%(num_links//100) == 0 :
                 t_1 = time.time ()
                 if t_1 > t_0 + 0.6 :
@@ -341,10 +342,10 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
         dst_mask  [..., dst_address [link]] = 1.0
         dst_field [..., dst_address [link]] += remap_matrix[link] * src_field[..., src_address[link]]
     t_end = time.time ()
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         progress (percent=100, width=width)
     
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ("\nInterpolation time : {:5.3}s".format (t_end-t_start))
         print (" ")
         

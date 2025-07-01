@@ -28,10 +28,11 @@ personal.
 
 import time
 import copy
+from typing import Any, Self, Literal, Dict, Union, Hashable
+
 import numpy as np
 import xarray as xr
 import cftime
-from libIGCM import Container
 
 deg2rad = np.deg2rad (1.0)
 rad2deg = np.rad2deg (1.0)
@@ -75,7 +76,7 @@ SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice(1,None,12), 'MAR':slice(2,None,1
 SOLAR = 1365.0          # Solar constant (W/m^2)   
 
 # Ephemerides internal options
-DEFAULT_OPTIONS = Container (Debug  = False,
+DEFAULT_OPTIONS = dict (Debug  = False,
                              Trace  = False,
                              Timing = None,
                              t0     = None,
@@ -88,7 +89,7 @@ class set_options :
     Set options for Ephemerides
     """
     def __init__ (self, **kwargs):
-        self.old = Container ()
+        self.old = dict ()
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -102,7 +103,7 @@ class set_options :
     def __exit__ (self, type, value, traceback) :
         self._apply_update (self.old)
 
-def get_options () -> dict :
+def get_options () -> Dict :
     """
     Get options for Ephemerides
 
@@ -164,7 +165,7 @@ def pop_stack (string:str) :
     #
 
 ## ============================================================================
-def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
+def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0, Debug=False) :
     '''
     Convert a cftime time variable in to Year before present values
     unit  : year or month
@@ -175,20 +176,20 @@ def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0) :
     '''
     push_stack ( f'time2BP (time, {unit=}, {year0=}, {month0=}, {day0=}, {hour0=})' )
     
-    ty = isinstance (time, xr.core.dataarray.DataArray)
+    ty = isinstance (time, xr.DataArray)
         
-    if OPTIONS['Debug'] :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{ty=}')
     if ty  :
         ztime = time.values
     else   :
         ztime = time
     result = np.empty_like (time)
-    if OPTIONS['Debug'] :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{type (ztime)=}')
         
     for ii, tt in enumerate (ztime) :
-        #if OPTIONS['Debug'] : print ( f'{tt=}')
+        #if OPTIONS['Debug'] or Debug : print ( f'{tt=}')
         (year, month, day, hour, mn, sec, ms) = cftime.to_tuple (tt)
         result [ii] = (year0-year) - (month-month0)/12 - (day-day0)/365.25 - (hour-hour0)/(365.25*24) - mn/(365.25*24*60) - sec/(365.25*24*60+60)
     if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
@@ -227,7 +228,7 @@ def declinaison (day) :
     L = np.mod (280.0 + C + day2deg*day , 360)
     declinaison = np.arcsin (0.3978 * np.sin (deg2rad*L) ) * rad2deg
     
-    if isinstance (day, xr.core.dataarray.DataArray) :
+    if isinstance (day, xr.DataArray) :
         declinaison.attrs.update ({'units':'degrees_north', 'standard_name':'declinaison', 'long_name':'Sun declinaison',} )
 
     pop_stack (declinaison)
@@ -248,7 +249,7 @@ def equation_temps (day) :
     R = -2.466 * np.sin (2.0 * deg2rad*L) + 0.053 * np.sin (4.0 * deg2rad*L)
     equation_temps = (C + R) * 4.0
         
-    if isinstance (equation_temps, xr.core.dataarray.DataArray) :
+    if isinstance (equation_temps, xr.DataArray) :
         equation_temps.attrs.update ( {'units':'minutes', 'standard_name':'equation_du_temps', 'long_name':'Equation du temps',
                                           'comment':'Time between 12:00 GMT and the passage of the Sun at the Greenwich meridian'} )
     push_stack ( 'equation_temps' )
@@ -271,7 +272,7 @@ def equation_temps_smooth (day) :
     R = -2.466 * np.sin (2.0 * deg2rad*L) + 0.053 * np.sin (4.0 * deg2rad*L)
     equation_temps = (C + R) * 4.0
         
-    if isinstance (equation_temps, xr.core.dataarray.DataArray) :
+    if isinstance (equation_temps, xr.DataArray) :
         equation_temps.attrs.update ( {'units':'minutes', 'standard_name':'equation_du_temps', 'long_name':'Equation du temps',
                                           'comment':'Time between 12:00 GMT and the passage of the Sun at the Greenwich meridian'} )
     push_stack ( 'equation_temps' )
@@ -289,7 +290,7 @@ def H0 (day, lat) :
     dec = declinaison (day)
     arg = (-0.01454 - np.sin (deg2rad*dec) * np.sin (deg2rad*lat)) / (np.cos (deg2rad*dec) * np.cos (deg2rad*lat) )
     H0  = xr.where ( np.abs(arg) <= 1.0,  rad2deg*np.arccos ( np.clip( arg, -1, 1.)), np.nan )
-    if isinstance (H0, xr.core.dataarray.DataArray) :
+    if isinstance (H0, xr.DataArray) :
         H0.attrs.update ({'units':'degrees', 'comment':'maximum height of the Sun above horizon for a given day (passage at the local meridian)'})
 
     pop_stack ('H0')
@@ -317,7 +318,7 @@ def hour_angle (Hour) :
     '''
     push_stack ( 'hour_angle(Hour)' )
     omega = 180.0 * (1 - Hour/12.)
-    if isinstance (omega, xr.core.dataarray.DataArray) :
+    if isinstance (omega, xr.DataArray) :
         omega.attrs.update ( {'units':'degrees_east', 'long_name':'angle horaire'} )
 
     pop_stack ( 'hour_angle')
@@ -335,7 +336,7 @@ def sun_height (delta, lat, omega) :
     sin_h = np.sin(deg2rad*delta)*np.sin(deg2rad*lat) + np.cos(deg2rad*delta)*np.cos(deg2rad*lat)*np.cos(deg2rad*omega)
     sun_height = rad2deg * np.arcsin(sin_h)
 
-    if isinstance (sun_height, xr.core.dataarray.DataArray) :
+    if isinstance (sun_height, xr.DataArray) :
         sun_height.attrs.update ( {'units':'degrees', 'long_name':'sun_height',
                                            'comment':'Sun height above horizon'} )
     pop_stack ( 'sun_height' )
@@ -353,9 +354,9 @@ def insol (delta, lat, omega) :
     sin_h = np.sin(deg2rad*delta)*np.sin(deg2rad*lat) + np.cos(deg2rad*delta)*np.cos(deg2rad*lat)*np.cos(deg2rad*omega)
 
     insol = SOLAR * np.maximum(0., sin_h)
-    if isinstance (insol, xr.core.dataarray.DataArray) :
+    if isinstance (insol, xr.DataArray) :
         insol.attrs.update ( {'units':'W m^-2', 'standard_name':'tops', 'comment':'Insolation at top of atm'} )
-    pop_stack (insol)
+    pop_stack ( f'insol')
     return insol
         
 def SunRiseGMT (day, lat, lon) :
@@ -372,7 +373,7 @@ def SunRiseGMT (day, lat, lon) :
     eq = equation_temps (day)
     h1 = 12. - h0/15. + eq/60. - lon/15.  
     SunRise = np.fix (h1) + np.fix ( (h1 - np.fix (h1)) * 60. ) / 60.
-    if isinstance (day, xr.core.dataarray.DataArray) :
+    if isinstance (day, xr.DataArray) :
         SunRise.attrs.update ( {'units':'hours', 'comment':'Hour of the Sun rise in fraction of GMT hour'})
     pop_stack ( 'SunRiseGMT' )
     return SunRise 
@@ -391,7 +392,7 @@ def SunSetGMT (day, lat, lon) :
     eq = equation_temps (day)
     h1 = 12. + h0/15. + eq/60. - lon/15.
     SunSet = np.fix (h1) + np.fix ( (h1 - np.fix (h1)) * 60. ) / 60.
-    if isinstance (day, xr.core.dataarray.DataArray) :
+    if isinstance (day, xr.DataArray) :
         SunSet.attrs.update ( {'units':'hours', 'comment':'Hour of the Sun set in fraction of GMT hour'})
     pop_stack ( 'SunSetGMT' )
     return SunSet
@@ -419,14 +420,14 @@ def DayLength (day, lat) :
     dimz   = []
     coordz = []
             
-    if isinstance (day, xr.core.dataarray.DataArray) :
+    if isinstance (day, xr.DataArray) :
             coordz.append (day.coords[day.dims[0]])
             dimz.append   (day.dims[0])
-    if isinstance (lat, xr.core.dataarray.DataArray) :
+    if isinstance (lat, xr.DataArray) :
             coordz.append (lat.coords[lat.dims[0]])
             dimz.append   (lat.dims[0])
     
-    if isinstance (day, xr.core.dataarray.DataArray) or isinstance (lat, xr.core.dataarray.DataArray) :      
+    if isinstance (day, xr.DataArray) or isinstance (lat, xr.DataArray) :      
         h1 = xr.DataArray ( h1, coords=coordz, dims=dimz)
         h2 = xr.DataArray ( h2, coords=coordz, dims=dimz)
             
@@ -434,7 +435,7 @@ def DayLength (day, lat) :
     DayLength = xr.where ( arg>=1,   0, DayLength )
     DayLength = xr.where ( arg<=-1, 24, DayLength )
     
-    if isinstance (DayLength, xr.core.dataarray.DataArray) :
+    if isinstance (DayLength, xr.DataArray) :
         DayLength.attrs.update ( {'units':'hours', 'comment':'Length of the day, from sun rise to sun set'})
 
     pop_stack ( 'DayLength' )
@@ -484,7 +485,7 @@ def date2day (pdate, t0=np.datetime64 ('1955-01-01T00:00:00')) :
     ts = (zdate - t0) / np.timedelta64 (1, 'D')
     day = np.floor (ts%365) + 1
     
-    if isinstance (pdate, xr.core.dataarray.DataArray) :
+    if isinstance (pdate, xr.DataArray) :
         day.attrs.update ( {'units':'days'} )
     pop_stack ( 'date2day' )
     return day
@@ -502,7 +503,7 @@ def date2daydec (pdate, t0=np.datetime64 ('1955-01-01T00:00:00'), out_int=True) 
     ts = (pdate - t0) / np.timedelta64 (1, 'D')
     day = ts%365 + 1
     
-    if isinstance (pdate, xr.core.dataarray.DataArray) :
+    if isinstance (pdate, xr.DataArray) :
         day.attrs.update ( {'units':'days'} )
     pop_stack ( 'date2day' )
     return day
@@ -518,12 +519,12 @@ def date2hour (pdate, t0=np.datetime64 ('1955-01-01T00:00:00'), out='int') :
     push_stack ( f'date2hour (pdate, {t0=})' )
     ts   = (pdate - t0) / np.timedelta64 (1, 'h')
     hour = np.floor (ts%24)
-    if isinstance (pdate, xr.core.dataarray.DataArray) :
+    if isinstance (pdate, xr.DataArray) :
         hour.attrs.update ( {'units':'hours' } )
-    pop_stack (date2hour)
+    pop_stack ('date2hour')
     return hour
 
-def date2hourdec (pdate, t0) :
+def date2hourdec (pdate:Union[np.datetime64,xr.DataArray], t0:Union[np.datetime64,xr.DataArray], Debug:bool=False) -> xr.DataArray :
     '''
     Gives day from a date in np.datetime64 format : hour and fraction of hour
     Input
@@ -532,14 +533,27 @@ def date2hourdec (pdate, t0) :
     t0    : reference date in np.datetime64 01-JAN of any year, time 00:00
     '''
     push_stack ( f'date2hourdec (pdate, {t0=})' )
-    hourdec = ts%24
-    if isinstance (pdate, xr.core.dataarray.DataArray) :
+    if OPTIONS['Debug'] or Debug :
+        print ( f'{pdate=} {t0=}')
+    if isinstance (pdate, xr.DataArray) :
+        ts = [ (x - t0) / np.timedelta64 (1, 'h') for x in pdate.values]
+        hourdec = [x%24 for x in ts]
+    else :
         ts = (pdate - t0) / np.timedelta64 (1, 'h')
+        hourdec = ts%24
+
+    hourdec = xr.DataArray (hourdec)
     hourdec.attrs.update ( {'units':'hours'} )
+
+    if OPTIONS['Debug'] or Debug :
+        print ( f'{ts=}')
+
     pop_stack ( 'date2hourdec' )
+    if OPTIONS['Debug'] or Debug :
+        print ( f'{ts=} {hourdec=} {pdate=}')
     return hourdec
 
-def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:00')) :
+def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:00'), Debug=False) :
     '''
     Converts time to local Roman time
     Stretch & compress local time to have 6h=SunRise/18h=SunSet
@@ -549,10 +563,10 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
     hourGMT   = date2hourdec (ptime, t0)
     hour      = np.mod (hourGMT + lon/15.0, 24.0)
 
-    if OPTIONS.Debug :
+    if OPTIONS['Debug'] or Debug :
         print ( f'{day=}' )
 
-    if isinstance (ptime, xr.core.dataarray.DataArray) :
+    if isinstance (ptime, xr.DataArray) :
         math = xr
     else :
         math = np
@@ -573,12 +587,11 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
     h4 = math.where ( hour>SunSet, 
                   18.0 + (hour - SunSet)/(Midnight-SunSet)*6.0, 0.)
     
-    pseudo_local_time = math.where ( SunSet>SunRise, h1 + h2 + h3 + h4, np.nan)
+    pseudo_local_time = math.where (SunSet>SunRise, h1 + h2 + h3 + h4, np.nan)
 
-    if isinstance (pseudo_local_time, xr.core.dataarray.DataArray) :
+    if isinstance (pseudo_local_time, xr.DataArray) :
         pseudo_local_time.attrs.update ( {'units':'hours', 'comment':'pseudo local time, roman definition',
                                 'reference':'Marti, O., S. Nguyen, P. Braconnot, S. Valcke, F. Lemarié, and E. Blayo, 2021: A Schwarz iterative method to evaluate ocean–atmosphere coupling schemes: implementation and diagnostics in IPSL-CM6-SW-VLR. Geosci. Model Dev., 14, 2959–2975, https://doi.org/10.5194/gmd-14-2959-2021.'} )
-
         
     pop_stack ( 'pseudo_local_time' )    
     return pseudo_local_time

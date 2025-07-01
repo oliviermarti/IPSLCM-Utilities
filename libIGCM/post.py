@@ -21,13 +21,14 @@ personal.
 '''
 
 import os
+from typing import Any, Self, Literal, Dict, Union, Hashable
 import re
 import json
 import cftime
 import xarray as xr
 
 import libIGCM
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+from libIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 
 class Config (libIGCM.sys.Config) :
     '''
@@ -37,21 +38,26 @@ class Config (libIGCM.sys.Config) :
     described in a catalog (at json format)
     '''
     
-    def __init__ (self, JobName=None, TagName=None, SpaceName=None, ExperimentName=None,
-                  LongName=None, ModelName=None, ShortName=None, Comment=None,
-                  Source=None, MASTER=None, ConfigCard=None, RunCard=None, User=None, Group=None,
-                  TGCC_User=None, TGCC_Group=None, IDRIS_User=None, IDRIS_Group=None,
-                  ARCHIVE=None, SCRATCHDIR=None, STORAGE=None, R_IN=None, R_OUT=None,
-                  R_FIG=None, L_EXP=None, R_SAVE=None, R_FIGR=None, R_BUF=None, R_BUFR=None, R_BUF_KSH=None,
-                  REBUILD_DIR=None, POST_DIR=None, ThreddsPrefix=None, DapPrefix=None,
-                  R_GRAF=None, DB=None, IGCM_OUT=None, IGCM_OUT_name=None, rebuild=None, TmpDir=None,
-                  TGCC_ThreddsPrefix=None, TGCC_DapPrefix=None, IDRIS_ThreddsPrefix=None, IDRIS_DapPrefix=None,
-                  DateBegin=None, DateEnd=None, YearBegin=None, YearEnd=None, PeriodLength=None,
-                  SeasonalFrequency=None, CalendarType=None,
-                  DateBeginGregorian=None, DateEndGregorian=None, FullPeriod=None, DatePattern=None,
-                  Period=None, PeriodSE=None, Shading=None, Marker=None, Line=None,
-                  OCE=None, ATM=None, CMIP6_BUF=None,
-                  IGCM_Catalog=None, IGCM_Catalog_list=None, config=None, Debug=False, **kwargs) :
+    def __init__ (self:Self, JobName:Union[str,None]=None, TagName:Union[str,None]=None, SpaceName:Union[str,None]=None, 
+                  ExperimentName:Union[str,None]=None, LongName:Union[str,None]=None, ModelName:Union[str,None]=None, 
+                  ShortName:Union[str,None]=None, Comment:Union[str,None]=None, Source:Union[str,None]=None, MASTER:Union[str,None]=None,
+                  ConfigCard:Union[str,None]=None, RunCard:Union[str,None]=None, User:Union[str,None]=None, Group:Union[str,None]=None,
+                  TGCC_User:Union[str,None]=None, TGCC_Group:Union[str,None]=None, 
+                  IDRIS_User:Union[str,None]=None, IDRIS_Group:Union[str,None]=None,
+                  ARCHIVE:Union[str,None]=None, SCRATCHDIR:Union[str,None]=None, STORAGE:Union[str,None]=None, 
+                  R_IN:Union[str,None]=None, R_OUT:Union[str,None]=None, R_FIG:Union[str,None]=None, L_EXP:Union[str,None]=None, 
+                  R_SAVE:Union[str,None]=None, R_FIGR:Union[str,None]=None, R_BUF:Union[str,None]=None, R_BUFR:Union[str,None]=None,
+                  R_BUF_KSH:Union[str,None]=None, REBUILD_DIR:Union[str,None]=None, POST_DIR:Union[str,None]=None,
+                  ThreddsPrefix:Union[str,None]=None, DapPrefix:Union[str,None]=None,
+                  R_GRAF:Union[str,None]=None, DB:Union[str,None]=None, IGCM_OUT:Union[str,None]=None, IGCM_OUT_name:Union[str,None]=None,
+                  rebuild:Union[str,None]=None, TmpDir:Union[str,None]=None,
+                  TGCC_ThreddsPrefix:Union[str,None]=None, TGCC_DapPrefix:Union[str,None]=None, IDRIS_ThreddsPrefix:Union[str,None]=None, IDRIS_DapPrefix:Union[str,None]=None,
+                  DateBegin:Union[str,None]=None, DateEnd:Union[str,None]=None, YearBegin:Union[str,None]=None, YearEnd:Union[str,None]=None, PeriodLength:Union[str,None]=None,
+                  SeasonalFrequency:Union[str,None]=None, CalendarType:Union[str,None]=None,
+                  DateBeginGregorian:Union[str,None]=None, DateEndGregorian:Union[str,None]=None, FullPeriod:Union[str,None]=None, DatePattern:Union[str,None]=None,
+                  Period:Union[str,None]=None, PeriodSE:Union[str,None]=None, Shading:Union[str,None]=None, Marker:Union[str,None]=None, Line:Union[str,None]=None,
+                  OCE:Union[str,None]=None, ATM:Union[str,None]=None, CMIP6_BUF:Union[str,None]=None,
+                  IGCM_Catalog:Union[str,None]=None, IGCM_Catalog_list:Union[list,None]=None, config:Union[libIGCM.sys.Config,None]=None, Debug:bool=False, **kwargs) -> None :
         
         ### ===========================================================================================
         ## Read catalog of known simulations
@@ -129,108 +135,109 @@ class Config (libIGCM.sys.Config) :
         for key, value in OPTIONS.items () :
             if key in self.keys () :
                 if self[key] is None and value is not None :
-                    if OPTIONS.Debug or Debug :
+                    if OPTIONS['Debug'] or Debug : # type: ignore
                         print ( f'from OPTIONS, setting {key=} {value=}')
                     setattr (self, key, value)  
             
         if config is not None :
             for key, value in config.items () :
                 if self[key] is None and value is not None :
-                    if OPTIONS.Debug or Debug :
+                    if OPTIONS['Debug'] or Debug : # type: ignore
                         print ( f'from config, setting {key=} {value=}')
                     setattr (self, key, value)       
                     
         if not self.IGCM_Catalog      :
-            self.IGCM_Catalog      = OPTIONS.IGCM_Catalog
+            self.IGCM_Catalog      = OPTIONS['IGCM_Catalog'] # type: ignore
         if not IGCM_Catalog_list :
-            self.IGCM_Catalog_list = OPTIONS.IGCM_Catalog_list
+            self.IGCM_Catalog_list = OPTIONS['IGCM_Catalog_list'] # type: ignore
         
-        if OPTIONS.Debug or Debug :
-            print ( f'{self.IGCM_Catalog_list=}' )
-            print ( f'{self.IGCM_Catalog=}' )
+        if OPTIONS['Debug'] or Debug : # type: ignore
+            print ( f'{self.IGCM_Catalog_list=}' ) # type: ignore
+            print ( f'{self.IGCM_Catalog=}' ) # type: ignore
 
         exp = None
 
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug : # type: ignore
             print ( f'{IGCM_Catalog=}' )
-        if self.IGCM_Catalog is not None :
-            if OPTIONS.Debug or Debug :
+        if self.IGCM_Catalog is not None : # type: ignore
+            if OPTIONS['Debug'] or Debug : # type: ignore
                 print ( f'Searching for catalog file : {self.IGCM_Catalog=}' )
-            if os.path.isfile (self.IGCM_Catalog) :
-                if OPTIONS.Debug or Debug :
+            if os.path.isfile (self.IGCM_Catalog) : # type ignore
+                if OPTIONS['Debug'] or Debug : # type: ignore
                     print ( f'Catalog file : {self.IGCM_Catalog=}' )
-                exp_file = open (self.IGCM_Catalog)
+                exp_file = open (self.IGCM_Catalog) # type: ignore
                 Experiments = json.load (exp_file)
-                if self.JobName in Experiments.keys () :
+                if self.JobName in Experiments.keys () : # type: ignore
                     exp = Experiments[JobName]
             else :
                 raise Exception ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
 
         else :
-            for cfile in self.IGCM_Catalog_list :
-                if OPTIONS.Debug or Debug :
-                    print ( f'Searching for {cfile=}')
-                if os.path.isfile (cfile) :
-                    if OPTIONS.Debug or Debug :
-                        print ( f'Reads catalog file : {cfile=}' )
-                    exp_file = open (cfile)
-                    Experiments = json.load (exp_file)
-                    if OPTIONS.Debug or Debug :
-                        print ( f'{Experiments.keys()=}' )
-                    if self.JobName in Experiments.keys () :
-                        if OPTIONS.Debug or Debug :
-                            print (f'{self.JobName=} found')
-                        exp = Experiments[self.JobName]
-                        break
+            if self.IGCM_Catalog_list  is not None : 
+                for cfile in self.IGCM_Catalog_list :
+                    if OPTIONS['Debug'] or Debug : # type: ignore
+                        print ( f'Searching for {cfile=}')
+                    if os.path.isfile (cfile) :
+                        if OPTIONS['Debug'] or Debug : #type: ignore
+                            print ( f'Reads catalog file : {cfile=}' )
+                        exp_file = open (cfile)
+                        Experiments = json.load (exp_file)
+                        if OPTIONS['Debug'] or Debug : # type: ignore
+                            print ( f'{Experiments.keys()=}' )
+                        if self.JobName in Experiments.keys () :
+                            if OPTIONS['Debug'] or Debug : #type: ignore
+                                print (f'{self.JobName=} found')
+                            exp = Experiments[self.JobName]
+                            break
 
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug : # type: ignore
             print (f'exp    before analysing (1) : {exp=}')
             print (f'kwargs before analysing (1) : {kwargs=}')
                
         if len(kwargs)>0 :
             if exp is None :
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug : # type: ignore
                     print ( 'Updates exp with *kwargs')
-                exp = Container (**kwargs)
+                exp = dict (**kwargs)
             else :
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug : # type: ignore
                     print ( 'Creates exp from *kwargs')
                 exp.update (**kwargs)
 
-        if OPTIONS.Debug or Debug :
+        if OPTIONS['Debug'] or Debug : # type: ignore
             print (f'exp before analysing (2) : {exp=}')
             #print (f'{len(exp)}')
                     
         if exp is not None :
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug : # type: ignore
                 print ( f'Read catalog file for {self.JobName=}' )
-            exp = Container (**exp)
-            if OPTIONS.Debug or Debug :
+            exp = dict (**exp)
+            if OPTIONS['Debug'] or Debug : # type: ignore
                 print (f'exp at start of analysing : {exp=}')
                     
             liste_pop = []
             for key, value in exp.items () :
                 liste_pop.append (key)
-                if OPTIONS.Debug or Debug :
+                if OPTIONS['Debug'] or Debug : # type: ignore
                     print ( f'Analyzing {key=} {value=}')
                 if key in self.keys() :
-                    if OPTIONS.Debug or Debug :
+                    if OPTIONS['Debug'] or Debug : # type: ignore
                         print ( f'  {key=} found in self : {self[key]}')
                     if self[key] is not None :
-                        if OPTIONS.Debug or Debug :
+                        if OPTIONS['Debug'] or Debug : # type: ignore
                             print ( f'  {key:18} found in self : {self[key]}')
                     else :
                         setattr (self, key, value)
-                        if OPTIONS.Debug or Debug :
+                        if OPTIONS['Debug'] or Debug : # type: ignore
                             print ( f'  {key:18} set from exp (1) : {self[key]} {value}')
                 else :
                     setattr (self, key, value)
-                    if OPTIONS.Debug or Debug :
+                    if OPTIONS['Debug'] or Debug : # type: ignore
                         print ( f'{key:18} set from exp (2) : {self[key]}')
                         
             for key in liste_pop :
                 exp.pop (key)
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug : # type: ignore
                 print ( f'exp after analysing : {exp=}' )
 
         else :
@@ -259,9 +266,9 @@ class Config (libIGCM.sys.Config) :
                     self.YearEnd   = Y2
 
         if len(exp)== 0 :
-            add_values = Container ()
+            add_values = dict ()
         else :
-            if OPTIONS.Debug or Debug :
+            if OPTIONS['Debug'] or Debug : # type: ignore
                 print ( f'exp after analyzing : {exp=}' )
             add_values = exp
 
@@ -293,7 +300,7 @@ class Config (libIGCM.sys.Config) :
         pop_stack ('libIGCM.post.__init__')
 
 
-def add_year (ptime_counter, year_shift=0) :
+def add_year (ptime_counter:xr.DataArray, year_shift:int=0) -> xr.DataArray :
     '''
     Add years to a time variable
     Time variable is an xarray of cftime values

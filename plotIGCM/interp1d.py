@@ -26,7 +26,7 @@ personal.
 
 import time
 import numpy as np, xarray as xr
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+from libIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 #from numba import jit
 
 def interp1d (x:float, xp:float, yp:float, zdim:str, name=None) :
