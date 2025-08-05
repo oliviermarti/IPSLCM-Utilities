@@ -20,184 +20,61 @@ the usage of his software by incorrectly or partially configured
 personal.
 '''
 
-import time, copy
-import numpy as np, xarray as xr
+import itertools
+
+import numpy as np
+import xarray as xr
+
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patheffects import Stroke, Normal
 from matplotlib.projections import PolarAxes
 import mpl_toolkits.axisartist.floating_axes as FA
 import mpl_toolkits.axisartist.grid_finder   as GF
-import xrft
 
-import libIGCM
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
-import plotIGCM
-from plotIGCM import pmath, xr_quantify, xr_dequantify, pint_unit, copy_attrs, ureg, Q_
+from libIGCM.options import push_stack as push_stack
+from libIGCM.options import pop_stack  as pop_stack
+
+RPI   = np.pi
+RAD   = np.deg2rad (1.0)
+DAR   = np.rad2deg (1.0)
+REPSI = np.finfo (1.0).eps
 
 
-
-def fft_fft ( tab, dim:str, fill_gap:bool=False, use_coord:bool=False, return_aux=True) :
+def distance (lat1, lon1, lat2, lon2, radius:float=1) :
     '''
-    Run a fft transform on a xarray DataArray
-    Data are mirrored to force the periodicity of the signal
+    Compute distance on the sphere
+    '''
+    arg      = ( np.sin (RAD*lat1) * np.sin (RAD*lat2)
+               + np.cos (RAD*lat1) * np.cos (RAD*lat2) *
+                 np.cos(RAD*(lon1-lon2)) )
     
-    tab        : multi-dimensionnal xarray data array
-                    The data to be transformed
-    dim        : str
-                 The dimension along which to take the transformation.
-                 If the inputs is a dask arrays, the array must not be
-                    chunked along this dimension
-    fill_gap   : if True, replace Nan values by ionterpolation. Default: False
-    use_coord  : if True , frequencies and periods are the same units as dim
-                 if False, frequencies and periods are in number of time steps
-                 Default: False
-    Returns
-    -------
-    power      : the power spectrum
-    if return_aux==True, returns : 
-       freqs   : frequencies
-    '''
-    push_stack (f'fft_fft')
-
-    ztab  = tab
-    xxt   = ztab.coords[dim]
-    if fill_gap :
-        if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Fill gaps')
-        ztab = ztab.interpolate_na (dim=dim, method='linear', limit=None, use_coordinate=False, max_gap=None, keep_attrs=None)
-        ztab = ztab.fillna (0.)
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Remove and store mean')
-    ztab_mean = ztab.mean (dim=dim)
-    ztab     -= ztab_mean
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Detrend, and store trend' )
-    ztab_d     = xrft.detrend (ztab, dim=dim, detrend_type='linear'  )
-    ztab_trend = ztab - ztab_d
-    ztab       = ztab_d
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Mirror data')
-    ztab2  = xr.concat ( ( ztab.isel({dim:slice(None,None,-1)}), ztab, ), dim=dim)
-    del ztab_d, ztab_trend
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Create axis for the mirrored data')
-    if use_coord : 
-        xx2 = xr.concat ( (2.*xxt[0]-(xxt[1]-xxt[0])-xxt.isel({dim:slice(None,None,-1)}), xxt), dim=dim)
-    else : 
-        xx2 = np.arange ( 2*len(xxt) )
-    ztab2  = ztab2.assign_coords ( {dim:xx2} )
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Detrend')
-    ztab2  = xrft.detrend (ztab2, dim=dim, detrend_type='linear'  )
-
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth,'  fft_filter: Direct transform')
-    power = xrft.fft (ztab2, dim=dim, true_phase=True, true_amplitude=True, prefix='freq_')
-    freqs = power.coords[f'freq_{dim}']
-    del ztab2
-
-    if return_aux : 
-        return power, freqs
-    else :
-        return power 
-
-## ============================================================================
-def fft_filter ( tab, dim:str, fill_gap:bool=False, use_coord:bool=False,
-                     min_freq:float=None, max_freq:float=None, min_period:float=None, max_period:float=None,
-                     keep_trend:bool=True, return_aux:bool=False) :
-    '''
-    Run a fft filter on a xarray DataArray
-    Data are mirrored to force the periodicity of the signal
+    zdistance = np.arccos (arg) * radius
     
-    tab        : multi-dimensionnal xarray data array
-                    The data to be transformed
-    dim        : str
-                 The dimension along which to take the transformation.
-                 If the inputs is a dask arrays, the array must not be
-                    chunked along this dimension
-    fill_gap   : if True, replace Nan values by ionterpolation. Default: False
-    keep_trend : if True, keep the trend of the signal. Only for low pass filter. Default: True
-    return_aux : if True, returns intermediate variables for debugging. Default: False
-    use_coord  : if True , frequencies and periods are the same units as dim
-                 if False, frequencies and periods are in number of time steps
-                 Default: False
-    min_freq   : minimum frequency for a high-pass filtering
-    max_freq   : maximum frequency for a low-pass filtering
-    min_period : minimum period for a low-pass filtering
-    max_period : maximum period for a high-pass filtering
-    min_freq and max_period are mutually exclusive. And max_freq and min_period.
+    return zdistance
 
-    Returns
-    -------
-    ftab : `xarray.DataArray`
-        The filtered tab, with same dimensions, coordinates and attributes
-
-    if return_aux==True, returns : 
-       power      : the power spectrum
-       power_filt : truncated power spectrum
-       freqs      : frequencies
+def aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2) :
     '''
-    push_stack ( f'fft_filter' )
+    Aire of a triangle on the sphere
+    Girard's formula
+    '''
+    a = distance (lat0 , lon0, lat1 , lon1)
+    b = distance (lat1 , lon1, lat2 , lon2)
+    c = distance (lat2 , lon2, lat0 , lon0)
 
-    #- Check parameters
-    if min_freq and max_period :
-        raise ValueError ( 'both min_freq and max_period are defined. Please choose one' )
-    if max_freq and min_period :
-        raise ValueError ( 'both max_freq and min_period are defined. Please choose one' )
+    arg_alpha = (np.cos(a) - np.cos(b)*np.cos(c)) / ( np.sin(b)*np.sin(c) ) 
+    arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / ( np.sin(a)*np.sin(c) ) 
+    arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / ( np.sin(a)*np.sin(b) ) 
 
-    ztab  = tab
-    xxt   = ztab.coords[dim]
-    if fill_gap :
-        if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Fill gaps')
-        ztab = ztab.interpolate_na (dim=dim, method='linear', limit=None, use_coordinate=False, max_gap=None, keep_attrs=None)
-        ztab = ztab.fillna (0.)
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Remove and store mean')
-    ztab_mean = ztab.mean (dim=dim)
-    ztab     -= ztab_mean
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Detrend, and store trend' )
-    ztab_d     = xrft.detrend (ztab, dim=dim, detrend_type='linear'  )
-    ztab_trend = ztab - ztab_d
-    ztab       = ztab_d
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Mirror data')
-    ztab2  = xr.concat ( ( ztab.isel({dim:slice(None,None,-1)}), ztab, ), dim=dim)
-    del ztab_d, ztab_trend
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Create axis for the mirrored data')
-    if use_coord : 
-        xx2 = xr.concat ( (2.*xxt[0]-(xxt[1]-xxt[0])-xxt.isel({dim:slice(None,None,-1)}), xxt), dim=dim)
-    else : 
-        xx2 = np.arange ( 2*len(xxt) )
-    ztab2  = ztab2.assign_coords ( {dim:xx2} )
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Detrend')
-    ztab2  = xrft.detrend (ztab2, dim=dim, detrend_type='linear'  )
+    alpha = np.arccos ( arg_alpha ) 
+    beta  = np.arccos ( arg_beta  ) 
+    gamma = np.arccos ( arg_gamma )
 
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth,'  fft_filter: Direct transform')
-    power = xrft.fft (ztab2, dim=dim, true_phase=True, true_amplitude=True, prefix='freq_')
-    freqs = power.coords[f'freq_{dim}']
-    del ztab2
-    
-    if max_period and not min_freq : min_freq = 1./max_period
-    if min_period and not max_freq :
-        if min_period > 0. : max_freq = 1./min_period
-    if min_freq and not max_period : max_period = 1./min_freq
-    if max_freq and not min_period : min_period = 1./max_freq
+    S = (alpha + beta + gamma - np.pi)
 
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, f'  fft_filter: {min_freq=} {max_freq=} {min_period=} {max_period=}')
+    return S
 
-    power_filt = power.copy()
-    if min_freq : power_filt = xr.where ( np.abs(freqs) < min_freq, 0., power_filt )
-    if max_freq : power_filt = xr.where ( np.abs(freqs) > max_freq, 0., power_filt )
-
-    if OPTIONS.Debug : print ('  '*OPTIONS.Depth, '  fft_filter: Inverse transform' )
-    ftab = xrft.ifft (power_filt, dim=f'freq_{dim}', true_phase=True, true_amplitude=True).isel( {dim:slice(len(xxt),None)})
-    ftab = ftab.real.assign_coords ( {dim:xxt} )
-    if not min_freq and keep_trend :
-        ftab = ftab + ztab_mean
-        ftab = ftab + ztab_trend
-
-    for attr in ztab.attrs : ftab.attrs[attr] = ztab.attrs[attr]
-
-    ftab.attrs.update ( {'Comment':f'{ztab.name} filtered with fft filter and mirroring',
-        'min_freq':str(min_freq), 'max_freq':str(max_freq), 'min_period':str(min_period), 'max_period':str(max_period)} )
-
-    pop_stack ( 'fft_filter' )
-    if return_aux : 
-        return ftab, power, power_filt, freqs
-    else :
-        return ftab
-
-def aire_maille ( bounds_lat, bounds_lon, vertex=None ) :
+def aire_maille (bounds_lat:xr.DataArray, bounds_lon:xr.DataArray, vertex:str|None=None ) :
     '''
     Aire of a grid box on the sphere
     '''
@@ -213,7 +90,7 @@ def aire_maille ( bounds_lat, bounds_lon, vertex=None ) :
     pop_stack ('aire_maille')
     return S1 + S2
 
-def cmap_long ( cmap, ncolors ) :
+def cmap_long (cmap, ncolors:int) :
     '''
     Cycle sur une palette de couleur pour en créer une plus longue par répétition
     '''
@@ -229,7 +106,7 @@ def cmap_long ( cmap, ncolors ) :
     for nn in range (ncolors) : colors[nn,:]= cmap (nn%nc)
 
     # Creation d'un objet colormap
-    cmap_long =  mpl.colors.ListedColormap (colors)
+    cmap_long =  matplotlib.colors.ListedColormap (colors)
 
     pop_stack ('cmap_long')
     return cmap_long
@@ -248,23 +125,47 @@ def hex2rgb (hexcode) :
     pop_stack  ( f'{zres = }')
     return zres
 
-def color2hex ( r, g, b ) :
+def color2hex (r, g, b) :
     '''Converti du RGB fraactionaire (valeurs dans [0,1]) vers HEXA'''
     push_stack ( 'color2hex')
     zres = "#{:02X}{:02X}{:02X}".format( int(r*255), int(g*255), int(b*255) )
     pop_stack  ( f'color2hex: {zres =}')
     return
 
+def total_seconds (timedelta):
+    """Convert timedeltas to seconds
+    In Python, time differences can take many formats. This function can take
+    timedeltas in any format and return the corresponding number of seconds, as
+    a float.
+    Beware! Representing timedeltas as floats is not as precise as representing
+    them as a timedelta object in datetime, numpy, or pandas.
+    Parameters
+    ----------
+    timedelta : various
+        Time delta from python's datetime library or from numpy or pandas. If
+        it is from numpy, it can be an ndarray with dtype datetime64. If it is
+        from pandas, it can also be a Series of datetimes. However, this
+        function cannot operate on entire pandas DataFrames. To convert a
+        DataFrame, do df.apply(to_seconds)
+    Returns
+    -------
+    seconds : various
+        Returns the total seconds in the input timedelta object(s) as float.
+        If the input is a numpy ndarray or pandas Series, the output is the
+        same, but with a float datatype.
+
+    From https://gist.github.com/MichaelStetner
+    """
+    try:
+        seconds = timedelta.total_seconds()
+    except AttributeError:  # no method total_seconds
+        one_second = np.timedelta64(1000000000, 'ns')
+        # use nanoseconds to get highest possible precision in output
+        seconds = timedelta / one_second
+    return seconds
 
 
-
-
-import itertools
-from matplotlib.patheffects import Stroke, Normal
-import numpy as np
-import cartopy.mpl.geoaxes
-
-def zebra_frame(self, lw=3, crs=None, zorder=None, iFlag_outer_frame_in = None):    
+def zebra_frame(self, lw:int=3, crs=None, zorder:int|None=None, iFlag_outer_frame_in:bool|None=None) -> None :    
     # Alternate black and white line segments
     bws = itertools.cycle(["k", "w"])
     self.spines["geo"].set_visible(False)
@@ -305,7 +206,6 @@ def zebra_frame(self, lw=3, crs=None, zorder=None, iFlag_outer_frame_in = None):
                             Normal(),
                         ],
                     )
-    
 
 class TaylorDiagram (object) :
     """
@@ -397,14 +297,14 @@ class TaylorDiagram (object) :
         self.ax = ax.get_aux_axes (tr)  # Polar coordinates
 
         # Add reference point and stddev contour
-        l, = self.ax.plot([0], self.refstd, 'k*',
+        ll, = self.ax.plot([0], self.refstd, 'k*',
                           ls='', ms=10, label=label)
-        t = np.linspace(0, self.tmax)
-        r = np.zeros_like(t) + self.refstd
-        self.ax.plot (t, r, 'k--', label='_')
+        tt = np.linspace(0, self.tmax)
+        rr = np.zeros_like(tt) + self.refstd
+        self.ax.plot (tt, rr, 'k--', label='_')
 
         # Collect sample points for latter use (e.g. legend)
-        self.samplePoints = [l]
+        self.samplePoints = [ll]
 
     def add_sample (self, stddev, corrcoef, *args, **kwargs) :
         """
@@ -413,12 +313,12 @@ class TaylorDiagram (object) :
         `Figure.plot` command.
         """
         push_stack ('add_sample')
-        l, = self.ax.plot (np.arccos(corrcoef), stddev,
+        ll, = self.ax.plot (np.arccos(corrcoef), stddev,
                           *args, **kwargs)  # (theta, radius)
-        self.samplePoints.append(l)
+        self.samplePoints.append(ll)
 
         pop_stack  ('add_sample')
-        return l
+        return ll
 
     def add_grid (self, *args, **kwargs) :
         """Add a grid."""
@@ -439,8 +339,7 @@ class TaylorDiagram (object) :
         pop_stack ('add_contours')
         return contours
 
-
-    def test1 () :
+    def test1 (self) :
         """Display a Taylor diagram in a separate axis."""
         push_stack ('test1')
         # Reference dataset
@@ -493,7 +392,7 @@ class TaylorDiagram (object) :
         pop_stack  ('test1')
         return 
     
-    def test2 () :
+    def test2 (self) :
         """
         Climatology-oriented example (after iteration w/ Michael A. Rawlins).
         """

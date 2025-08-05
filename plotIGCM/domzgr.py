@@ -25,7 +25,11 @@ GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
 '''
 import numpy as np
 import xarray as xr
+
+from libIGCM.options import push_stack as push_stack
+from libIGCM.options import pop_stack  as pop_stack
 import orca
+
 
 def zgr_z (config:str='orca2') -> tuple[xr.DataArray,xr.DataArray,xr.DataArray,xr.DataArray]:
     '''

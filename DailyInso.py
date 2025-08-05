@@ -9,7 +9,6 @@ Created on Thu Jun 17 15:20:13 2021
 import time
 import numpy as np
 import xarray as xr
-from libIGCM_utils import Container
 
 ## Astronomical parameters
 ECC     =   0.0167024   # Excentricity 0kBP (1950 CE)
@@ -36,14 +35,14 @@ NITER = 7
 PREC  = 1.0E-7
 
 # daily inso internal options
-OPTIONS = Container (Debug=False, Trace=False, Timing=None, t0=None, Depth=None, Stack=None)
+OPTIONS = dict (Debug=False, Trace=False, Timing=False, t0=None, Depth=0, Stack=[])
 
 class set_options :
     """
     Set options for daily inso
     """
     def __init__ (self, **kwargs) :
-        self.old = Container ()
+        self.old = dict ()
         for k, v in kwargs.items() :
             if k not in OPTIONS:
                 raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
@@ -72,17 +71,11 @@ def return_stack () :
     return OPTIONS['Stack']
 
 def push_stack (string:str) :
-    if OPTIONS['Depth'] :
-        OPTIONS['Depth'] += 1
-    else                :
-        OPTIONS['Depth'] = 1
+    OPTIONS['Depth'] += 1
     if OPTIONS['Trace'] :
         print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] :
-        OPTIONS['Stack'].append (string)
-    else                :
-        OPTIONS['Stack'] = [string,]
+    OPTIONS['Stack'].append (string)
     #
     if OPTIONS['Timing'] :
         if OPTIONS['t0'] :
@@ -105,14 +98,10 @@ def pop_stack (string:str) :
             if dt >= 1 : 
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}') # type: ignore
     #
     OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 :
-        OPTIONS['Depth'] = None
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () :
-        OPTIONS['Stack'] = None
+    OPTIONS['Stack'].pop () # type: ignore
     #
 
 # Astronomical functions
@@ -144,12 +133,12 @@ def daily_inso_longitude (lat, lon, ecc=ECC, obl=OBL, pre=PRE, solar=SOLAR) :
 
     daily_inso = solar * ar2 * g/np.pi
 
-    if isinstance (daily_inso, xr.core.dataarray.DataArray) :
+    if isinstance (daily_inso, xr.DataArray) :
         daily_inso.attrs.update ({'units':'W.m-2', 'standard_name':'daily_insolation', 'long_name':'Daily insolation',} )
     
     return daily_inso
 
-def solve_Kepler_iter (m, ecc=ECC, niter=NITER) :
+def solve_Kepler_iter (m:float|np.ndarray|xr.DataArray, ecc:float|np.ndarray|xr.DataArray=ECC, niter:int=NITER) :
     '''
     Solve Kepler equation : E - e sinE = m
     Use a fixed number of iterations
@@ -160,7 +149,7 @@ def solve_Kepler_iter (m, ecc=ECC, niter=NITER) :
 
     return E
 
-def solve_Kepler_prec (m, ecc=ECC, prec=PREC) :
+def solve_Kepler_prec (m:float|np.ndarray|xr.DataArray, ecc:float|np.ndarray|xr.DataArray=ECC, prec:float=PREC) -> float|np.ndarray|xr.DataArray :
     '''
     Solve Kepler equation : E - e sinE = m
     Iterate until error < prec
@@ -172,7 +161,7 @@ def solve_Kepler_prec (m, ecc=ECC, prec=PREC) :
         error = np.max ( np.abs (m - (E - ecc*np.sin(E))) )
     return E
 
-def solve_Kepler (m, ecc=ECC, niter=None, prec=None) :
+def solve_Kepler (m, ecc=ECC, niter:int|None=None, prec:float|None=None) :
     '''
     Solve Kepler equation : E - e sinE = m
     input :
@@ -218,7 +207,7 @@ def daily_inso_time (lat, t, ecc=ECC, obl=OBL, pre=PRE, solar=SOLAR):
 
     daily_inso_time = daily_inso_longitude (lat, lon, ecc=ecc, obl=obl, pre=pre, solar=solar)
 
-    if isinstance (daily_inso_time, xr.core.dataarray.DataArray) :
+    if isinstance (daily_inso_time, xr.DataArray) :
         daily_inso_time.attrs.update ({'units':'W.m-2', 'standard_name':'daily_insolation', 'long_name':'Daily insolation',} )
     
     return daily_inso_time

@@ -157,7 +157,7 @@ def yearmin (var, time_dim) :
     
     return var_yearmin
 
-def yseamean (dd: xc.dataset, varname:str, season:str='JJAS', drop_incomplete_djf:bool=True, dec_mode:str='DJF') -> xr.DataArray :
+def yseamean (dd: xr.Dataset, varname:str, season:str='JJAS', drop_incomplete_djf:bool=True, dec_mode:str='DJF') -> xr.DataArray :
     '''
     Compute seasonal mean
     dd      : an xcdat dataset

@@ -24,12 +24,16 @@ the usage of his software by incorrectly or partially configured
 personal.
 '''
 
-import time
-import numpy as np, xarray as xr
-from libIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+import numpy as np
+import xarray as xr
+from typing import Union
+#from plotIGCM.options import OPTIONS
+from plotIGCM.options import push_stack
+from plotIGCM.options import pop_stack
+
 #from numba import jit
 
-def interp1d (x:float, xp:float, yp:float, zdim:str, name=None) :
+def interp1d (x:Union[np.ndarray,xr.DataArray], xp:xr.DataArray, yp:xr.DataArray, zdim:str, name:Union[str,None]=None) :
     '''
     One-dimensionnal interpolation of a multi-dimensionnal field
 
@@ -48,12 +52,13 @@ def interp1d (x:float, xp:float, yp:float, zdim:str, name=None) :
 
     if isinstance (x, np.ndarray) :
         x = xr.DataArray (x, coords=(x,), dims=(zdim,))
+    if isinstance (x, float) :
+        x = xr.DataArray (x, coords=(np.array(x),), dims=(zdim,))
 
     # Get the number of dimension with dim==zdim
     axis           = list (xp.dims).index (zdim)
 
     # Get the number of levels in each arrays
-    nk_in          = xp.shape[axis]
     nk_ou          = len (x)
 
     in_dims        = list (yp.dims)
@@ -66,7 +71,6 @@ def interp1d (x:float, xp:float, yp:float, zdim:str, name=None) :
 
     pdim           = x.dims[0]
     ou_dims[axis]  = pdim
-    
 
     # Determines orientation of x
     dx = x.differentiate (coord=zdim)
@@ -89,10 +93,9 @@ def interp1d (x:float, xp:float, yp:float, zdim:str, name=None) :
     ou_tab = xr.DataArray (np.empty (ou_shape), dims=ou_dims, coords=new_coords)
 
     # Interpolate
-    for k in np.arange (nk_ou) :
-        t0 = time.time ()
+    for k in range (nk_ou) :
         # Find index of just above level
-        idk1   = np.minimum ( (x[k]-xp), 0.).argmax (dim=zdim)
+        idk1   = np.minimum ( (x[k]-xp), 0.).argmax (dim=zdim) # type: ignore
         idk2   = idk1 - 1
         idk2   = np.maximum (idk2, 0)
         

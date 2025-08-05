@@ -10,7 +10,6 @@ Includes ColorShading, ColorLine, RCPColorLine, RCPColorShading
 
 '''
 import types
-from typing import Any, Self, Literal, Dict, Union, Hashable
 
 import numpy as np
 import matplotlib as mpl

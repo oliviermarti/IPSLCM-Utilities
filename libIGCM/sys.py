@@ -30,18 +30,43 @@ prerequisites.
 import os
 import subprocess
 import configparser
-import time
 import copy
-from typing import Any, Self, Literal, Dict, Union, Hashable
+from typing import Self, Optional, Any, Dict, Callable
+from collections.abc import ItemsView, KeysView, ValuesView, Iterable
+
 import numpy as np
 import libIGCM.date
-from libIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+
+from libIGCM.options import set_options
+from libIGCM.options import get_options
+from libIGCM.options import push_stack as push_stack
+from libIGCM.options import pop_stack  as pop_stack
 
 # Where do we run ?
 SysName, NodeName, Release, Version, Machine = os.uname ()
 
 ## ============================================================================
-def Mach (long:bool=False) -> Union[str,None] :
+def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=0) -> str:
+    '''
+    Pretty printing for almost anything hierachical
+
+    key can be of any valid type. Indent and Newline character can be changed for everything we'd like. dict, list and tuples are pretty printed.
+    '''
+    nlch = lfchar + htchar * (indent + 1)
+    if isinstance (value, dict) :
+        items = [ nlch + repr(key) + ': ' + pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
+        return f"{','.join(items)}{lfchar}{htchar*indent}"
+    elif '__dict__' in dir (value) :
+        items = [ nlch + repr(key) + ': ' + pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
+        return f"{','.join(items)}{lfchar}{htchar*indent}"
+    elif isinstance (value, list) or isinstance (value, tuple) :
+        items = [ nlch + pretty(item, htchar, lfchar, indent+1) for item in value ]
+        return f"{','.join(items)}{lfchar}{htchar*indent}"
+    else:
+        return repr (value)
+    
+## ============================================================================
+def Mach (long:bool=False) -> str|None :
     '''
     Find the computer we are on
 
@@ -126,77 +151,100 @@ class Config :
         TGCC_thredds  : thredds TGCC via IPSL
         IDRIS_thredds : thredds IDRIS via IPSL
     '''
-    ## Public functions
-    def update (self:Self, dico:Union[Dict,None]=None, **kwargs):
-        '''Use a dictionnary to update values'''
-        if dico is not None : 
+    def update (self:Self, dico:Optional[Dict[str,Any]]=None, action:Optional[str]=None, Debug:bool=False, **kwargs:Any) -> None :
+        '''Use a dictionnary to update values
+        if action is set, add/del halo or cyclic
+        '''
+        if dico :
             for attr in dico.keys () :
-                super().__setattr__(attr, dico[attr])
+                super().__setattr__ (attr, dico[attr])
         self.__dict__.update (kwargs)
-    def keys    (self:Self) :
+
+    def keys(self: Self) -> KeysView[str]:
         return self.__dict__.keys()
-    def values  (self:Self) :
+
+    def values(self: Self) -> ValuesView[Any]:
         return self.__dict__.values()
-    def items   (self:Self) :
+
+    def items(self: Self) -> ItemsView[str, Any]:
         return self.__dict__.items()
-    def dict    (self:Self) :
-        return self.__dict__()
-    def pop     (self:Self, attr) :
-        zv = self[attr]
-        delattr (self, attr)
-        return zv
-    ## Hidden functions
-    def __str__     (self:Self) :
-        return str  (self.__dict__)
-    def __repr__    (self:Self) :
-        return repr (self.__dict__)
-    def __name__    (self:Self) :
+
+    def dict(self: Self) -> Dict[str, Any]:
+        return self.__dict__
+
+    def pop(self: Self, attr: str) -> Any:
+        value = self[attr]
+        delattr(self, attr)
+        return value
+
+    def copy(self: Self) -> 'Config':
+        return Config (config=self)
+
+    def __str__(self: Self) -> str :
+        return str(self.__dict__)
+    
+    def __repr__(self: Self) :
+        return repr(self.__dict__)
+    
+    def __name__(self: Self) -> Callable  :
         return self.__class__.__name__
-    def __getitem__ (self:Self, attr) :
-        return getattr (self, attr)
-    def __setitem__ (self, attr, value) -> None :
-        setattr (self, attr, value)
-    def __iter__    (self:Self) :
-        return self.__dict__.__iter__()
-    def __next__    (self:Self) :
-        return self.__dict__.__next__()
-    def __len__     (self:Self) :
-        return len(self.__dict__)
-    def __copy__    (self:Self) :
-        return copy.deepcopy (self)
+    
+    def __getitem__(self: Self, attr: str) -> Any:
+        return getattr(self, attr)
+    
+    def __setitem__(self: Self, attr: str, value: Any) -> None:
+        setattr(self, attr, value)
+        
+    def __iter__(self:Self) -> Iterable[str]:
+        return iter(self.__dict__)
 
     def __init__ (self:Self, 
-                  JobName:Union[str,None]=None, TagName:Union[str,None]=None, SpaceName:Union[str,None]=None, ExperimentName:Union[str,None]=None,
-                  LongName:Union[str,None]=None, ModelName:Union[str,None]=None, ShortName:Union[str,None]=None, Comment:Union[str,None]=None,
-                  Source:Union[str,None]=None, MASTER:Union[str,None]=None, 
-                  ConfigCard:Union[str,None]=None, RunCard:Union[str,None]=None,
-                  User:Union[str,None]=None, Group:Union[str,None]=None, LocalGroup:Union[str,None]=None,
-                  TGCC_User:Union[str,None]=None, TGCC_Group:Union[str,None]=None, 
-                  IDRIS_User:Union[str,None]=None, IDRIS_Group:Union[str,None]=None,
-                  ARCHIVE:Union[str,None]=None, SCRATCHDIR:Union[str,None]=None,
-                  STORAGE:Union[str,None]=None, 
-                  R_IN:Union[str,None]=None, R_OUT:Union[str,None]=None, R_FIG:Union[str,None]=None,
-                  L_EXP:Union[str,None]=None,
-                  R_SAVE:Union[str,None]=None, R_FIGR:Union[str,None]=None, R_BUF:Union[str,None]=None, 
-                  R_BUFR:Union[str,None]=None, R_BUF_KSH:Union[str,None]=None,
-                  REBUILD_DIR:Union[str,None]=None, POST_DIR:Union[str,None]=None,
-                  ThreddsPrefix:Union[str,None]=None, DapPrefix:Union[str,None]=None, R_GRAF:Union[str,None]=None, 
-                  DB:Union[str,None]=None,
-                  IGCM_OUT:Union[str,None]=None, IGCM_OUT_name:Union[str,None]=None, 
-                  rebuild:Union[str,None]=None, TmpDir:Union[str,None]=None,
-                  TGCC_ThreddsPrefix:Union[str,None]=None, TGCC_DapPrefix:Union[str,None]=None,
-                  IDRIS_ThreddsPrefix:Union[str,None]=None, IDRIS_DapPrefix:Union[str,None]=None,
-                  DateBegin:Union[str,None]=None, DateEnd:Union[str,None]=None, YearBegin:Union[str,None]=None, YearEnd:Union[str,None]=None, PeriodLength:Union[str,None]=None,
-                  SeasonalFrequency:Union[str,None]=None, CalendarType:Union[str,None]=None,
-                  DateBeginGregorian:Union[str,None]=None, DateEndGregorian:Union[str,None]=None, 
-                  FullPeriod:Union[str,None]=None, DatePattern:Union[str,None]=None,
-                  Period:Union[str,None]=None, PeriodSE:Union[str,None]=None, CumulPeriod:Union[str,None]=None, PeriodState:Union[str,None]=None,
-                  PeriodDateBegin:Union[str,None]=None, PeriodDateEnd:Union[str,None]=None,
-                  Shading:Union[str,np.ndarray,list,None]=None, Marker:Union[str,Dict,None]=None, Line:Union[str,Dict,None]=None,
-                  OCE:Union[str,None]=None, ATM:Union[str,None]=None,
-                  CMIP6_BUF:Union[str,None]=None, Debug:bool=False, **kwargs) -> None :
+                  JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
+                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, Comment:str|None=None,
+                  Source:str|None=None, MASTER:str|None=None, 
+                  ConfigCard:str|None=None, RunCard:str|None=None,
+                  User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
+                  TGCC_User:str|None=None,
+                  TGCC_Group:str|None=None, 
+                  IDRIS_User:str|None=None,
+                  IDRIS_Group:str|None=None,
+                  ARCHIVE:str|None=None,
+                  SCRATCHDIR:str|None=None,
+                  STORAGE:str|None=None, 
+                  R_IN:str|None=None,
+                  R_OUT:str|None=None, R_FIG:str|None=None,
+                  L_EXP:str|None=None,
+                  R_SAVE:str|None=None, R_FIGR:str|None=None, R_BUF:str|None=None, 
+                  R_BUFR:str|None=None, R_BUF_KSH:str|None=None,
+                  REBUILD_DIR:str|None=None, POST_DIR:str|None=None,
+                  ThreddsPrefix:str|None=None, DapPrefix:str|None=None, R_GRAF:str|None=None, 
+                  DB:str|None=None,
+                  IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None, 
+                  rebuild:str|None=None, TmpDir:str|None=None,
+                  TGCC_ThreddsPrefix:str|None=None, TGCC_DapPrefix:str|None=None,
+                  IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None,
+                  DateBegin:str|None=None, DateEnd:str|None=None, YearBegin:str|None=None, YearEnd:str|None=None, PeriodLength:str|None=None,
+                  SeasonalFrequency:str|None=None, CalendarType:str|None=None,
+                  DateBeginGregorian:str|None=None,
+                  DateEndGregorian:str|None=None, 
+                  FullPeriod:str|None=None,
+                  DatePattern:str|None=None,
+                  Period:str|None=None,
+                  PeriodSE:str|None=None, CumulPeriod:str|None=None, PeriodState:str|None=None,
+                  PeriodDateBegin:str|None=None,
+                  PeriodDateEnd:str|None=None,
+                  Shading:str|np.ndarray|list|None=None,
+                  Marker:str|Dict|None=None,
+                  Line:str|Dict|None=None,
+                  OCE:str|None=None, ATM:str|None=None,
+                  CMIP6_BUF:str|None=None,
+                  Debug:bool=False,
+                  **kwargs) -> None :
 
-        if OPTIONS['Debug'] or Debug : # type: ignore
+        OPTIONS = get_options ()
+        ldebug = OPTIONS['Debug'] or Debug
+        
+        if ldebug :
             print ( f'libIGCM.sys.Config : {MASTER    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
@@ -204,38 +252,38 @@ class Config :
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
    
         if not Debug               :
-            Debug               = OPTIONS['Debug'] # type: ignore
+            Debug               = OPTIONS['Debug']
         if not User                :
-            User                = OPTIONS['User'] # type: ignore
+            User                = OPTIONS['User']
         if not Group               :
-            Group               = OPTIONS['Group'] # type: ignore
+            Group               = OPTIONS['Group']
         if not TGCC_User           :
-            TGCC_User           = OPTIONS['TGCC_User'] # type: ignore
+            TGCC_User           = OPTIONS['TGCC_User']
         if not TGCC_Group          :
-            TGCC_Group          = OPTIONS['TGCC_Group'] # type: ignore
+            TGCC_Group          = OPTIONS['TGCC_Group']
         if not IDRIS_User          :
-            IDRIS_User          = OPTIONS['IDRIS_User'] # type: ignore
+            IDRIS_User          = OPTIONS['IDRIS_User']
         if not IDRIS_Group         :
-            IDRIS_Group         = OPTIONS['IDRIS_Group'] # type: ignore
+            IDRIS_Group         = OPTIONS['IDRIS_Group']
         if not TGCC_ThreddsPrefix  :
-            TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix'] # type: ignore
+            TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix']
         if not TGCC_DapPrefix      :
-            TGCC_DapPrefix      = OPTIONS['TGCC_DapPrefix'] # type: ignore
+            TGCC_DapPrefix      = OPTIONS['TGCC_DapPrefix']
         if not IDRIS_ThreddsPrefix :
-            IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix'] # type: ignore
+            IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
         if not IDRIS_DapPrefix     :
-            IDRIS_DapPrefix     = OPTIONS['IDRIS_DapPrefix'] # type: ignore
+            IDRIS_DapPrefix     = OPTIONS['IDRIS_DapPrefix']
         if not ThreddsPrefix       :
-            ThreddsPrefix       = OPTIONS['ThreddsPrefix'] # type: ignore
+            ThreddsPrefix       = OPTIONS['ThreddsPrefix']
         if not DapPrefix           :
-            DapPrefix           = OPTIONS['DapPrefix'] # type: ignore
+            DapPrefix           = OPTIONS['DapPrefix']
 
         if not MASTER :
             MASTER = Mach (long=False)
         if not MASTER :
             MASTER = 'Unknown'
             
-        if OPTIONS['Debug'] or Debug : # type: ignore
+        if ldebug :
             print ( f'libIGCM.sys.Config : {MASTER    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
@@ -251,7 +299,7 @@ class Config :
                 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # To keep capitals # type: ignore
+            MyReader.optionxform = str # To keep capitals
             MyReader.read (ConfigCard)
             
             if not JobName        :
@@ -278,7 +326,7 @@ class Config :
                 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # type: ignore
+            MyReader.optionxform = str # To keep capitals
             
             MyReader.read (RunCard)
 
@@ -314,9 +362,9 @@ class Config :
                 Group = TGCC_Group
                 
             if not ThreddsPrefix :
-                ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix'] # type: ignore
+                ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix']
             if not DapPrefix     :
-                DapPrefix     = OPTIONS['TGCC_DapPrefix'] # type: ignore
+                DapPrefix     = OPTIONS['TGCC_DapPrefix']
                
             if not ARCHIVE :
                 ARCHIVE = f'{DapPrefix}/store/{TGCC_User}'
@@ -335,9 +383,9 @@ class Config :
                 Group = IDRIS_Group
                 
             if not ThreddsPrefix :
-                ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix'] # type: ignore
+                ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
             if not DapPrefix     :
-                DapPrefix     = OPTIONS['IDRIS_DapPrefix'] # type: ignore
+                DapPrefix     = OPTIONS['IDRIS_DapPrefix']
                 
             if not ARCHIVE :
                 ARCHIVE = f'{DapPrefix}/store/{IDRIS_User}'
@@ -403,7 +451,7 @@ class Config :
             if not R_GRAF or 'http' in str(R_GRAF) :
                 R_GRAF      = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DATA' )
             if not DB         :
-                DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DB' )
+                DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'Data', 'database' )
             if not TmpDir     :
                 TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
 
@@ -411,7 +459,7 @@ class Config :
         if ( 'Irene' in MASTER ) or ( 'Rome' in MASTER ) :
             ccc_home = os.path.isfile ( subprocess.getoutput ( 'which ccc_home'))
 
-            if Debug :
+            if ldebug :
                 print ( f'{TGCC_User=} {TGCC_Group=}' )
                 
             if not User or User == 'marti' :
@@ -426,13 +474,13 @@ class Config :
                 else          :
                     Group = LocalGroup
 
-            if Debug :
+            if ldebug :
                 print ( f'{User=} {Group=}' )
                     
             LocalHome  = subprocess.getoutput ( 'ccc_home --ccchome' )
             LocalGroup = os.path.basename ( os.path.dirname (LocalHome))
 
-            if Debug :
+            if ldebug :
                 print ( f'{MASTER=} {LocalHome=} {LocalGroup=}' )
 
             if not Source :
@@ -443,56 +491,56 @@ class Config :
                     R_IN       = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg' ), 'IGCM')
                 else        :
                     R_IN       = '/ccc/work/cont003/igcmg/igcmg/IGCM'
-            if Debug :
+            if ldebug :
                 print ( f'{R_IN}' )
             if not ARCHIVE  :
                 if ccc_home :
                     ARCHIVE    = subprocess.getoutput ( f'ccc_home --cccstore   -u {User} -d {Group}')
                 else        :
                     ARCHIVE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
-            if Debug :
+            if ldebug :
                 print ( f'{ARCHIVE}' )
             if not STORAGE  :
                 if ccc_home :
                     STORAGE    = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
                     STORAGE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
-            if Debug :
+            if ldebug :
                 print ( f'{STORAGE}' )
             if not SCRATCHDIR  :
                 if ccc_home :
                     SCRATCHDIR = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
                 else        :
                     SCRATCHDIR = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
-            if Debug :
+            if ldebug :
                 print ( f'{SCRATCHDIR}' )
             if not R_BUF       :
                 if ccc_home :
                     R_BUF      = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
                 else        :
                     R_BUF      = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
-            if Debug :
+            if ldebug :
                 print ( f'{R_BUF}' )
             if not R_FIG       :
                 if ccc_home :
                     R_FIG      = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
                     R_FIG      = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
-            if Debug :
+            if ldebug :
                 print ( f'{R_FIG}' )
             if not R_GRAF or 'http' in str(R_GRAF) :
                 if ccc_home :
                     R_GRAF     = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA')
                 else        :
                     R_GRAF     = '/ccc/store/cont003/drf/p86mart'
-            if Debug :
+            if ldebug :
                 print ( f'{R_GRAF}' )
             if not DB          :
                 if ccc_home :
                     DB         = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg'), 'database')
                 else        :
                     DB         = '/ccc/store/cont003/igcmg/igcmg/database'
-            if Debug :
+            if ldebug :
                 print ( f'{DB}' )
 
                 
@@ -525,7 +573,8 @@ class Config :
                 R_IN       = os.path.join ( '/', 'projsu', 'igcmg', 'IGCM' )
             #if not R_GRAF     : R_GRAF     = os.path.join ('/', 'data', 'omamce', 'GRAF', 'DATA' )
             if not R_GRAF or 'http' in str(R_GRAF) :
-                R_GRAF     = os.path.join  ( '/', 'thredds', 'tgcc', 'work', 'p86mart', 'GRAF', 'DATA' )
+                #R_GRAF     = os.path.join  ( '/', 'thredds', 'tgcc', 'work', 'p86mart', 'GRAF', 'DATA' )
+                R_GRAF     = os.path.join  ( '/', 'data', 'omamce', 'GRAF', 'DATA' )
             if not DB         :
                 DB         = os.path.join  ( '/', 'data', 'igcmg', 'database' )
             if not TmpDir     :
@@ -595,7 +644,7 @@ class Config :
             if not L_EXP :
                 L_EXP = os.path.join (TagName, SpaceName, ExperimentName, JobName)
 
-            if Debug :
+            if ldebug :
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {R_BUF=}' )
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {IGCM_OUT_name=}' )
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {L_EXP=}' )
@@ -621,7 +670,7 @@ class Config :
 
         ### =========
         if isinstance (Line, dict) :
-            if OPTIONS['Debug'] or Debug : # type: ignore
+            if ldebug :
                 print ( f'{type(Line) = } - {Line =}' )
             if "color" in Line.keys () : 
                 if isinstance (Line["color"], list) :
@@ -631,10 +680,10 @@ class Config :
                             Line["color"] = Line["color"] / 255.
             else :
                 Line['color'] = 'black'
-            if 'style' not in Line.keys() :
-                Line['style']='solid'
+            if 'linestyle' not in Line.keys() :
+                Line['linestyle']='solid'
         else :
-            Line = dict (color='black', style='solid')
+            Line = dict (color='black', linestyle='solid')
                                                  
         if Marker is None :
             Marker = dict (marker='D', fillstyle='full' )
@@ -728,7 +777,7 @@ class Config :
         return None
         
 ### ===========================================================================
-def Dap2Thredds (file:str, mm:Union[Config,None]=None) :
+def Dap2Thredds (file:str, mm:Config|None=None) -> str :
     '''
     ! Convert a Dap URL to http URL
     '''

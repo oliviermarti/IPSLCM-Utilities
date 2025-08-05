@@ -21,126 +21,87 @@ data loss, or any other consequences caused directly or indirectly by
 the usage of his software by incorrectly or partially configured           
 personal. Be warned that the author himself may not respect the prerequisites.                                                               
 '''
-import copy
-import time
-from typing import Any, Self, Literal, Dict, Union, Hashable
+from typing import Callable, Any, Self, Literal, _LiteralGenericAlias
+import typing
 
-## ============================================================================
-DEFAULT_OPTIONS = dict (Debug  = False,
-                             Trace  = False,
-                             Timing = None,
-                             t0     = None,
-                             Depth  = None,
-                             Stack  = None,
-                             DefaultCalendar      = 'Gregorian',
-                             User                 = None,
-                             Group                = None,
-                             TGCC_User            = 'p86mart',
-                             TGCC_Group           = 'gen12006',
-                             IDRIS_User           = 'rces009',
-                             IDRIS_Group          = 'ces',
-                             TGCC_DapPrefix       = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-                             TGCC_ThreddsPrefix   = 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
-                             IDRIS_DapPrefix      = 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-                             IDRIS_ThreddsPrefix  = 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
-                             DapPrefix            = None,
-                             ThreddsPrefix        = None,
-                             IGCM_Catalog         = None,
-                             IGCM_Catalog_list    = [ 'IGCM_catalog.json', ],
-                             Pint                 = False)
+import numpy as np
+import xarray as xr
 
-OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
+from plotIGCM.options import OPTIONS    as OPTIONS
+from plotIGCM.options import push_stack as push_stack
+from plotIGCM.options import pop_stack  as pop_stack
 
-class set_options :
+Debug=True
+Check=False
+
+def validate_types (func: Callable) -> Callable :
     '''
-    Set OPTIONS for libIGCM
-    
-    See Also :
-    ----------
-    reset_options, get_options
-    
+    Decorator to check arguments and return types of a function deduced from annotations
     '''
-    def __init__ (self:Self, **kwargs) -> None :
-        self.old = dict ()
-        for k, v in kwargs.items() :
-            if k not in OPTIONS :
-                raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
-            self.old[k] = OPTIONS[k]
-        self._apply_update (kwargs)
+    def wrapper (*args: Any, **kwargs: Any) -> Any :
+        if Check :
+            ## Validate arguments
+            for (name, param_type), value in zip (func.__annotations__.items (), args) :
+                if Debug :
+                    print ( 'arg --')
+                    print ( f'{name=}, {param_type=}, {value=}, {type(value)=}' )
+                    print ( f'{param_type in [Literal,] =}' )
+                if param_type not in [Any, Self, Literal, _LiteralGenericAlias] :
+                    if Debug :
+                        print ( 'Checking arg' )
+                    if not param_type in [Any,] and not isinstance (value, param_type) :
+                       raise TypeError (f"Argument {name} should be of type {param_type}, got {type(value)}")
+                if Debug :
+                    print ( '==')
 
-    def _apply_update (self:Self, options_dict=Dict) -> None :
-        OPTIONS.update (options_dict)
-    def __enter__ (self:Self) :
-        return
-    def __exit__ (self:Self, type, value, traceback) :
-        self._apply_update (self.old)
+            for key, value in kwargs.items () :
+                param_type = func.__annotations__.get (key, Any)
+                if Debug :
+                    print ( 'kwarg --')
+                    print ( f"{key}, {param_type=}, {value=}, {type(value)=} {type(param_type)=}" )
+                if type(param_type) == typing._LiteralGenericAlias :
+                    if Debug :
+                        print ( f"kwarg non testable : {param_type = }")
+                else : 
+                    if Debug :
+                        print ( 'Checking kwarg' )
+                    if not param_type in  [Any,] and not isinstance (value, param_type) :
+                        raise TypeError (f"k-Argument '{key}' should be of type {param_type}, got {type(value)}")
 
-def get_options () -> Dict :
+        ## Validate return type
+        result = func (*args, **kwargs)
+        if Check :
+            return_type = func.__annotations__.get("return", Any)
+            if Debug :
+                print ( 'return --')
+                print ( f"{return_type=}, {result=}, {type(result)=} {type(return_type)=}" )
+            if return_type and return_type not in  [Any,] and not isinstance (result, return_type):
+                raise TypeError (f"Return value should be of type {return_type}, got {type(result)}")
+
+        return result
+    return wrapper
+
+def copy_attrs (ptab:xr.DataArray, pref:xr.DataArray, Debug:bool|None=False) -> xr.DataArray :
     '''
-    Get OPTIONS for libIGCM
-
-    See Also :
-    ----------
-    set_options, reset_options
+    Copy units and attrs of pref in ptab
+    Convert from numpy to xarray if needed
     '''
-    return OPTIONS
+    push_stack ( 'copy_attrs' )
+    if OPTIONS['Debug'] or Debug : print ( f'ptab:{type(ptab)} pref:{type(pref)} {ptab.shape=} {pref.shape=}')
 
-def reset_options () -> None :
-    '''
-    Reset OPTIONS to DEFAULT_OPTIONS for libIGCM
-
-    See Also :
-    ----------
-    set_options, get_options
-
-    '''
-    return set_options (**DEFAULT_OPTIONS) 
-
-def return_stack () -> Union[list,None] :
-    return OPTIONS['Stack']
-
-def push_stack (string:str) -> None :
-    if OPTIONS['Depth'] :
-        OPTIONS['Depth'] += 1
-    else             :
-        OPTIONS['Depth'] = 1 
-    if OPTIONS['Trace'] :
-        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
-    #
-    if OPTIONS['Stack'] :
-        OPTIONS['Stack'].append (string) # type: ignore
-    else             :
-        OPTIONS['Stack'] = [string,]
-    #
-    if OPTIONS['Timing'] :
-        if OPTIONS['t0'] :
-            OPTIONS['t0'].append (time.time())
+    if isinstance(pref, xr.DataArray) :
+        if isinstance (ptab, xr.DataArray) :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is xr' )
+            ztab = ptab
+        elif isinstance (ptab, np.ndarray) :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is np or np.ma' )
+            if ptab.shape == pref.shape :
+                if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : convert ptab to xarray' )
+                ztab = xr.DataArray (ptab, coords=pref.coords, dims=pref.dims)
+                ztab.name = pref.name
         else :
-            OPTIONS['t0'] = [time.time(),]
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab copied' )
+            ztab = ptab
 
-def pop_stack (string:str) -> None :
-    if OPTIONS['Timing'] :
-        dt = time.time() - OPTIONS['t0'][-1]
-        OPTIONS['t0'].pop()
-    else :
-        dt = None
-    if OPTIONS['Trace'] or dt :
-        if dt :
-            if dt < 1e-3 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
-            if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
-            if dt >= 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
-        else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
-    #
-    OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 :
-        OPTIONS['Depth'] = None 
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () :
-        OPTIONS['Stack'] = None 
-    #
-    
-   
+    pop_stack ( 'copy_attrs')
+    return ztab

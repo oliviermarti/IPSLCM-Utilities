@@ -7,10 +7,10 @@ GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
 
 '''
 
+from typing import Dict
 import numpy as np
-from libIGCM.utils import OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
 
-nam_config = {
+nam_config:Dict = {
     'orca2' : {
         'key_agrif'   : False, 
         #-----------------------------------------------------------------------
@@ -22,8 +22,8 @@ nam_config = {
             'jpidta'      :     182, #  1st lateral dimension ( >: jpi )
             'jpjdta'      :     149, #  2nd    "         "    ( >= jpj )
             'jpkdta'      :      31, #  number of levels      ( >= jpk )
-            'jpiglo'      :     182, #  1st dimension of global domain --> i =jpidta
-            'jpjglo'      :     149, #  2nd    -                  -    --> j  =jpjdta
+            'jpiglo'      :     182, #  1st dimension of global domain --> i=jpidta
+            'jpjglo'      :     149, #  2nd    -                  -    --> j=jpjdta
             'jpizoom'     :       1, #  left bottom (i,j) indices of the zoom
             'jpjzoom'     :       1, #  in data domain indices
             'jperio'      :       4, #  lateral cond. type (between 0 and 6)

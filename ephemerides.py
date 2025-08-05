@@ -28,7 +28,7 @@ personal.
 
 import time
 import copy
-from typing import Any, Self, Literal, Dict, Union, Hashable
+from typing import Dict, Self, Any, Optional, Type
 
 import numpy as np
 import xarray as xr
@@ -77,69 +77,78 @@ SOLAR = 1365.0          # Solar constant (W/m^2)
 
 # Ephemerides internal options
 DEFAULT_OPTIONS = dict (Debug  = False,
-                             Trace  = False,
-                             Timing = None,
-                             t0     = None,
-                             Depth  = None,
-                             Stack  = None)
-OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
+                        Trace  = False,
+                        Timing = False,
+                        t0     = [],
+                        Depth  = 0,
+                        Stack  = [])
+
+OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
 
 class set_options :
-    """
-    Set options for Ephemerides
-    """
-    def __init__ (self, **kwargs):
-        self.old = dict ()
-        for k, v in kwargs.items():
-            if k not in OPTIONS:
-                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
-            self.old[k] = OPTIONS[k]
-        self._apply_update(kwargs)
-
-    def _apply_update (self, options_dict) :
-        OPTIONS.update (options_dict)
-    def __enter__ (self) :
-        return
-    def __exit__ (self, type, value, traceback) :
-        self._apply_update (self.old)
-
-def get_options () -> Dict :
-    """
-    Get options for Ephemerides
-
-    See Also
+    '''
+    Set OPTIONS for libIGCM
+    
+    See Also :
     ----------
-    set_options
+    reset_options, get_options
+    
+    '''
+    def __init__ (self:Self, **kwargs) -> None :
+        self.old = dict ()
+        for k, v in kwargs.items() :
+            if k not in OPTIONS :
+                raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
+            self.old[k] = OPTIONS[k]
+        self._apply_update (kwargs)
 
-    """
+    def _apply_update (self:Self, options_dict:dict) -> None :
+        OPTIONS.update (options_dict)
+        
+    def __enter__(self: Self) -> None:
+        return None
+
+    def __exit__(self: Self, type: Optional[Type[BaseException]], value: Optional[BaseException], traceback: Optional[Any]) -> None:
+        self._apply_update(self.old)
+
+def get_options() -> dict[str, Any]:
+    '''
+    Get OPTIONS for libIGCM
+
+    See Also :
+    ----------
+    set_options, reset_options
+    '''
     return OPTIONS
 
-def reset_options():
-    return set_options (**DEFAULT_OPTIONS)
+def reset_options () :
+    '''
+    Reset OPTIONS to DEFAULT_OPTIONS for libIGCM
 
-def return_stack () :
+    See Also :
+    ----------
+    set_options, get_options
+
+    '''
+    return set_options (**DEFAULT_OPTIONS) 
+
+def return_stack() -> list[str]|str|int|bool|None:
     return OPTIONS['Stack']
 
-def push_stack (string:str) :
-    if OPTIONS['Depth'] :
-        OPTIONS['Depth'] += 1
-    else                :
-        OPTIONS['Depth'] = 1
+def push_stack (string:str) -> None :
+    OPTIONS['Depth'] += 1
     if OPTIONS['Trace'] :
         print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
     #
-    if OPTIONS['Stack'] :
-        OPTIONS['Stack'].append (string)
-    else                :
-        OPTIONS['Stack'] = [string,]
+    OPTIONS['Stack'].append (string)
     #
     if OPTIONS['Timing'] :
         if OPTIONS['t0'] :
-            OPTIONS['t0'].append ( time.time() )
+            OPTIONS['t0'].append (time.time())
         else :
-            OPTIONS['t0'] = [ time.time(), ]
+            OPTIONS['t0'] = [time.time(),]
 
-def pop_stack (string:str) :
+def pop_stack (string:str) -> None :
     if OPTIONS['Timing'] :
         dt = time.time() - OPTIONS['t0'][-1]
         OPTIONS['t0'].pop()
@@ -157,15 +166,12 @@ def pop_stack (string:str) :
             print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
     OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 :
-        OPTIONS['Depth'] = None
     OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () :
-        OPTIONS['Stack'] = None
     #
-
+    
+   
 ## ============================================================================
-def time2BP (time, unit='year', year0=7999, month0=7, day0=0, hour0=0, Debug=False) :
+def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, hour0:int=0, Debug:bool=False) :
     '''
     Convert a cftime time variable in to Year before present values
     unit  : year or month
@@ -356,7 +362,7 @@ def insol (delta, lat, omega) :
     insol = SOLAR * np.maximum(0., sin_h)
     if isinstance (insol, xr.DataArray) :
         insol.attrs.update ( {'units':'W m^-2', 'standard_name':'tops', 'comment':'Insolation at top of atm'} )
-    pop_stack ( f'insol')
+    pop_stack ('insol')
     return insol
         
 def SunRiseGMT (day, lat, lon) :
@@ -524,7 +530,7 @@ def date2hour (pdate, t0=np.datetime64 ('1955-01-01T00:00:00'), out='int') :
     pop_stack ('date2hour')
     return hour
 
-def date2hourdec (pdate:Union[np.datetime64,xr.DataArray], t0:Union[np.datetime64,xr.DataArray], Debug:bool=False) -> xr.DataArray :
+def date2hourdec (pdate:np.datetime64|xr.DataArray, t0:np.datetime64|xr.DataArray, Debug:bool=False) -> xr.DataArray :
     '''
     Gives day from a date in np.datetime64 format : hour and fraction of hour
     Input
@@ -567,9 +573,9 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
         print ( f'{day=}' )
 
     if isinstance (ptime, xr.DataArray) :
-        math = xr
+        zmath = xr
     else :
-        math = np
+        zmath = np
     
     # Ephemerides of the Sun in local time
     zeroh    = 0.0
@@ -578,16 +584,16 @@ def pseudo_local_time (ptime, lat=0, lon=0, t0=np.datetime64 ('1955-01-01T00:00:
     SunSet   = SunSetLocal  (day=day, lat=lat)
     Midnight = 24.0
     
-    h1 = math.where ( hour<SunRise  ,  
+    h1 = zmath.where ( hour<SunRise  ,  
                    0.0 + (hour - zeroh)/(SunRise - zeroh)*6.0, 0.)
-    h2 = math.where ( np.logical_and(SunRise <= hour, hour <= Noon),
+    h2 = zmath.where ( np.logical_and(SunRise <= hour, hour <= Noon),
                    6.0 + (hour - SunRise)/(Noon - SunRise) * 6.0, 0.)
-    h3 = math.where ( np.logical_and(Noon < hour, hour <= SunSet),
+    h3 = zmath.where ( np.logical_and(Noon < hour, hour <= SunSet),
                   12.0 + (hour -Noon)/(SunSet - Noon)*6.0, 0.)  
-    h4 = math.where ( hour>SunSet, 
+    h4 = zmath.where ( hour>SunSet, 
                   18.0 + (hour - SunSet)/(Midnight-SunSet)*6.0, 0.)
     
-    pseudo_local_time = math.where (SunSet>SunRise, h1 + h2 + h3 + h4, np.nan)
+    pseudo_local_time = zmath.where (SunSet>SunRise, h1 + h2 + h3 + h4, np.nan)
 
     if isinstance (pseudo_local_time, xr.DataArray) :
         pseudo_local_time.attrs.update ( {'units':'hours', 'comment':'pseudo local time, roman definition',

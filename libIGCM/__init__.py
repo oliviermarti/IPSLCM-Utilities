@@ -26,8 +26,14 @@ the usage of his software by incorrectly or partially configured
 personal.
 '''
 
-from libIGCM import utils
-from libIGCM.utils import set_options, get_options, reset_options, push_stack, pop_stack, return_stack
-from libIGCM import date
-from libIGCM import sys
-from libIGCM import post
+from libIGCM.options import set_options   as set_options
+from libIGCM.options import get_options   as get_options
+from libIGCM.options import reset_options as reset_options
+from libIGCM.options import push_stack    as push_stack
+from libIGCM.options import pop_stack     as pop_stack
+from libIGCM.options import return_stack  as return_stack
+
+from libIGCM import options as options
+from libIGCM import date    as date
+from libIGCM import sys     as sys
+from libIGCM import post    as post

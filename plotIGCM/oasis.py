@@ -23,14 +23,17 @@ personal.
 '''
 
 import time
-import copy
-from typing import Any, Self, Literal, Dict, Union, Hashable
+from typing import Tuple, List, Dict
 
 import numpy as np
 import xarray as xr
 
+from plotIGCM.options import OPTIONS
+from plotIGCM.options import push_stack
+from plotIGCM.options import pop_stack
+
 ## Variables exchanged between ocean and atmosphere in IPSL coupled model      
-o2a_hf = [
+o2a_hf:List[List[str]] = [
     ['O_SSTSST', 'SISUTESW'],
     ['OIceFrc' , 'SIICECOV'],
     ['O_TepIce', 'SIICTEMW'],
@@ -38,16 +41,17 @@ o2a_hf = [
     ['O_OCurx1', 'CURRENTX'],
     ['O_OCury1', 'CURRENTY'],
     ['O_OCurz1', 'CURRENTZ']]
-o2a_day = []
+o2a_day:List = []
+
 o2a     = o2a_hf + o2a_day
 
-a2o_day = [
+a2o_day:List[List[str]] = [
     ['COLIQRUN', 'O_Runoff'],
     ['COCALVIN', 'OCalving'],
     ['COCALVIN', 'OIceberg'],
     ['COCALVIN', 'OIcshelf']]
 
-a2o_hf_wind = [
+a2o_hf_wind:List[List[str]] = [
     ['COTAUXXU', 'O_OTaux1'],
     ['COTAUYYU', 'O_OTauy1'],
     ['COTAUZZU', 'O_OTauz1'],
@@ -56,7 +60,7 @@ a2o_hf_wind = [
     ['COTAUZZV', 'O_OTauz2'],
     ['COWINDSP', 'O_Wind10']]
 
-a2o_hf_ext = [
+a2o_hf_ext:List[List[str]] = [
     ['COTOTRAI', 'OTotRain'],
     ['COTOTSNO', 'OTotSnow'],
     ['COTOTEVA', 'OTotEvap'],
@@ -71,8 +75,8 @@ a2o_hf = a2o_hf_wind + a2o_hf_ext
 a2o    = a2o_day     + a2o_hf
 
 # Build dictionnaries for correspondance between ocean and atmosphere variables.
-a2o_d = dict ()
-a2o_r = dict ()
+a2o_d:Dict = {}
+a2o_r:Dict = {}
 for avar, ovar in a2o :
     a2o_d[avar] = ovar
     a2o_r[ovar] = avar
@@ -83,97 +87,11 @@ for ovar, avar in o2a :
     o2a_d[ovar] = avar
     o2a_r[avar] = ovar
 
-### OASIS internal options                                                     
-DEFAULT_OPTIONS = dict (Debug  = False,
-                     Trace  = False,
-                     Timing = None,
-                     t0     = None,
-                     Depth  = None,
-                     Stack  = None)
-OPTIONS = copy.deepcopy (DEFAULT_OPTIONS)
-
-class set_options :
-    '''
-    Set options for oasis
-    '''
-    def __init__ (self, **kwargs) :
-        self.old = dict ()
-        for k, v in kwargs.items() :
-            if k not in OPTIONS:
-                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
-            self.old[k] = OPTIONS[k]
-        self._apply_update(kwargs)
-
-    def _apply_update (self, options_dict) :
-        OPTIONS.update (options_dict)
-    def __enter__ (self) :
-        return
-    def __exit__ (self, type, value, traceback) :
-        self._apply_update (self.old)
-
-def get_options () -> dict :
-    '''
-    Get options for oasis
-
-    See Also
-    ----------
-    set_options
-
-    '''
-    return OPTIONS
-
-def reset_options():
-    return set_options (**DEFAULT_OPTIONS)
-
-def return_stack () :
-    return OPTIONS['Stack']
-
-def push_stack (string:str) :
-    if OPTIONS['Depth'] :
-        OPTIONS['Depth'] += 1
-    else             :
-        OPTIONS['Depth'] = 1
-    if OPTIONS['Trace'] :
-        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
-    #
-    if OPTIONS['Stack'] :
-        OPTIONS['Stack'].append (string)
-    else             :
-        OPTIONS['Stack'] = [string,]
-    #
-    if OPTIONS['Timing'] :
-        if OPTIONS['t0'] :
-            OPTIONS['t0'].append ( time.time() )
-        else :
-            OPTIONS['t0'] = [ time.time(), ]
-
-def pop_stack (string:str) :
-    if OPTIONS['Timing'] :
-        dt = time.time() - OPTIONS['t0'][-1]
-        OPTIONS['t0'].pop()
-    else :
-        dt = None
-    if OPTIONS['Trace'] or dt :
-        if dt : 
-            if dt < 1e-3 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
-            if dt >= 1e-3 and dt < 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
-            if dt >= 1 : 
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1  :5.1f} second')
-        else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
-    #
-    OPTIONS['Depth'] -= 1
-    if OPTIONS['Depth'] == 0 :
-        OPTIONS['Depth'] = None
-    OPTIONS['Stack'].pop ()
-    if OPTIONS['Stack'] == list () :
-        OPTIONS['Stack'] = None
-    #
-
 ## ============================================================================
-def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_grid_size, num_links) :
+def compute_links (remap_matrix:np.ndarray|xr.DataArray, 
+                   src_address:np.ndarray|xr.DataArray, dst_address:np.ndarray|xr.DataArray, 
+                   src_grid_size:int, dst_grid_size:int, num_links:int) \
+                    -> Tuple[np.ndarray|xr.DataArray,np.ndarray|xr.DataArray,np.ndarray|xr.DataArray,np.ndarray|xr.DataArray] :
     push_stack ( f'compute_links ( remap_matrix, src_address, dst_address, {src_grid_size=}, {dst_grid_size=}, {num_links=} )' )
     
     src_grid_target     = np.zeros ((src_grid_size,), dtype=int)
@@ -181,7 +99,7 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
 
     dst_grid_target     = np.zeros ((dst_grid_size,), dtype=int)
     dst_grid_weight     = np.zeros ((dst_grid_size,))
-    for link in np.arange (num_links) :
+    for link in range (num_links) :
         if link%1000 == 0 :
             print ( link, end=' ' )
         src_grid_target[src_address[link]] += 1
@@ -192,7 +110,7 @@ def compute_links (remap_matrix, src_address, dst_address, src_grid_size, dst_gr
     pop_stack ( 'compute_links')
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
-def rmp_remap (ptab, d_rmp, sval=np.nan, Debug=False) :
+def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.DataArray :
     '''
     Remap a field using OASIS rmpfile
 
@@ -332,7 +250,7 @@ def remap (src_field, src_grid_size, dst_grid_size, num_links, src_address, dst_
     t_start = time.time ()
     t_0     = t_start
    
-    for link in np.arange (num_links) :
+    for link in range (num_links) :
         if OPTIONS['Debug'] or Debug :
             if link%(num_links//100) == 0 :
                 t_1 = time.time ()
