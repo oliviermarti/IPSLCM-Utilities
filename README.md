@@ -5,13 +5,16 @@ Author : <mailto:olivier.marti@lsce.ipsl.fr>
 
 git : <https://github.com/oliviermarti/IPSLCM-Utilities>
 
-## Jupyter notebooks
+# Jupyter notebooks
 
-### ORCA\_Gallery.ipynb
+## ORCA\_Gallery.ipynb
 An eclectic demo of various plots with ORCA outputs, using `nemo.py`
 
-### LMDZ\_Gallery.ipynb 
+## LMDZ\_Gallery.ipynb 
 A demo of plots with LMDZ outputs, using `lmdz.py`
+
+# Usage notes
+In `plotIGCM/utils/__init__.py`, there is a decorator that allows to dynamically check paramaters for functions that are correctly documented (with proper python 'hints'). This fully experimental. The parameter Check at the beginning allows to activate/deactivate this checkins phase.
 
 # Python modules
 
@@ -22,12 +25,12 @@ Some functionnalities of the ksh libIGCM used for running the IPSL models. Dedic
 Utilities for the following modules.
 
 ### sys.py 
-Defines `libIGCM` directories, depending of the computer.
+Defines libIGCM directories, depending of the computer.
 
 ### date.py
-Handles date computations and convertions in different calendars. Mostly conversion of `IGCM_date.ksh` to python.
+Handles date computations and convertions in different calendars. Mostly conversion of `IGCM_date.ksh` to python. In the ksh version, most date arithmetic functions are duplicated for use with dates either in Gregorian or Human format. Here, the functions guess the input date format, and returns the result in the same format.
 
-Dates format
+Dates format :
 
 - Human format     : `[yy]yy-mm-dd`
 - Gregorian format : `yymmdd`
@@ -46,15 +49,16 @@ Available calendars :
       Year of 360 days with month of equal length.
 
 ### post.py
-A layer above `sys.py` that read `IGCM_catalog.json` to automatically get information about key simulations.
+A layer above `sys.py` that read `IGCM_catalog.json` to automatically get information about key simulations. You can specify your own catalog.
 
 ## plotIGCM
 Utilities for post processing of IPSL models outputs
 
 ### lmdz.py
 Utilities for LMDZ grid
+
 - Lots of tests for `xarray` object
-- Not much tested for `numpy` objects
+- Support `numpy` objects is now obsolete
 
 ### nemo.py
 Utilities to plot NEMO ORCA fields. Handles periodicity and other stuff.
@@ -65,20 +69,17 @@ Utilities to plot NEMO ORCA fields. Handles periodicity and other stuff.
 A few fonctionnalities of the OASIS coupler in Python : interpolation.
 
 ### interp1d.py
-One-dimensionnal interpolation of a multi-dimensionnal field
+One-dimensionnal interpolation of a multi-dimensionnal field. Used for vertical interpolation on regular levels or pressure levels by `nemo.py` and `lmdz.py`.
 
 
 ## Miscellaneous
 ### IPCC.py
 Defines colors recommanded by IPCC
 
-IPCC Visual Style Guide for Authors
-IPCC WGI Technical Support Unit
-
-<https://www.ipcc.ch/site/assets/uploads/2019/04/IPCC-visual-style-guide.pdf>
+IPCC Visual Style Guide for Authors. IPCC WGI Technical Support Unit. <https://www.ipcc.ch/site/assets/uploads/2019/04/IPCC-visual-style-guide.pdf>
 
 ### ephemerides.py
-Compute time of sun rise and sun set, given a day and a geographical position
+Compute time of sun rise and sun set, given a day and a geographical position.
 
 (<http://www.softrun.fr/index.php/bases-scientifiques/heure-de-lever-et-de-coucher-du-soleil>)
 

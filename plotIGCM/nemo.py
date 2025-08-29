@@ -242,72 +242,72 @@ class Domain :
         if action is set, add/del halo or cyclic
         '''
         if dico :
-            for attr in dico.keys () :
-                super().__setattr__ (attr, dico[attr])
+            for attr, value in dico.items () :
+                super().__setattr__ (attr, value)
         self.__dict__.update (kwargs)
 
         if action :
             tdom = self.copy ()
             tdom = tdom.edit (action=action, Debug=Debug)
             self.__dict__.update (tdom)
-        
 
+    def replace (self:Self, dico:Optional[Dict[str,Any]]=None, action:Optional[str]=None, fatal:bool=True, Debug:bool=False, **kwargs:Any) -> None :
+        '''Use a dictionnary to update values
+        if action is set, add/del halo or cyclic
+        '''
+        if dico :
+            for attr, value in dico.items () :
+                if attr in self.keys () or not fatal :               
+                    super().__setattr__ (attr, value)
+                else :
+                    raise KeyError (f"{attr} attribute is not valid. Valid attributes are {list(self.keys())}")
+
+        for attr, value in kwargs.items () :
+            if attr in self.keys () or not fatal :               
+                super().__setattr__ (attr, value)
+            else :
+                raise KeyError (f"{attr} attribute is not valid. Valid attributes are {list(self.keys())}")
+            
+        if action :
+            tdom = self.copy ()
+            tdom = tdom.edit (action=action, Debug=Debug)
+            self.__dict__.update (tdom)
+         
     def keys(self: Self) -> KeysView[str]:
         return self.__dict__.keys()
-
     def values(self: Self) -> ValuesView[Any]:
         return self.__dict__.values()
-
     def items(self: Self) -> ItemsView[str, Any]:
         return self.__dict__.items()
-
     def dict(self: Self) -> dict[str, Any]:
         return self.__dict__
-
     def pop(self: Self, attr: str) -> Any:
         value = self[attr]
         delattr(self, attr)
         return value
-
     def copy(self: Self) -> 'Domain':
-        return Domain(domain=self)
-
+        return Domain (domain=self)
     # Convenience aliases for update
-    def __replace__(
-            self: Self,
-            dico: Optional[Dict[str, Any]] = None,
-            action: Optional[str] = None,
-            Debug: bool = False,
-            **kwargs: Any
-    ) -> None:
+    def __replace__(self: Self, dico: Optional[Dict[str, Any]] = None, action: Optional[str] = None,
+                    Debug: bool = False, **kwargs: Any ) -> None:
+        return self.replace(dico=dico, action=action, Debug=Debug, **kwargs)
+    def __update__ (self: Self, dico: Optional[Dict[str, Any]] = None, action: Optional[str] = None,
+                    Debug: bool = False, **kwargs: Any ) -> None:
         return self.update(dico=dico, action=action, Debug=Debug, **kwargs)
-
-    def __update__(
-            self: Self,
-            dico: Optional[Dict[str, Any]] = None,
-            action: Optional[str] = None,
-            Debug: bool = False,
-            **kwargs: Any
-    ) -> None:
-        return self.update(dico=dico, action=action, Debug=Debug, **kwargs)
-    
     def __str__(self: Self) -> str:
         return str(self.__dict__)
-    
     def __repr__(self: Self) -> str:
         return repr(self.__dict__)
-    
     def __name__(self: Self) -> Callable:
         return self.__class__.__name__
-    
     def __getitem__(self: Self, attr: str) -> Any:
         return getattr(self, attr)
-    
     def __setitem__(self: Self, attr: str, value: Any) -> None:
         setattr(self, attr, value)
-        
     def __iter__(self: Self) -> Iterable[str]:
         return iter(self.__dict__)
+    def __contains__ (self:Self, attr:Any) -> bool : 
+        return True if attr in self.__dict__.keys () else False
     
     @validate_types
     def __init__ (self:Self, ptab:xr.DataArray|None=None, cfg_name:Optional[str]=None, CFG_name:Optional[str]=None, 
@@ -847,7 +847,7 @@ def build_bounds2d (glont:xr.DataArray|None=None, glatt:xr.DataArray|None=None,
     Else, returns bounds_lont, bounds_latt, bounds_lonu, bounds_latu, bounds_lonv, bounds_latv, bounds_lonf, bounds_latf
     (some arrays set to None when the computation is not possible)
     '''
-    zdom= Domain (Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, Cyclic=Cyclic, 
+    zdom = Domain (Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype, Halo=Halo, Cyclic=Cyclic, 
                   aperio=aperio, domain=domain)
 
     if glont is not None :

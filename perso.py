@@ -20,6 +20,8 @@ the usage of his software by incorrectly or partially configured
 personal.
 '''
 
+from typing import Any
+
 import itertools
 
 import numpy as np
@@ -40,8 +42,17 @@ RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
 REPSI = np.finfo (1.0).eps
 
+def pval (r:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
+    '''p-value for a correlation r and a sample size n'''
+    return 1 - r * np.sqrt(n-2) / np.sqrt(1.0-r*r)
 
-def distance (lat1, lon1, lat2, lon2, radius:float=1) :
+def rcor (p:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
+    '''correlation r critical for a p-value p and and a sample size n'''
+    return np.sqrt ((1-p)/(n-1)) 
+
+def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
+              lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray,
+              radius:float=1) -> float|np.ndarray|xr.DataArray :
     '''
     Compute distance on the sphere
     '''
@@ -53,7 +64,9 @@ def distance (lat1, lon1, lat2, lon2, radius:float=1) :
     
     return zdistance
 
-def aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2) :
+def aire_triangle (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.DataArray,
+                   lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
+                   lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
     '''
     Aire of a triangle on the sphere
     Girard's formula

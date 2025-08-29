@@ -10,6 +10,7 @@ Includes ColorShading, ColorLine, RCPColorLine, RCPColorShading
 
 '''
 import types
+from typing import Self, Any, Optional, Type
 
 import numpy as np
 import matplotlib as mpl
@@ -422,3 +423,31 @@ cmap.colors_MultiCat_5.extend (cmap.colors_Green_5 )
 cmap.colors_MultiCat_5.extend (cmap.colors_Red_5   )
 cmap.MultiCat_5   = create_colormap (cmap.colors_MultiCat_5, reverse=False, name='MultiCat_5'  )
 cmap.MultiCat_5_r = create_colormap (cmap.colors_MultiCat_5, reverse=True , name='MultiCat_5_r')
+
+
+def multicat (ncolors:int=19, trunk:str='high', reverse:bool=False, name:str='MultiCat') -> mpl.colors.ListedColormap :
+    '''
+    Builds a multicategory colormap
+    '''
+    nn = ((ncolors-1)//4+1)*2
+    
+    nrange = np.arange(nn-nn//2,0,-1)-1
+
+    Green  = [ (np.array(cmap.colors_Green_5 [0]) - np.array(cmap.colors_Green_5 [-1])) * n/(nn-1) + np.array(cmap.colors_Green_5 [-1]) for n in nrange ]
+    Purple = [ (np.array(cmap.colors_Purple_5[0]) - np.array(cmap.colors_Purple_5[-1])) * n/(nn-1) + np.array(cmap.colors_Purple_5[-1]) for n in nrange ]
+    Red    = [ (np.array(cmap.colors_Red_5   [0]) - np.array(cmap.colors_Red_5   [-1])) * n/(nn-1) + np.array(cmap.colors_Red_5   [-1]) for n in nrange ]
+    Blue   = [ (np.array(cmap.colors_Blue_5  [0]) - np.array(cmap.colors_Blue_5  [-1])) * n/(nn-1) + np.array(cmap.colors_Blue_5  [-1]) for n in nrange ]
+    
+    MultiCat = []
+    MultiCat.extend (Purple)
+    MultiCat.extend (Blue  )
+    MultiCat.extend (Green )
+    MultiCat.extend (Red   )
+
+    if trunk == 'low'  : MultiCat = MultiCat [ncolors-nn*2+2:]
+    if trunk == 'high' : MultiCat = MultiCat [:ncolors]
+    
+    MultiCat = create_colormap (MultiCat, reverse=reverse, name=name )
+    
+    return MultiCat
+    

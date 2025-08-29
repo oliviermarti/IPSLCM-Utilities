@@ -171,6 +171,73 @@ def pop_stack (string:str) -> None :
     
    
 ## ============================================================================
+def time2float (time, unit:str='year', year0:int=0, month0:int=1, day0:int=0, hour0:int=0, Debug:bool=False) :
+    '''
+    Convert a cftime time variable in to Year before present values
+    unit  : year or month
+    year0 : year corresponding to 0k BP
+    month0, day0, hour0 : month, day, hour corresponding to 0 ka BP
+
+    Approximate calculation for plots
+    '''
+    push_stack ( f'time2float (time, {unit=}, {year0=}, {month0=}, {day0=}, {hour0=})' )
+    
+    ldebug = OPTIONS['Debug'] or Debug
+    
+    if ldebug : print ( f'{type(time) = }')
+
+    if isinstance (time, xr.DataArray)  :
+        if ldebug : print ( f'Case : xarray {len(time.dims)}')
+        if len(time.dims) == 0 :
+            ztime = time.item()
+        else :
+            ztime = time.values
+    elif isinstance (time, cftime._cftime.DatetimeGregorian) :
+        if ldebug : print ( f'Case : cftime')
+        ztime = time
+    elif isinstance (time, numpy.ndarray) :
+        if ldebug : print ( f'Case : numpy : {len(time) = }')
+        if len(time.shape) == 0 : 
+            ztime = time.item ()
+        else :
+            ztime = time
+    else :
+        if ldebug : print ( f'Case : else')
+        ztime = time
+        
+    result = np.empty_like (time)        
+    if ldebug :
+        print ( f'{type (ztime)=}')
+        print ( f'{type (result)=} {result.shape=}')
+
+    def zres (ptt) :
+        (year, month, day, hour, mn, sec, ms) = cftime.to_tuple (ptt)
+        zres = (year0-year) - (month-month0)/12 - (day-day0)/365.25 - (hour-hour0)/(365.25*24) - mn/(365.25*24*60) - sec/(365.25*24*60+60)
+        return zres
+        
+    if len(result.shape) == 0 :
+        result = np.array ( [float(zres (ztime)),] )
+    else :
+        result = np.empty_like (time)
+        for ii, tt in enumerate (ztime) :
+            if OPTIONS['Debug'] or Debug : print ( f'{tt=}')
+            result[ii] = float (zres (tt))
+            
+    if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
+        result = result*12
+        
+    #result = result.astype(float)
+
+    if isinstance (time, xr.DataArray) : 
+        result = xr.DataArray (result, dims=('YearBP',), coords=(result,))
+        if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
+            result.attrs.update ({'unit':'Month', 'Comment':f'Month after {year0:04d}-{month0:02d}-{day0:02d}'})
+        else : 
+            result.attrs.update ({'unit':'Year' , 'Comment':f'Year after {year0:04d}-{month0:02d}-{day0:02d}'})
+
+    pop_stack ( 'time2float' )        
+    return result
+
 def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, hour0:int=0, Debug:bool=False) :
     '''
     Convert a cftime time variable in to Year before present values
@@ -181,35 +248,57 @@ def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, ho
     Approximate calculation for plots
     '''
     push_stack ( f'time2BP (time, {unit=}, {year0=}, {month0=}, {day0=}, {hour0=})' )
+    ldebug = OPTIONS['Debug'] or Debug
     
-    ty = isinstance (time, xr.DataArray)
-        
-    if OPTIONS['Debug'] or Debug :
-        print ( f'{ty=}')
-    if ty  :
-        ztime = time.values
-    else   :
+    if ldebug : print ( f'{type(time) = }')
+
+    if isinstance (time, xr.DataArray)  :
+        if ldebug : print ( f'Case : xarray {len(time.dims)}')
+        if len(time.dims) == 0 :
+            ztime = time.item()
+        else :
+            ztime = time.values
+    elif isinstance (time, cftime._cftime.DatetimeGregorian) :
+        if ldebug : print ( f'Case : cftime')
         ztime = time
-    result = np.empty_like (time)
-    if OPTIONS['Debug'] or Debug :
-        print ( f'{type (ztime)=}')
+    elif isinstance (time, numpy.ndarray) :
+        if ldebug : print ( f'Case : numpy : {len(time) = }')
+        if len(time.shape) == 0 : 
+            ztime = time.item ()
+        else :
+            ztime = time
+    else :
+        if ldebug : print ( f'Case : else')
+        ztime = time
         
-    for ii, tt in enumerate (ztime) :
-        #if OPTIONS['Debug'] or Debug : print ( f'{tt=}')
-        (year, month, day, hour, mn, sec, ms) = cftime.to_tuple (tt)
-        result [ii] = (year0-year) - (month-month0)/12 - (day-day0)/365.25 - (hour-hour0)/(365.25*24) - mn/(365.25*24*60) - sec/(365.25*24*60+60)
+    result = np.empty_like (time)
+    if ldebug :
+        print ( f'{type (ztime)=}')
+        print ( f'{type (result)=} {result.shape=}')
+
+    def zres (ptt) :
+        (year, month, day, hour, mn, sec, ms) = cftime.to_tuple (ptt)
+        zres = (year0-year) - (month-month0)/12 - (day-day0)/365.25 - (hour-hour0)/(365.25*24) - mn/(365.25*24*60) - sec/(365.25*24*60+60)
+        return zres
+
+    if len(result.shape) == 0 :
+        result = np.array ( [float(zres(ztime))] )
+    else :
+        for ii, tt in enumerate (ztime) :
+            if OPTIONS['Debug'] or Debug : print ( f'{tt=}')
+            result[ii] = float(zres (tt))
+            
     if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
         result = result*12
-    result = result.astype(float)
-
-    if ty : 
+        
+    if isinstance (time, xr.DataArray) :
         result = xr.DataArray (result, dims=('YearBP',), coords=(result,))
         if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
-            result.attrs.update ({'unit':'Month BP', 'Comment':'Month before 1950'})
+            result.attrs.update ({'unit':'Month BP', 'Comment':f'Month before {year0:04d}-{month0:02d}-{day0:02d}'})
         else : 
-            result.attrs.update ({'unit':'Year BP' , 'Comment':'Year before 1950' })
+            result.attrs.update ({'unit':'Year BP' , 'Comment':f'Year before {year0:04d}-{month0:02d}-{day0:02d}'})
 
-    pop_stack ( 'time2BP' )        
+    pop_stack ('time2BP')        
     return result
 
 def mthday2day (month, day) :

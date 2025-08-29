@@ -6,9 +6,11 @@ Created on Thu Jun 17 15:20:13 2021
 @Author: Didier Paillard. Adapted by Olivier Marti
 """
 
+import copy
 import time
 import numpy as np
 import xarray as xr
+from typing import Any, Self, Optional, Type
 
 ## Astronomical parameters
 ECC     =   0.0167024   # Excentricity 0kBP (1950 CE)
@@ -35,42 +37,62 @@ NITER = 7
 PREC  = 1.0E-7
 
 # daily inso internal options
-OPTIONS = dict (Debug=False, Trace=False, Timing=False, t0=None, Depth=0, Stack=[])
+DEFAULT_OPTIONS = dict (Debug=False, Trace=False, Timing=False, t0=None, Depth=0, Stack=[])
+
+OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
+
 
 class set_options :
-    """
-    Set options for daily inso
-    """
-    def __init__ (self, **kwargs) :
+    '''
+    Set OPTIONS for libIGCM
+    
+    See Also :
+    ----------
+    reset_options, get_options
+    
+    '''
+    def __init__ (self:Self, **kwargs) -> None :
         self.old = dict ()
         for k, v in kwargs.items() :
-            if k not in OPTIONS:
-                raise ValueError ( f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}" )
+            if k not in OPTIONS :
+                raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
-        self._apply_update(kwargs)
+        self._apply_update (kwargs)
 
-    def _apply_update (self, options_dict) :
+    def _apply_update (self:Self, options_dict:dict) -> None :
         OPTIONS.update (options_dict)
-    def __enter__ (self) :
-        return
-    def __exit__ (self, type, value, traceback) :
-        self._apply_update (self.old)
+        
+    def __enter__(self: Self) -> None:
+        return None
 
-def get_options () -> dict :
-    """
-    Get options for nemo
+    def __exit__(self: Self, type: Optional[Type[BaseException]], value: Optional[BaseException], traceback: Optional[Any]) -> None:
+        self._apply_update(self.old)
 
-    See Also
+def get_options() -> dict[str, Any]:
+    '''
+    Get OPTIONS for libIGCM
+
+    See Also :
     ----------
-    set_options
-
-    """
+    set_options, reset_options
+    '''
     return OPTIONS
 
-def return_stack () :
+def reset_options () :
+    '''
+    Reset OPTIONS to DEFAULT_OPTIONS for libIGCM
+
+    See Also :
+    ----------
+    set_options, get_options
+
+    '''
+    return set_options (**DEFAULT_OPTIONS) 
+
+def return_stack() -> list[str]|str|int|bool|None:
     return OPTIONS['Stack']
 
-def push_stack (string:str) :
+def push_stack (string:str) -> None :
     OPTIONS['Depth'] += 1
     if OPTIONS['Trace'] :
         print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
@@ -79,18 +101,18 @@ def push_stack (string:str) :
     #
     if OPTIONS['Timing'] :
         if OPTIONS['t0'] :
-            OPTIONS['t0'].append ( time.time() )
+            OPTIONS['t0'].append (time.time())
         else :
-            OPTIONS['t0'] = [ time.time(), ]
+            OPTIONS['t0'] = [time.time(),]
 
-def pop_stack (string:str) :
+def pop_stack (string:str) -> None :
     if OPTIONS['Timing'] :
         dt = time.time() - OPTIONS['t0'][-1]
         OPTIONS['t0'].pop()
     else :
         dt = None
     if OPTIONS['Trace'] or dt :
-        if dt : 
+        if dt :
             if dt < 1e-3 : 
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             if dt >= 1e-3 and dt < 1 : 
@@ -98,14 +120,14 @@ def pop_stack (string:str) :
             if dt >= 1 : 
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else : 
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}') # type: ignore
+            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
     OPTIONS['Depth'] -= 1
-    OPTIONS['Stack'].pop () # type: ignore
+    OPTIONS['Stack'].pop ()
     #
 
 # Astronomical functions
-def daily_inso_longitude (lat, lon, ecc=ECC, obl=OBL, pre=PRE, solar=SOLAR) :
+def daily_inso_longitude (lat:float|xr.DataArray, lon:float|xr.DataArray, ecc:float=ECC, obl:float=OBL, pre:float=PRE, solar:float=SOLAR) -> float|xr.DataArray :
     '''
     Daily insolation for a given latitude and for true solar longitude 
     All angles in degrees
@@ -161,7 +183,7 @@ def solve_Kepler_prec (m:float|np.ndarray|xr.DataArray, ecc:float|np.ndarray|xr.
         error = np.max ( np.abs (m - (E - ecc*np.sin(E))) )
     return E
 
-def solve_Kepler (m, ecc=ECC, niter:int|None=None, prec:float|None=None) :
+def solve_Kepler (m, ecc:float|np.ndarray|xr.DataArray=ECC, niter:Optional[int]=None, prec:Optional[float]=None ) :
     '''
     Solve Kepler equation : E - e sinE = m
     input :

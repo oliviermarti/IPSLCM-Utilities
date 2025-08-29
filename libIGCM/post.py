@@ -317,6 +317,57 @@ class Config (libIGCM.sys.Config) :
         pop_stack ('libIGCM.post.__init__')
 
 
+def catalog (keep_all:bool=False, Debug:bool=False) -> Dict :
+    '''
+    Return a dictionnary from the catalog file
+
+    By defaults, keeps only experiments entries
+    '''
+    OPTIONS = get_options ()
+    ldebug= OPTIONS['Debug'] or Debug
+    
+    cata_list = OPTIONS['IGCM_Catalog_list']
+    cata_log  = OPTIONS['IGCM_Catalog']
+
+    catalog=None
+
+    if cata_log is not None :
+        if ldebug :
+            print ( f'Searching for catalog file : {cata_log=}' )
+        if os.path.isfile (cata_log) :
+            if ldebug :
+                print ( f'Catalog file : {cata_log=}' )
+            exp_file = open (cata_log)
+            catalog = json.load (exp_file)
+        else :
+            raise Exception ( f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
+
+    else :
+        if cata_list is not None : 
+            for cfile in cata_list :
+                if ldebug :
+                    print ( f'Searching for {cfile=}')
+                if os.path.isfile (cfile) :
+                    if ldebug : 
+                        print ( f'Reads catalog file : {cfile=}' )
+                exp_file = open (cfile)
+                catalog = json.load (exp_file)
+                if ldebug :
+                    print ( f'{Experiments.keys()=}' )
+
+    if catalog is not None and not keep_all :
+        ccz = catalog.copy ()
+        for kk in catalog.keys() :
+            if 'keys' not in dir(ccz[kk]) :
+                ccz.pop(kk)
+            else :
+                if 'JobName' not in ccz[kk].keys() :
+                    ccz.pop (kk) 
+                
+        catalog = ccz
+                
+    return catalog
+                        
 def add_year (ptime_counter:xr.DataArray, year_shift:int=0) -> xr.DataArray :
     '''
     Add years to a time variable

@@ -160,43 +160,57 @@ class Config :
                 super().__setattr__ (attr, dico[attr])
         self.__dict__.update (kwargs)
 
+    def replace (self:Self, dico:Optional[Dict[str,Any]]=None, action:Optional[str]=None, fatal:bool=True, Debug:bool=False, **kwargs:Any) -> None :
+        '''Use a dictionnary to update values
+        if action is set, add/del halo or cyclic
+        '''
+        if dico :
+            for attr in dico.items () :
+                if attr in self.keys () or not fatal :               
+                    super().__setattr__ (attr, value)
+                else :
+                    raise KeyError (f"{attr} attribute is not valid. Valid attributes are {list(self.keys())}")
+
+        for attr, value in kwargs.items () :
+            if attr in self.keys () or not fatal :               
+                super().__setattr__ (attr, value)
+            else :
+                raise KeyError (f"{attr} attribute is not valid. Valid attributes are {list(self.keys())}")
+            
     def keys(self: Self) -> KeysView[str]:
         return self.__dict__.keys()
-
     def values(self: Self) -> ValuesView[Any]:
         return self.__dict__.values()
-
     def items(self: Self) -> ItemsView[str, Any]:
         return self.__dict__.items()
-
     def dict(self: Self) -> Dict[str, Any]:
         return self.__dict__
-
     def pop(self: Self, attr: str) -> Any:
         value = self[attr]
         delattr(self, attr)
         return value
-
     def copy(self: Self) -> 'Config':
         return Config (config=self)
-
+    def __replace__(self: Self, dico: Optional[Dict[str, Any]] = None, action: Optional[str] = None,
+                    Debug: bool = False, **kwargs: Any ) -> None:
+        return self.replace(dico=dico, action=action, Debug=Debug, **kwargs)
+    def __update__(self: Self, dico: Optional[Dict[str, Any]] = None, action: Optional[str] = None,
+            Debug: bool = False, **kwargs: Any ) -> None:
+        return self.update(dico=dico, action=action, Debug=Debug, **kwargs)
     def __str__(self: Self) -> str :
         return str(self.__dict__)
-    
     def __repr__(self: Self) :
         return repr(self.__dict__)
-    
     def __name__(self: Self) -> Callable  :
         return self.__class__.__name__
-    
     def __getitem__(self: Self, attr: str) -> Any:
         return getattr(self, attr)
-    
     def __setitem__(self: Self, attr: str, value: Any) -> None:
         setattr(self, attr, value)
-        
     def __iter__(self:Self) -> Iterable[str]:
         return iter(self.__dict__)
+    def __contains__ (self:Self, attr:Any) -> bool : 
+        return True if attr in self.__dict__.keys () else False
 
     def __init__ (self:Self, 
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
