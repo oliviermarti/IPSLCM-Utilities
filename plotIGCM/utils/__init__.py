@@ -23,9 +23,14 @@ personal. Be warned that the author himself may not respect the prerequisites.
 '''
 from typing import Callable, Any, Self, Literal, _LiteralGenericAlias
 import typing
-
+from urllib.request import urlretrieve
+from pathlib import Path
+    
 import numpy as np
 import xarray as xr
+import shapely as shp
+import cartopy
+import cartopy.crs as ccrs
 
 from plotIGCM.options import OPTIONS    as OPTIONS
 from plotIGCM.options import push_stack as push_stack
@@ -33,6 +38,54 @@ from plotIGCM.options import pop_stack  as pop_stack
 
 Debug=True
 Check=False
+
+
+def GetFile (url:str, File=None, Debug=False) :
+    '''
+    Get a file from a web server
+    '''
+    if File : File = Path (File)
+    else    : File = Path (os.path.basename(url))
+    if not File.exists () :
+        if OPTIONS['Debug'] or Debug :
+            print ( f'Retrieving url={url}' )
+        urlretrieve (url, File)
+    return File
+
+def build_feat (file, Debug=False, facecolor='none', edgecolor='k') :
+    '''
+    From a geojson file, build a cartopy feature
+    '''
+    if 'http' in file : zf = open (GetFile (file), 'r')
+    else              : zf = open (file, 'r')
+    if OPTIONS['Debug'] or Debug :
+        print ( f'Reading shapefile in {file=}' )
+    file_shp  = shp.from_geojson (zf.read())
+    file_poly = cartopy.feature.ShapelyFeature (file_shp, crs=ccrs.PlateCarree(), facecolor=facecolor, edgecolor=edgecolor)
+    zf.close()
+    return file_poly, file_shp
+
+
+def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
+    '''
+    Join two time series : first take ptab1, and ptab2 when possible
+    '''
+    Y1 = ptab1[dim][ 0].item().year
+    Y3 = ptab2[dim][ 0].item().year
+    Y4 = ptab2[dim][-1].item().year
+    Y2 = Y3-1
+
+    print (Y1, Y2, Y3, Y4)
+    
+    T1 = f"{Y1:04d}-01-01"
+    T2 = f"{Y2:04d}-12-31"
+    T3 = f"{Y3:04d}-01-01"
+    T4 = f"{Y4:04d}-12-31"
+    
+    print (T1, T2, T3, T4)
+    
+    ptab3 =  xr.concat ( [ ptab1.sel( {dim:slice(T1,T2)} ), ptab2.sel ( {dim:slice(T3,T4)} ) ], dim=dim )
+    return ptab3
 
 def validate_types (func: Callable) -> Callable :
     '''

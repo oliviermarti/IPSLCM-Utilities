@@ -52,7 +52,7 @@ class Container :
     Class members can be accessed either with dictionnary or namespace syntax
        i.e  <Container>['member'] or <Container>.member
     '''
-    def update (self:Self, dico:Optional[Dict[str,Any]]=None, **kwargs:Any) -> None :
+    def update (self:Self, dico:Dict[str,Any]|Self|None=None, **kwargs:Any) -> None :
         '''Use a dictionnary or a Container to update values'''
         if dico :
             for attr in dico.keys () :
@@ -97,14 +97,14 @@ class Container :
     
     def __replace__(
             self: Self,
-            dico: Optional[Dict[str, Any]] = None,
+            dico: Dict[str, Any]|Self|None = None,
             **kwargs: Any
     ) -> None:
         return self.update(dico=dico, **kwargs)
 
     def __update__(
             self: Self,
-            dico: Optional[Dict[str, Any]] = None,
+            dico: Dict[str, Any]|Self|None = None,
             **kwargs: Any
     ) -> None:
         return self.update(dico=dico, **kwargs)
@@ -135,23 +135,25 @@ class Container :
         else :
             return False
         
-    def __next__    (self:Self) :
-        return self.__dict__.__next__()
+    #def __next__  (self:Self) :
+    #    return self.__dict__.__next__()
     
     def __len__     (self:Self) :
         return len (self.__dict__)
 
     ## Initialisation
-    def __init__    (self:Self, dico:Dict|None=None, **kwargs) -> None :
+    def __init__    (self:Self, dico:Dict|Self|None=None, Debug=False, level=0, **kwargs) -> None :
         if dico is not None :
             zargs = dico
         else :
             zargs = {}
         zargs.update (**kwargs)
         for attr, value in zargs.items () :
-             if isinstance (value, dict) :
-                 # Dictionnaries are handeld by recursivity
-                 super().__setattr__ (attr, Container (value))
-             else :
-                 super().__setattr__ (attr, value)
+            if Debug :
+                print ( f"{level=} - {attr=} - {type(value)=}" )
+            if isinstance (value, dict) : 
+                # Dictionnaries are handeld by recursivity
+                super().__setattr__ (attr, Container (value, level=level+1))
+            else :
+                super().__setattr__ (attr, value)
     

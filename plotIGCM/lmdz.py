@@ -1,4 +1,8 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
+
+# pylint: disable=multiple-statements, unused-argument, line-too-long, invalid-name
+# pylint: disable=missing-function-docstring, too-many-lines
+
 '''
 Utilities for LMDZ grid
 
@@ -28,13 +32,12 @@ personal.
 from typing import Literal, Union, Optional
 import numpy as np
 import xarray as xr
+
 import cartopy
-    
 if cartopy.__version__ > '0.20' :
     import cartopy.util as cutil
 else :
     import my_cyclic as cutil
-
 from plotIGCM.options import OPTIONS, push_stack, pop_stack
 
 lon_per = xr.DataArray (360.0    , name='lon_per', attrs={'units':"degrees_east"  , 'long_name':"Longitude range" })
@@ -57,10 +60,10 @@ RSIYEA  = xr.DataArray (365.25*RDAY*2*np.pi/6.283076, name='RSIYEA', attrs={'uni
 RSIDAY  = xr.DataArray (RDAY/(1+RDAY/ RSIYEA)       , name='RSIDAY', attrs={'units':"second", 'long_name':"Sideral day length"})
 ROMEGA  = xr.DataArray (2*np.pi/RSIDAY              , name='ROMEGA', attrs={'units':"s-1"   , 'long_name':"Earth rotation parameter"})
 
-## Default names of dimensions                                                 
+## Default names of dimensions
 UDIMS:dict[str,str] = {'x':'lon', 'y':'lat', 'z':'presnivs', 't':'time_counter'}
 
-## All possible names of dimensions in LMDZ files                              
+## All possible names of dimensions in LMDZ files
 XNAME:list[str] = [ 'x', 'X', 'lon', ]
 YNAME:list[str] = [ 'y', 'Y', 'lat', ]
 CNAME:list[str] = [ 'c', 'cell', ]
@@ -68,14 +71,14 @@ ZNAME:list[str] = [ 'z', 'Z', 'presnivs', ]
 TNAME:list[str] = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
 BNAME:list[str] = [ 'bnd', 'bnds', 'bound', 'bounds', 'vertex', 'nvertex', 'two', 'two1', 'two2', 'four' ]
 
-## All possibles name of units of dimensions in LMDZ files                     
+## All possibles name of units of dimensions in LMDZ files
 XUNIT:list[str] = [ 'degrees_east', ]
 YUNIT:list[str] = [ 'degrees_north', ]
 CUNIT:list[str] = [ 'cell', ]
 ZUNIT:list[str] = [ 'Pa', 'm', 'meter']
 TUNIT:list[str] = [ 'second', 'minute', 'hour', 'day', 'month', 'year', ]
 
-## All possibles size of dimensions in LMDZ files                              
+## All possibles size of dimensions in LMDZ files
 XLENGTH :list[int]  = [ 96, 144, 180, 360, ]
 YLENGTH :list[int] = [ 95, 96, 143, 144, 180, 360, ]
 XYLENGTH:list[list[int]] = [ [96,95], [144, 143], [180, 180], [360, 360]]
@@ -95,8 +98,8 @@ def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't'
     ix        :Optional[int]       = None
     ax_name   :Optional[list[str]] = None
     unit_list :Optional[list[str]] = None
-    length    :Optional[list[int]] = None 
-  
+    length    :Optional[list[int]] = None
+
     if axis in XNAME :
         ax_name   = XNAME
         unit_list = XUNIT
@@ -140,9 +143,9 @@ def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't'
                 if OPTIONS['Debug'] or Debug :
                     print ( f'Rule 3 : Trying {ii=} {dim=} {l_axis=}' )
                 if l_axis in ax_name and l_axis == str('X') :
-                        if OPTIONS['Debug'] or Debug :
-                            print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
-                        ix=ii ; ax=str(dim)
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f'Rule 3 : xaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
+                    ix=ii ; ax=str(dim)
                 if l_axis in ax_name and l_axis == str('Y') :
                     if OPTIONS['Debug'] or Debug :
                         print ( f'Rule 3 : yaxis found by name : {ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
@@ -173,12 +176,12 @@ def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't'
     # If dimension not found, try by length
     if not ix :
         if length is not None :
-            l_shape = ptab.shape
-            for nn in range ( len(l_shape) ) :
-                if l_shape[nn] in length :
+            for nn, dim in enumerate (ptab.shape) :
+                if dim in length :
                     if OPTIONS['Debug'] or Debug :
                         print ( f'Rule 5 : axis found by length : {axis=} : {XNAME=} {nn=} {dim=}' )
                     ix = nn
+
 
     if ix and back :
         ix -= len(ptab.shape)
@@ -264,7 +267,9 @@ def extend (tab:xr.DataArray, Lon:bool=False, jplus:int=25, jpi:Union[int,None]=
     pop_stack ( 'extend ' )
     return ztab
 
-def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presnivs', units:Union[str,None]=None, method:str='linear', Debug:bool=False) -> xr.DataArray :
+def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presnivs',
+              units:str|None=None, method:Literal['linear','log', 'nearest']='linear',
+              Debug:bool=False) -> xr.DataArray :
     '''
     One-dimensionnal interpolation of a multi-dimensionnal field
 
@@ -334,7 +339,7 @@ def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presni
 
     if OPTIONS['Debug'] or Debug :
         print ( f'{ou_tab.shape=} {ou_tab.dims=}' )
-    
+
     if 'log' in method :
         yp_min = yp.min()
         yp_max = yp.max()
@@ -359,7 +364,7 @@ def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presni
 
         #if OPTIONS['Debug'] or Debug :
         #    print ( f'{idk1=} {idk2=}' )
-        
+
         x1   = xp[{pdim:idk1}]
         x2   = xp[{pdim:idk2}]
 
@@ -372,6 +377,7 @@ def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presni
         y1   = yp[{pdim:idk1}]
         y2   = yp[{pdim:idk2}]
 
+        result = None
         if 'linear'  in method :
             result = dx1*y2 + dx2*y1
         if 'log'     in method :
@@ -395,7 +401,7 @@ def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presni
     pop_stack ( 'interp1d' )
     return ou_tab.squeeze()
 
-def correct_uv (u:xr.DataArray, v:xr.DataArray, 
+def correct_uv (u:xr.DataArray, v:xr.DataArray,
                 lon:xr.DataArray, lat:xr.DataArray, Debug:bool=False) :
     '''
     Corrects a Cartopy bug in orthographic projection
@@ -414,14 +420,14 @@ def correct_uv (u:xr.DataArray, v:xr.DataArray,
        modified eastward/nothward components to have correct polar projections in cartopy
     '''
     push_stack ( 'correct_uv (u, v, lon, lat)' )
-    
+
     uv = np.sqrt (u*u + v*v)           # Original modulus
     zu = u
     zv = v * np.cos (np.deg2rad(lat))
     zz = np.sqrt ( zu*zu + zv*zv )     # Corrected modulus
     uc = zu*uv/zz
     vc = zv*uv/zz                      # Final corrected values
-    
+
     uc[...,  0, :] = np.nan
     uc[..., -1, :] = np.nan
     vc[...,  0, :] = np.nan #p.nan
@@ -459,7 +465,7 @@ def nord2sud (p2d:xr.DataArray) -> xr.DataArray :
     pop_stack ( 'nord2sud (p2d)' )
     z2d_inv = p2d[..., -1::-1, : ]
     pop_stack ( 'nord2sud' )
-    return z2d_inv 
+    return z2d_inv
 
 def unify_dims (dd:Union[xr.DataArray,xr.Dataset], x:str='x', y:str='y', z:str='olevel', t:str='time_counter', c:str='cell', Debug:bool=False ) -> Union[xr.DataArray,xr.Dataset] :
     '''
@@ -500,11 +506,11 @@ def unify_dims (dd:Union[xr.DataArray,xr.Dataset], x:str='x', y:str='y', z:str='
     pop_stack ( 'unify_dims' )
     return dd
 
-def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1, 
+def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
                 cyclic:float|xr.DataArray=lon_per, precision:float=0.0001, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     Add a cyclic point to an array and optionally corresponding x/longitude and y/latitude coordinates.
-    
+
     Same as cartopy.util.add_cyclic, but returns xarray instead of numy arrays.
 
     Use cartopy.util.add_cyclic
@@ -514,18 +520,16 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
     xx1=x
     yy1=y
     ztab, xx, yy = cutil.add_cyclic (data   = ptab, # type: ignore
-                                     x      = xx1,
-                                     y      = yy1,
+                                     x      = xx1.values,
+                                     y      = yy1.values,
                                      axis   = axis,
                                      cyclic = lon_per.item(),
                                      precision=0.0001)
-    #xx = xr.DataArray (xx, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
-    #yy = xr.DataArray (yy, dims=(y.dims[0], x.dims[0]), coords=(yy[:,0].squeeze(), xx[0,:].squeeze()) )
     xx = xr.DataArray (xx, dims=(x.dims[0],), coords=(xx.squeeze(),) )
     yy = xr.DataArray (yy, dims=(y.dims[0],), coords=(yy.squeeze(),) )
 
     new_coords = []
-    for i, dim in enumerate (ptab.dims) :
+    for dim in ptab.dims :
         if dim == ptab.dims[axis] :
             new_coords.append (xx)
         else                      :
@@ -536,7 +540,7 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
     pop_stack ( 'add_cyclic' )
     return ztab, xx, yy
 
-def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int|None=None, jpj:int|None=None, 
+def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int|None=None, jpj:int|None=None,
                share_pole:bool=False, lon_name:str|None=None, lat_name:str|None=None, Debug:bool=False) -> xr.DataArray :
     '''
     From 1D [..., points_physiques] (restart type) to 2D [..., lat, lon]
@@ -547,7 +551,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
     push_stack (f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}, {lon_name=}, {lat_name=})')
-    
+
     # Get the horizontal dimension
     jpn = p1d.shape[-1]
     # Get other dimension(s)
@@ -565,7 +569,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     if jpi==0 and jpj>0    :
         jpi = (jpn-2)//(jpj-2)
     if jpi>0  and jpj == 0 :
-        jpj = (jpn-2)//jpi +2            
+        jpj = (jpn-2)//jpi +2
     if jpi==0 and jpi==0 :
         for [jj, ji] in [ [36,45], [72,96], [95,96], [96,96], [143,144], [144,144], [180,180] ] :
             if ji*(jj-2) + 2 == jpn :
@@ -573,7 +577,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
                 jpi = ji
         if jpi==0 and jpi==0 :
             raise ValueError (f'1D horizontal dimension {jpn=} not known. Cannot not guess horizontal dimensions jpj, jpi')
-                
+
     form_all   = form1 + [jpj  , jpi]
     form_shape = form1 + [jpj-2, jpi]
 
@@ -588,7 +592,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     else :
         p2d [...,  0 , :].flat = p1d [...,  0] # type: ignore
         p2d [..., -1 , :].flat = p1d [..., -1] # type: ignore
-        
+
     # Adding metadata, coordinates, etc ...
     p2d = xr.DataArray (p2d)
     p2d.attrs.update ( p1d.attrs )
@@ -604,7 +608,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     if isinstance (lat, str) :
         if not lat_name :
             lat_name = lat
-        zlat = np.linspace ( 90, -90, jpj, endpoint=True) 
+        zlat = np.linspace ( 90, -90, jpj, endpoint=True)
     if isinstance (lon, bool) :
         if lon :
             if not lon_name :
@@ -633,11 +637,11 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
             if aa[0] not in lat.attrs : # type: ignore
                 zlat.attrs.update ( { aa[0]:aa[1] } )
     if not isinstance (lat, xr.DataArray) :
-        if not lat_name : 
-            lat_name = lat.name if isinstance (zlat, xr.DataArray) else 'lat'
+        if not lat_name :
+            lat_name = lat.name if isinstance (zlat, xr.DataArray) else 'lat' # type: ignore
     if not isinstance (lon, xr.DataArray) :
         if not lon_name :
-            lon_name = lon.name if isinstance (zlon, xr.DataArray) else 'lon'
+            lon_name = lon.name if isinstance (zlon, xr.DataArray) else 'lon' # type: ignore
 
     if not lon_name :
         lon_name = 'x'
@@ -648,10 +652,10 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
         print ( f'{lon_name=}' )
 
     if lon_name != p2d.dims[-1] :
-        p2d = p2d.rename ( {p2d.dims[-1]:lon_name} ) 
+        p2d = p2d.rename ( {p2d.dims[-1]:lon_name} )
     if lat_name != p2d.dims[-2] :
         p2d = p2d.rename ( {p2d.dims[-2]:lat_name} )
-    
+
     p2d = p2d.assign_coords ( {lon_name:zlon} )
     p2d[lon_name].attrs.update ( lon.attrs ) # type: ignore
     p2d = p2d.assign_coords ( {lat_name:zlat} )
@@ -660,7 +664,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     pop_stack ('point2geo')
     return p2d
 
-def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=False, lev:bool=False, jpi:Union[int,None]=None, jpj:Union[int,None]=None, jpk:Union[int,None]=None, 
+def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=False, lev:bool=False, jpi:Union[int,None]=None, jpj:Union[int,None]=None, jpk:Union[int,None]=None,
                share_pole:bool=False, lon_name:Union[str,None]=None, lat_name:Union[str,None]=None, lev_name:Union[str,None]=None, Debug:Union[bool,None]=None) -> xr.DataArray :
     '''
     From 2D [..., horizon_vertical] (restart type) to 3D [..., lev, lat, lon]
@@ -677,35 +681,35 @@ def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=
     # Get other dimension(s)
     form1 = list (p1d.shape [0:-2])
 
-    if not jpi :
-        jpi=0
-    if not jpj :
-        jpj=0
-    if not jpk :
-        jpk=0
-    
+    if not jpi : jpi=0
+    if not jpj : jpj=0
+    if not jpk : jpk=0
+
     # Check or compute 3D horizontal dimensions
     if jpk == 0 :
         if jpi==0 and jpi==0 :
             liste2D = [ [36,45], [72,96], [95,96], [96,96], [143,144], [144,144], [180,180] ]
-        if jpi==0 and jpj>0 :
+        elif jpi==0 and jpj>0 :
             liste2D = [ [jpj,45], [jpj,96], [jpj,96], [jpi, 144], [jpj,180] ]
-        if jpi>0  and jpj == 0 :
+        elif jpi>0  and jpj == 0 :
             liste2D = [ [36,jpi], [72,jpi], [95,jpi], [96,jpi], [143,jpi], [144,jpi], [180,jpi] ]
-        for jk in [11, 15, 16, 39, 40, 79, 80 ] : 
+        else :
+            raise ValueError (f'Cannot guess jpk for {jpn=} {jpi=} {jpj=} ')
+
+        for jk in [11, 15, 16, 39, 40, 79, 80 ] :
             for [jj, ji] in liste2D :
                 if jk*(ji*(jj-2) + 2) == jpn :
-                    ( jpk, jpj, jpk) = (jk, jj, ji)
+                    ( jpk, jpj, jpi) = (jk, jj, ji)
         jpij = jpn / jpk
     else :
         jpij = jpn / jpk
-        if jpi*jpj !=0 : 
+        if jpi*jpj !=0 :
             if jpk * ( jpi*(jpj-2) + 2 ) != jpn :
                 raise ValueError (f'{jpn=}, {jpij=} {jpi=}, {jpj}, {jpk=}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]')
         if jpi==0 and jpj>0    :
             jpi = (jpi*jpj-2)//(jpj-2)
         if jpi>0  and jpj == 0 :
-            jpj = (jpi*jpj-2)//jpi +2            
+            jpj = (jpi*jpj-2)//jpi +2
         if jpi==0 and jpi==0 :
             for [jj, ji] in [ [36,45], [72,96], [95,96], [96,96], [143,144], [144,144], [180,180] ] :
                 if ji*(jj-2) + 2 == jpi*jpj :
@@ -718,21 +722,21 @@ def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=
         print ( f'{jpn=}, {jpij=} {jpi=}, {jpj=}, {jpk=}' )
         print ( f'{form1=}, {form_2D=}' )
     p2d = np.reshape ( p1d.values, form_2D )
-        
+
     if OPTIONS['Debug'] or Debug :
         print ( f'{p2d.shape=}' )
-    
+
     p2d = xr.DataArray (p2d)
     p2d.attrs.update ( p1d.attrs )
     for idim in range ( len(p1d.shape [0:-1]) ):
         dim = p1d.dims[idim]
         p2d = p2d.rename        ( {p2d.dims[idim]:p1d.dims[idim]}  )
         p2d = p2d.assign_coords ( {p2d.dims[idim]:p1d.coords[dim]} )
-            
+
     p3d = point2geo (p2d, lon=lon, lat=lat, jpi=jpi, jpj=jpj, share_pole=share_pole, lon_name=lon_name, lat_name=lat_name )
 
     if lev_name != p3d.dims[-3] :
-        p3d = p3d.rename ( {p3d.dims[-3]:lev_name} ) 
+        p3d = p3d.rename ( {p3d.dims[-3]:lev_name} )
     p2d = p2d.assign_coords ( {lev_name:lev} )
     p2d[lon_name].attrs.update (lon.attrs) # type: ignore
 
@@ -750,12 +754,12 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     jpn = jpi*(jpj-2) + 2
 
     # Get other dimensions
-    form1   = list(p2d.shape [0:-2]) 
+    form1   = list(p2d.shape [0:-2])
     form_2D = form1 + [jpn,]
-        
+
     p1d     = np.empty (form_2D)
     form_1D = form1 + [jpn-2,]
-    
+
     p1d [..., 1:-1] = np.reshape ( p2d[..., 1:-1, :].values.ravel(), form_1D )
     if cumul_poles :
         p1d [...,  0] = np.sum ( p2d[...,  0, :], axis=-1 )
@@ -767,7 +771,7 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     # Adding metadata
     p1d = xr.DataArray (p1d)
     p1d.attrs.update ( p2d.attrs )
-    if len(p2d.shape [0:-2]) > 0 : 
+    if len(p2d.shape [0:-2]) > 0 :
         for idim in range ( len(p2d.shape [0:-2]) ):
             dim=p2d.dims[idim]
             p1d = p1d.rename        ( {p1d.dims[idim]:p2d.dims[idim]}   )
@@ -818,6 +822,32 @@ def en2geo (pte:xr.DataArray, ptn:xr.DataArray, glam:xr.DataArray, gphi:xr.DataA
     pop_stack ( 'geo2en')
     return pxx, pyy, pzz
 
+
+def clo_lon (lon:xr.DataArray, lon0:float|xr.DataArray=0., rad:bool=False, deg:bool=True) -> xr.DataArray :
+    '''
+    Choose closest to lon0 longitude, adding/substacting 360.
+    if needed
+    '''
+    push_stack ( f'clo_lon (lon, {lon0=}, {rad=}, {deg=} )' )
+    if rad and deg :
+        raise RuntimeError ('Error in nemo.en2geo:  rad and deg can not be both True')
+    if rad :
+        lon_range = 2.*np.pi
+    else :
+        lon_range = 360.
+    c_lon = lon
+    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    if c_lon.shape == () :
+        c_lon = c_lon.item ()
+    if 'attrs' in dir(lon) and 'attrs' in dir(c_lon) :
+        c_lon.attrs.update (lon.attrs)
+
+    pop_stack ( 'clo_lon' )
+    return c_lon
+
 def limit_blon (blon:xr.DataArray, clon:xr.DataArray, lon_cen:float=0, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     From mapper https://github.com/PBrockmann/VTK_Mapper
@@ -826,7 +856,7 @@ def limit_blon (blon:xr.DataArray, clon:xr.DataArray, lon_cen:float=0, Debug:boo
     push_stack (f'limit_blon (blon, clon, {lon_cen=})')
     lon_min = lon_cen-180.
     lon_max = lon_cen+180.
-    
+
     clon  = (clon+lon_per*10.)%360
     clon  = xr.where (np.greater (clon, lon_max), clon-lon_per, clon)
     clon  = xr.where (np.less    (clon, lon_min), clon+lon_per, clon)
@@ -835,7 +865,7 @@ def limit_blon (blon:xr.DataArray, clon:xr.DataArray, lon_cen:float=0, Debug:boo
     blon  = (blon+lon_per*10.)%360
     blon  = xr.where (np.greater(blon, lon_max), blon-lon_per, blon)
     blon  = xr.where (np.less   (blon, lon_min), blon+lon_per, blon)
-    
+
     blon  = xr.where (np.greater(abs(blon-clon1), abs(blon+lon_per -clon1)), blon+lon_per, blon)
     blon  = xr.where (np.greater(abs(blon-clon1), abs(blon-lon_per -clon1)), blon-lon_per, blon)
 
@@ -850,11 +880,11 @@ def limit_lon (clon:xr.DataArray, lon_cen:float=0, Debug:bool=False) -> xr.DataA
     push_stack ( f'limit_lon (clon, {lon_cen})' )
     lon_min = lon_cen-180.
     lon_max = lon_cen+180.
-    
+
     clon  = (clon+lon_per*10.)%360
     clon  = xr.where (np.greater (clon, lon_max), clon-lon_per, clon)
     clon  = xr.where (np.less    (clon, lon_min), clon+lon_per,clon)
-    
+
     return clon
 
 def direction (uu:xr.DataArray, vv:xr.DataArray, unit:str='deg', Debug:bool=False) -> xr.DataArray :
@@ -867,7 +897,7 @@ def direction (uu:xr.DataArray, vv:xr.DataArray, unit:str='deg', Debug:bool=Fals
     return zd # type: ignore
 
 ## ===========================================================================
-##                                                                            
-##                               That's all folk's !!!                        
-##                                                                            
+##
+##                               That's all folk's !!!
+##
 ## ===========================================================================

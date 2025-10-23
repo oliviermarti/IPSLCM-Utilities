@@ -1,0 +1,7 @@
+,,,,{
+  "python.linting.pylintArgs": [
+      "--disable=multiple-statements",
+      "--disable=invalid-name",
+      "max-line-length=130"
+  ]
+}

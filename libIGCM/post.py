@@ -95,6 +95,8 @@ class Config (libIGCM.sys.Config) :
         self.DateEnd              = DateEnd
         self.DateEndGregorian     = DateEndGregorian
         self.DatePattern          = DatePattern
+        self.PeriodDateBegin      = PeriodDateBegin
+        self.PeriodDateEnd        = PeriodDateEnd
         self.Debug                = Debug
         self.ExperimentName       = ExperimentName
         self.FullPeriod           = FullPeriod
@@ -149,19 +151,20 @@ class Config (libIGCM.sys.Config) :
         self.YearEnd              = YearEnd
         self.rebuild              = rebuild
 
-        for key, value in OPTIONS.items () :
-            if key in self.keys () :
-                if self[key] is None and value is not None :
-                    if ldebug :
-                        print ( f'from OPTIONS, setting {key=} {value=}')
-                    setattr (self, key, value)  
+        # On rempli self avec les options : c'est une erreur
+        # for key, value in OPTIONS.items () :
+        #     if key in self.keys () :
+        #         if self[key] is None and value is not None :
+        #             if ldebug :
+        #                 print ( f'from OPTIONS, setting {key=} {value=}')
+        #             setattr (self, key, value)  
             
-        if config is not None :
-            for key, value in config.items () :
-                if self[key] is None and value is not None :
-                    if ldebug :
-                        print ( f'from config, setting {key=} {value=}')
-                    setattr (self, key, value)       
+        # if config is not None :
+        #     for key, value in config.items () :
+        #         if self[key] is None and value is not None :
+        #             if ldebug :
+        #                 print ( f'from config, setting {key=} {value=}')
+        #             setattr (self, key, value)       
                     
         if not self.IGCM_Catalog      :
             self.IGCM_Catalog      = OPTIONS['IGCM_Catalog']
@@ -224,7 +227,9 @@ class Config (libIGCM.sys.Config) :
         if ldebug :
             print (f'exp before analysing (2) : {exp=}')
             #print (f'{len(exp)}')
-                    
+
+
+        # A revoir : on prend les valeurs de self, puis de exp, puis celles de OPTIONS
         if exp is not None :
             if ldebug :
                 print ( f'Read catalog file for {self.JobName=}' )
@@ -235,8 +240,7 @@ class Config (libIGCM.sys.Config) :
             liste_pop = []
             for key, value in exp.items () :
                 liste_pop.append (key)
-                if ldebug :
-                    print ( f'Analyzing {key=} {value=}')
+        
                 if key in self.keys() :
                     if ldebug :
                         print ( f'  {key=} found in self : {self[key]}')
@@ -256,6 +260,14 @@ class Config (libIGCM.sys.Config) :
                 exp.pop (key)
             if ldebug :
                 print ( f'exp after analysing : {exp=}' )
+
+            for key, value in self.items () :
+                if value is None :
+                    if key in OPTIONS.keys () :
+                        if OPTIONS[key] is not None :
+                            setattr (self, key, OPTIONS[key])
+                            if ldebug :
+                                print (f'  {key:18} set from OPTIONS : {self[key]}')
 
         else :
             if IGCM_Catalog : 
@@ -320,7 +332,6 @@ class Config (libIGCM.sys.Config) :
 def catalog (keep_all:bool=False, Debug:bool=False) -> Dict :
     '''
     Return a dictionnary from the catalog file
-
     By defaults, keeps only experiments entries
     '''
     OPTIONS = get_options ()
@@ -368,17 +379,26 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict :
                 
     return catalog
                         
-def add_year (ptime_counter:xr.DataArray, year_shift:int=0) -> xr.DataArray :
+def add_year (ptime_counter:xr.DataArray, year_shift:int=0, Debug=False) -> xr.DataArray :
     '''
     Add years to a time variable
     Time variable is an xarray of cftime values
     '''
     dates_elements   = [ (date.year+year_shift, date.month, date.day, date.hour, date.minute, date.second, date.microsecond) for date in ptime_counter.values]
-    time_counter_new = [ cftime.datetime (*date_el, calendar='standard', has_year_zero=False) for date_el in dates_elements]
+
+    if isinstance ( ptime_counter[0].item(), cftime._cftime.DatetimeGregorian ) :
+        if Debug :
+            print ( 'add_year: Cas Gregorien' )
+        time_counter_new = [ cftime.DatetimeGregorian (*date_el,                      has_year_zero=False) for date_el in dates_elements ]
+    else :
+        if Debug :
+            print ( 'add_year: cas standard ' )
+        time_counter_new = [ cftime.datetime          (*date_el, calendar='standard', has_year_zero=False) for date_el in dates_elements ]
+    
     time_counter = xr.DataArray (time_counter_new, dims=('time_counter',), coords=(time_counter_new,))
     time_counter.attrs.update (ptime_counter.attrs)
+    
     return time_counter
-
         
 # def comp ( varName ) :
 #     #OPTIONS=get_options ()

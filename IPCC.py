@@ -95,7 +95,7 @@ def c2c (tab) :
         ztab = np.reshape (ztab, (ztab.shape[0]//3, 3))
     return ztab
         
-def create_colormap (colors, position=None, bit=True, reverse=False, name='custom_colormap', liste=False, continuous=False):
+def create_colormap (colors, position=None, bit=True, reverse=False, name='custom_colormap', liste=False, continuous=False, RGB=True, Debug=False):
     """
     returns a linear custom colormap
 
@@ -123,6 +123,9 @@ def create_colormap (colors, position=None, bit=True, reverse=False, name='custo
     cmap : matplotlib.colors.LinearSegmentedColormap
         cmap with equally spaced colors
     """
+
+    zfact = 255 if RGB else 1
+    
     from matplotlib.colors import LinearSegmentedColormap, ListedColormap
     if not isinstance (colors, np.ndarray):
         colors = np.array (colors, dtype='float')
@@ -140,7 +143,7 @@ def create_colormap (colors, position=None, bit=True, reverse=False, name='custo
         elif not np.isclose(position[0], 0) and not np.isclose(position[-1], 1):
             raise ValueError("position must start with 0 and end with 1")
     if bit:
-        colors[:] = [tuple(map(lambda x: x / 255., color)) for color in colors]
+        colors[:] = [tuple(map(lambda x: x / zfact, color)) for color in colors]
     cdict = {'red':[], 'green':[], 'blue':[]}
     if continuous : 
         for pos, color in zip (position, colors):
@@ -425,27 +428,36 @@ cmap.MultiCat_5   = create_colormap (cmap.colors_MultiCat_5, reverse=False, name
 cmap.MultiCat_5_r = create_colormap (cmap.colors_MultiCat_5, reverse=True , name='MultiCat_5_r')
 
 
-def multicat (ncolors:int=19, trunk:str='high', reverse:bool=False, name:str='MultiCat') -> mpl.colors.ListedColormap :
+def multicat (ncolors:int=19, trunk:str='high', reverse:bool=False, name:str='MultiCat', Debug=False) -> mpl.colors.ListedColormap :
     '''
     Builds a multicategory colormap
     '''
-    nn = ((ncolors-1)//4+1)*2
-    
-    nrange = np.arange(nn-nn//2,0,-1)-1
+    dd = 2
+        
+    nn     = ((ncolors-1)//4+1)*2
+    nc     = nn-nn//2 # Number of value by color
+    nrange = np.arange (nc, 0, -1) -1
 
-    Green  = [ (np.array(cmap.colors_Green_5 [0]) - np.array(cmap.colors_Green_5 [-1])) * n/(nn-1) + np.array(cmap.colors_Green_5 [-1]) for n in nrange ]
-    Purple = [ (np.array(cmap.colors_Purple_5[0]) - np.array(cmap.colors_Purple_5[-1])) * n/(nn-1) + np.array(cmap.colors_Purple_5[-1]) for n in nrange ]
-    Red    = [ (np.array(cmap.colors_Red_5   [0]) - np.array(cmap.colors_Red_5   [-1])) * n/(nn-1) + np.array(cmap.colors_Red_5   [-1]) for n in nrange ]
-    Blue   = [ (np.array(cmap.colors_Blue_5  [0]) - np.array(cmap.colors_Blue_5  [-1])) * n/(nn-1) + np.array(cmap.colors_Blue_5  [-1]) for n in nrange ]
+    
+    Green  = [ (np.array(cmap.colors_Green_5 [0]) - np.array(cmap.colors_Green_5 [-1])) * n/(nc+dd) + np.array(cmap.colors_Green_5 [-1]) for n in nrange ]
+    Purple = [ (np.array(cmap.colors_Purple_5[0]) - np.array(cmap.colors_Purple_5[-1])) * n/(nc+dd) + np.array(cmap.colors_Purple_5[-1]) for n in nrange ]
+    Red    = [ (np.array(cmap.colors_Red_5   [0]) - np.array(cmap.colors_Red_5   [-1])) * n/(nc+dd) + np.array(cmap.colors_Red_5   [-1]) for n in nrange ]
+    Blue   = [ (np.array(cmap.colors_Blue_5  [0]) - np.array(cmap.colors_Blue_5  [-1])) * n/(nc+dd) + np.array(cmap.colors_Blue_5  [-1]) for n in nrange ]
     
     MultiCat = []
+    MultiCat.extend (Red   )
     MultiCat.extend (Purple)
     MultiCat.extend (Blue  )
     MultiCat.extend (Green )
-    MultiCat.extend (Red   )
-
-    if trunk == 'low'  : MultiCat = MultiCat [ncolors-nn*2+2:]
+    
+    nd     =  len(MultiCat) - ncolors
+    
+    if trunk == 'low'  : MultiCat = MultiCat [nd:]
     if trunk == 'high' : MultiCat = MultiCat [:ncolors]
+    if trunk == 'both' : MultiCat = MultiCat [nd//2:ncolors+nd//2]
+
+    if Debug :
+        print ( f"{ncolors=} {nn=} {nc=} {nd=} {ncolors-nn*2+2=} {ncolors-nn+1=} {len(MultiCat)=}" )
     
     MultiCat = create_colormap (MultiCat, reverse=reverse, name=name )
     

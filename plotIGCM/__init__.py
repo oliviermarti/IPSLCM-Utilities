@@ -30,11 +30,9 @@ from plotIGCM.options import push_stack    as push_stack
 from plotIGCM.options import pop_stack     as pop_stack
 from plotIGCM.utils   import copy_attrs    as copy_attrs
 
-from plotIGCM         import sphere        as sphere
-
+from plotIGCM import sphere   as sphere
 from plotIGCM import nemo     as nemo
 from plotIGCM import lmdz     as lmdz
+from plotIGCM import utils    as utils
 from plotIGCM import oasis    as oasis
 from plotIGCM import interp1d as interp1d
-
-
