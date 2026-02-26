@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-plotIGCM : a few utilities for post processing
+libIGCM_utils : a few utilities
 
 Author : olivier.marti@lsce.ipsl.fr
 
-GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
+Github : https://github.com/oliviermarti/IPSLCM-Utilities
 
 This software is governed by the CeCILL  license under French law and      
 abiding by the rules of distribution of free software.  You can  use,      
@@ -19,200 +19,376 @@ will void any warranties (either express or implied).
 O. Marti assumes no responsability for errors, omissions,                  
 data loss, or any other consequences caused directly or indirectly by      
 the usage of his software by incorrectly or partially configured           
-personal. Be warned that the author himself may not respect the
-prerequisites.                                                                 
+personal. Be warned that the author himself may not respect the prerequisites.                                                               
 '''
+import os
+from typing import Callable, Any, Self, Literal, _LiteralGenericAlias # pyright: ignore[reportAttributeAccessIssue]
+import typing
+import re
+from urllib.request import urlretrieve
+from pathlib import Path
 
-import copy
-import time
 import numpy as np
 import xarray as xr
-import pint
+import shapely as shp
 
-from libIGCM.utils import Container, OPTIONS, set_options, get_options, reset_options, push_stack, pop_stack
+import cftime
+import cartopy
+import cartopy.crs as ccrs
 
-try :
-    from pint_xarray import unit_registry as ureg
-except ImportError :
-    from pint import UnitRegistry
-    ureg  = UnitRegistry()
-    pintx = False
-else :
-    pintx = True
-##    
-Q_ = ureg.Quantity
+from plotIGCM.options import OPTIONS
+from plotIGCM.options import push_stack
+from plotIGCM.options import pop_stack
 
+class RegexEqual (str) :
+    def __eq__(self:Self, pattern:str) -> bool :
+        return bool (re.search(pattern, self))
 
-full_name = Container (
-    {'tos':{'standard_name':'sea_surface_temperature', 'Title':'Sea surface temperature'},
-     'sos':{'standard_name':'sea_surface_salinity'   , 'Title':'Sea surface salinity'   }
-     })
+Debug=True
+Check=False
 
-def pmath (ptab, default=None) :
+def GetFile (url:str, File=None, Debug=False) :
     '''
-    Determines the type of tab : xarray, numpy or numpy.ma object ?
-
-    Returns type : xr, np or np.ma
+    Get a file from a web server
     '''
-    push_stack ( f'pmmath ( ptab, {default=} )' )
-    mmath = default
-    if   isinstance (ptab, xr.core.dataarray.DataArray) :
-        mmath = xr
-    elif isinstance (ptab, xr.core.dataset.Dataset)     :
-        mmath = 'dataset'
-    elif isinstance (ptab, np.ndarray)                  :
-        mmath = np
-    elif isinstance (ptab, np.ma.MaskType)              :
-        mmath = np.ma
+    if File : File = Path (File)
+    else    : File = Path (os.path.basename(url))
+    if not File.exists () :
+        if OPTIONS['Debug'] or Debug :
+            print ( f'Retrieving url={url}' )
+        urlretrieve (url, File)
+    return File
 
-    pop_stack ( f'pmath : {mmath}' )
-    return mmath
+def build_feat (file, Debug=False, facecolor='none', edgecolor='k') :
+    '''
+    From a geojson file, build a cartopy feature
+    '''
+    if 'http' in file : zf = open (GetFile (file), 'r')
+    else              : zf = open (file, 'r')
+    if OPTIONS['Debug'] or Debug :
+        print ( f'Reading shapefile in {file=}' )
+    file_shp  = shp.from_geojson (zf.read())
+    file_poly = cartopy.feature.ShapelyFeature (file_shp, crs=ccrs.PlateCarree(),# pyright: ignore[reportAttributeAccessIssue]
+                                    facecolor=facecolor, edgecolor=edgecolor) # pyright: ignore[reportAttributeAccessIssue]
+    zf.close()
+    return file_poly, file_shp
 
-def xr_quantify (zz) :
+def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
     '''
-    If zz is an xarray DataArray of DataSet, use pint to set the unit(s)
+    Join two time series : first take ptab1, and ptab2 when possible
     '''
-    if 'pint' in dir (zz) :
-        return zz.pint.quantify ()
+    Y1 = ptab1[dim][ 0].item().year
+    Y3 = ptab2[dim][ 0].item().year
+    Y4 = ptab2[dim][-1].item().year
+    Y2 = Y3-1
+
+    print (Y1, Y2, Y3, Y4)
+
+    T1 = f"{Y1:04d}-01-01"
+    T2 = f"{Y2:04d}-12-31"
+    T3 = f"{Y3:04d}-01-01"
+    T4 = f"{Y4:04d}-12-31"
+
+    print (T1, T2, T3, T4)
+
+    ptab3 =  xr.concat ( [ ptab1.sel( {dim:slice(T1,T2)} ), ptab2.sel ( {dim:slice(T3,T4)} ) ], dim=dim )
+    return ptab3
+
+def add_year (ptime:xr.DataArray, year_shift:int=0, Debug=False) -> xr.DataArray :
+    '''
+    Add years to a time variable
+    Time variable is an xarray of cftime values
+    '''
+    dates_elements   = [ (date.year+year_shift, date.month, date.day, date.hour,
+                          date.minute, date.second, date.microsecond) for date in ptime.values]
+
+    if isinstance (ptime[0].item(), cftime._cftime.DatetimeGregorian) :
+        if Debug :
+            print ( 'add_year: Gregorian calendar case' )
+        time_new = [ cftime.DatetimeGregorian (*date_el, has_year_zero=False)\
+                             for date_el in dates_elements ]
     else :
-        return zz
-    
-def xr_dequantify (zz) :
-    '''
-    If zz is an xarray DataArray of DataSet with a pint unit, reverses back to standard DataArray or DataSet
-    '''
-    if 'pint' in dir(zz) :
-        return zz.pint.dequantify ()
-    else :
-        return zz
+        if Debug :
+            print ( 'add_year: standard calendar case' )
+        time_new = [ cftime.datetime (*date_el, calendar='standard',
+                              has_year_zero=False) for date_el in dates_elements ]
 
-def pint_unit (ptab) :
-    zu = None
-    
-    if isinstance (ptab, Q_) :
-        zu = ptab.units
-    if isinstance (ptab, xr.core.dataarray.DataArray) :
-        if 'pint' in dir(ptab) :
-            zu = ptab.pint.units
-    return zu
+    time_counter = xr.DataArray (time_new, dims=(ptime.name,), coords=(time_new,))
+    time_counter.attrs.update (ptime.attrs)
 
-def copy_attrs (ptab, pref) :
+    return time_counter
+
+def validate_types (func: Callable) -> Callable :
+    '''
+    Decorator to check arguments and return types of a function deduced from annotations
+    '''
+    def wrapper (*args: Any, **kwargs: Any) -> Any :
+        if Check :
+            ## Validate arguments
+            for (name, param_type), value in zip (func.__annotations__.items (), args) :
+                if Debug :
+                    print ( 'arg --')
+                    print ( f'{name=}, {param_type=}, {value=}, {type(value)=}' )
+                    print ( f'{param_type in [Literal,] =}' )
+                if param_type not in [Any, Self, Literal, _LiteralGenericAlias] :
+                    if Debug :
+                        print ( 'Checking arg' )
+                    if not param_type in [Any,] and not isinstance (value, param_type) :
+                        raise TypeError (f"Argument {name} should be of type {param_type}, got {type(value)}")
+                if Debug :
+                    print ( '==')
+
+            for key, value in kwargs.items () :
+                param_type = func.__annotations__.get (key, Any)
+                if Debug :
+                    print ( 'kwarg --')
+                    print ( f"{key}, {param_type=}, {value=}, {type(value)=} {type(param_type)=}" )
+                #if type(param_type) == typing._LiteralGenericAlias :
+                if isinstance(param_type, _LiteralGenericAlias) :
+                    if Debug :
+                        print ( f"kwarg non testable : {param_type = }")
+                else :
+                    if Debug :
+                        print ( 'Checking kwarg' )
+                    if not param_type in  [Any,] and not isinstance (value, param_type) :
+                        raise TypeError (f"k-Argument '{key}' should be of type {param_type}, got {type(value)}")
+
+        ## Validate return type
+        result = func (*args, **kwargs)
+        if Check :
+            return_type = func.__annotations__.get("return", Any)
+            if Debug :
+                print ( 'return --')
+                print ( f"{return_type=}, {result=}, {type(result)=} {type(return_type)=}" )
+            if return_type and return_type not in  [Any,] and not isinstance (result, return_type):
+                raise TypeError (f"Return value should be of type {return_type}, got {type(result)}")
+
+        return result
+    return wrapper
+
+def copy_attrs (ptab:xr.DataArray, pref:xr.DataArray, Debug:bool=False) -> xr.DataArray :
     '''
     Copy units and attrs of pref in ptab
-    Copy pint units if available
     Convert from numpy to xarray if needed
     '''
-    mtab = pmath (ptab)
-    mref = pmath (pref)
-    xr_unit   = None
-    pint_unit = None
+    push_stack ( 'copy_attrs' )
+    if OPTIONS['Debug'] or Debug : print ( f'ptab:{type(ptab)} pref:{type(pref)} {ptab.shape=} {pref.shape=}')
 
-    if OPTIONS.Debug : print ( f'{mtab=} {mref=} {ptab.shape=} {pref.shape=}')
-
-    if mref == xr :
-        if 'pint' in dir (pref) :
-            pint_unit = pref.pint.units
-        else : 
-            if 'units' in pref.attrs :
-                xr_unit = pref.attrs['units']
-    if mref in (np.ma, np):
-        if 'units' in pref.attrs :
-            pint_unit = pref.units
-
-    if mref == xr :
-        if mtab == xr :
-            if OPTIONS.Debug : print ( 'copy_attrs : ptab is xr' )
+    if isinstance(pref, xr.DataArray) :
+        if isinstance (ptab, xr.DataArray) :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is xr' )
             ztab = ptab
-        elif mtab in [np, np.ma] :
-            if OPTIONS.Debug : print ( 'copy_attrs : ptab is np or np.ma' )
+        elif isinstance (ptab, np.ndarray) :
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is np or np.ma' )
             if ptab.shape == pref.shape :
-                if OPTIONS.Debug : print ( 'copy_attrs : convert ptab to xarray' )
+                if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : convert ptab to xarray' )
                 ztab = xr.DataArray (ptab, coords=pref.coords, dims=pref.dims)
                 ztab.name = pref.name
         else :
-            if OPTIONS.Debug : print ( 'copy_attrs : ptab copied' )
+            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab copied' )
             ztab = ptab
 
-    if mref == xr :
-        if pint_unit and pint in dir (ztab) :
-            ztab = ztab.pint.quantify (pint_unit)
-        if xr_unit and not pint_unit and pint in dir (ztab) :
-            ztab = ztab.pint.quantify (pint_unit)
-            
-    if mref in [np, np.ma] :
-        if pint_unit :
-            ztab = Q_ (ztab, pint_unit)
-       
+    pop_stack ( 'copy_attrs')
     return ztab
 
-def distance (lat1:float, lon1:float, lat2:float, lon2:float, radius:float=1.0, Debug=False) -> float :
+def unit2math (unit:str, Debug:bool=False) -> str :
     '''
-    Compute distance on the sphere
+    Return a nice unit for matplotlib
     '''
-    arg      = ( np.sin (np.deg2rad(lat1)) * np.sin (np.deg2rad(lat2))
-               + np.cos (np.deg2rad(lat1)) * np.cos (np.deg2rad(lat2)) *
-                 np.cos (np.deg2rad(lon1-lon2)) ) 
+    zu = unit
+        
+    #match RegexEqual (unit) :
+    #    case 'C'             : zu = '°C'
+    #    #case 'deg.*C'        : zu = '°C'
+    #    case _               : zu = unit
+
+    zu = zu.replace ( '.', ' ')
+
+    zu = re.sub ( 'deg.*C', '°C', zu)
+
+    # Correct Orchidee Units
+    zu = zu.replace ( 'Kg', 'kg' )
+
+    zu = re.sub ( 'deg.*[E,east]' , '°E', zu)
+    zu = re.sub ( 'deg.*[N,north]', '°N', zu)
+
+    zu = zu.replace ('degree_celsius', '°C')
+    zu = zu.replace ('degree_C2'     , '°C^{2}' )
+    zu = zu.replace ('degree_C'      , '°C')
+    zu = zu.replace ('deg'           , '°')
+
+    # Multiplicator
+    for nn in [1,2,3,4,5,6,7,8,9,20] :
+        zu = zu.replace (f'10^(-{nn})', f'$10^{{-{nn}}}$')
+        zu = zu.replace (f'10^-{nn}'  , f'$10^{{-{nn}}}$')
+        zu = zu.replace (f'10^{nn}'   , f'$10^{{{nn}}}$' )
+        zu = zu.replace (f'1e-{nn}'   , f'10^{{{-nn}}}$' )
+        zu = zu.replace (f'1E-{nn}'   , f'10^{{{-nn}}}$' )
+        zu = zu.replace (f'1e{nn}'    , f'10^{{{nn}}}$'  )
+        zu = zu.replace (f'1E{nn}'    , f'10^{{{nn}}}$'  )
+
+        zu = zu.replace (f'1.e-{nn}'  , f'10^{{{-nn}}}$' )
+        zu = zu.replace (f'1.E-{nn}'  , f'10^{{{-nn}}}$' )
+        zu = zu.replace (f'1.e{nn}'   , f'10^{{{nn}}}$' )
+        zu = zu.replace (f'1.E{nn}'   , f'10^{{{nn}}}$' )
+
+        zu = zu.replace ( 'Giga', '10^{9}' )
+        zu = zu.replace ( 'Mega', '10^{6}' )
+  
+        zu = zu.replace ( 'mm/d'       , 'mm d$^{-1}$'         )
+        zu = zu.replace ( 'J/m2'       , 'J m$^{-2}$'          )
+        zu = zu.replace ( 'kg/(s*m2)'  , 'kg m$^{-2}$ s$^{-1}' )
+        zu = zu.replace ( 'kg/m2/s'    , 'kg m$^{-2}$ s$^{-1}' )
+        zu = zu.replace ( 'kg/m3'      , 'kg m$^{-3}$'         )  
+        zu = zu.replace ( 'kg/s'       , 'kg s$^{-1}'          )
+        zu = zu.replace ( 'm/s'        , 'm s$^{-1}$'          )
+        zu = zu.replace ( 'W/m^2'      , 'W m$^{-2}$'          )
+        
+        zu = zu.replace ( 'm2'         , 'kg m$^3$'            )
+        zu = zu.replace ( 'm3'         , 'kg m$^3$'            )
+
+    # for zz in ['s', 'cm', 'mm', 'm', 'kgC', 'kg', 'N', 'ngN', 'Sv', 'gC', 'g', 'days', 'day', 'd',
+    #            'yr', 'years', 'year', 'C', '°C', 'K', 'Pa', 'J', 'pft', 'PSU', 'PSS', 'psu', 'pss', 'W', 'PW' ] :
+
+    #     if zz in zu : 
+        
+    #         if Debug or OPTIONS['Debug'] :
+    #             print ( f"In : {zz=:5} -> {zu=:10}" )
+
+    #             zu = zu.replace ( f'0.001*{zz}'  , f'10^{{-3}} {zz}' )
+    #             zu = zu.replace ( f'0.01*{zz}'   , f'10^{{-2}} {zz}' )
+    #             zu = zu.replace ( f'0.1*{zz}'    , f'10^{{-1}} {zz}' )
+                
+    #             zu = re.sub ( f'1/ *{zz}^3'      , f' {zz}^{{-3}}' , zu  )
+    #             zu = re.sub ( f'1/ *{zz}^2'      , f' {zz}^{{-2}}' , zu  )
+    #             zu = re.sub ( f'1/ *{zz}'        , f' {zz}^{{-1}}' , zu  )
+                
+    #             zu = zu.replace ( f'/{zz}3'      , f' {zz}$^{{-3}}$' )
+    #             zu = zu.replace ( f'/{zz}2'      , f' {zz}$^{{-2}}$' )
+    #             zu = zu.replace ( f'/{zz}'       , f' {zz}$^{{-1}}$' )
+                
+    #             zu = zu.replace ( f'{zz}^3'      , f' {zz}$^{{3}}$' )
+    #             zu = zu.replace ( f'{zz}^2'      , f' {zz}$^{{2}}$' )
+
+    #             # zu = zu.replace ( f'{zz}^{{3}}'  , f' {zz}$^{{3}}$' )
+    #             # zu = zu.replace ( f'{zz}^{{2}}'  , f' {zz}$^{{2}}$' )
+
+    #             # zu = zu.replace ( f'{zz}**-3'    , f' {zz}$^{-3}$' )
+    #             # zu = zu.replace ( f'{zz}**-2'    , f' {zz}$^{-2}$' )
+    #             # zu = zu.replace ( f'{zz}**-1'    , f' {zz}$^{-1}$' )
+
+    #             # zu = zu.replace ( f'{zz}**3'     , f' {zz}$^{{3}}$' )
+    #             # zu = zu.replace ( f'{zz}**2'     , f' {zz}$^{{2}}$' )
+
+    #             # zu = zu.replace ( f'{zz}^-3'     , f' {zz}$^{{-3}}$' )
+    #             # zu = zu.replace ( f'{zz}^-2'     , f' {zz}$^{{-2}}$' )
+    #             # zu = zu.replace ( f'{zz}^-1'     , f' {zz}$^{{-1}}$' )
+                
+    #             # zu = zu.replace ( f'{zz}^{{-3}}' , f' {zz}$^{{-3}}$' )
+    #             # zu = zu.replace ( f'{zz}^{{-2}}' , f' {zz}$^{{-2}}$' )
+    #             # zu = zu.replace ( f'{zz}^{{-1}}' , f' {zz}$^{{-1}}$' )
+                
+    #             # zu = zu.replace ( f'{zz}3'       , f' {zz}$^{{3}}$' )
+    #             # zu = zu.replace ( f'{zz}2'       , f' {zz}$^{{2}}$' )
+                
+    #             if Debug or OPTIONS['Debug'] :
+    #                 print ( f"Out: {zz=:5} -> {zu=:10}" )
+            
+    # Simplifies
+
+    zu = zu.replace ( f'0.001*'  , f'10^{{-3}}' )
+    zu = zu.replace ( f'0.01*'   , f'10^{{-2}}' )
+    zu = zu.replace ( f'0.0*'    , f'10^{{-1}}' )
     
-    zdistance = np.arccos (arg) * radius
-    if OPTIONS.Debug or Debug :
-        print ( f'1 - {zdistance.values = }' )
+    zu = zu.replace ( '$$' , '' )
+    zu = zu.replace ( '$ $', '' )
 
-    zdistance = xr_quantify (zdistance)
-    if OPTIONS.Debug or Debug :
-        print ( f'2 - {zdistance.values = }' )
-
-    if   'units' in dir(zdistance) :
-        zdistance = zdistance / ureg.rad
-
-    elif 'pint' in dir(zdistance) :
-        zdistance = zdistance / ureg.rad
-
-    if OPTIONS.Debug or Debug :
-        print ( f'3 - {zdistance.values = }' )
-
-    return zdistance
-
-def aire_triangle (lat0: float, lon0: float, lat1: float, lon1: float, lat2: float, lon2: float, 
-                   radius:float=1.0, Debug:bool=False) -> float :
-    '''
-    Area of a triangle on the sphere
-    Girard's formula
-    '''
+    zu = zu.replace ( '( ', '(' )
+    zu = zu.replace ( ' )', ')' )
     
-    a = distance (lat0 , lon0, lat1 , lon1)
-    b = distance (lat1 , lon1, lat2 , lon2)
-    c = distance (lat2 , lon2, lat0 , lon0)
-
-    if OPTIONS.Debug :
-        print ( f'{a=}, {b=}, {c=}' )
-
-    arg_alpha = (np.cos(a) - np.cos(b)*np.cos(c)) / (np.sin(b)*np.sin(c)) 
-    arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / (np.sin(a)*np.sin(c)) 
-    arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / (np.sin(a)*np.sin(b))
-
-    if OPTIONS.Debug or Debug :
-        print ( f'{arg_alpha=}, {arg_beta=}, {arg_gamma=}' )
+    zu = re.sub ( '  *', ' ', zu)
+    zu = zu.strip (' ')
     
-    alpha = np.arccos (arg_alpha) 
-    beta  = np.arccos (arg_beta ) 
-    gamma = np.arccos (arg_gamma)
+    if Debug or OPTIONS['Debug'] :
+        print ( f"{unit} -> {zu}" )
 
-    if OPTIONS.Debug or Debug :
-        print ( f'{alpha=}, {beta=}, {gamma=} {radius.item()=}' )
+    return zu
 
-    Saire = (alpha + beta + gamma - np.pi) * radius * radius
-    Saire = xr_quantify (Saire)
-
-    return Saire
-
-def aire_quadri (lat0:float, lon0:float, lat1:float, lon1:float, lat2:float, lon2:float, lat3:float, lon3:float, radius:float=1.0) -> float :
+def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False) -> str :
     '''
-    Area of a quadrilatere on the sphere
-    Girard's formula
+    Return a full long_name of a Monitoring variable
     '''
-    
-    Saire = aire_triangle (lat0, lon0, lat1, lon1, lat2, lon2, radius ) \
-          + aire_triangle (lat2, lon2, lat3, lon3, lat0, lon0, radius )
-          
-    return Saire
+    class RegexEqual (str) :
+        def __eq__(self:Self, pattern:str) -> bool :
+            return bool (re.search(pattern, self))
+        
+    match RegexEqual (varName) :
+        case 'icevol_north'             : zname = 'Ice volume, northern hemisphere'
+        case 'icevol_north_MAR'         : zname = 'Sea ice volume, northern hemisphere, March'
+        case 'icevol_south'             : zname = 'Ice volume, southern hemisphere'
+        case 'nadw_ocean_*'             : zname = 'Atlantic Meridional Overturning'
+        case 'precip_global'            : zname = 'Global precipitation'
+        case 'somxl010_Irminger'        : zname = 'Mixed layer depth, Irminger sea, annual max'
+        case 'somxl010_Labrador'        : zname = 'Mixed layer depth, Labrador sea, annual max'
+        case 'somxl010_NordicSeas'      : zname = 'Mixed layer depth, Nordic seas, annual max'
+        case 'somxl010_SubpolarNorthAtl': zname = 'Mixed layer depth, Subpolar North Atlantic, annual max'
+        case 'sosaline_north'           : zname = 'Salinity, northern hemisphere'
+        case 't2m_global.*'             : zname = 'Global air surface temperature'
+        case _ :
+            if long_name is not None :
+                zname = long_name
+            else :
+                zname = varName
 
+    if Debug or OPTIONS['Debug'] :
+        print ( f"{varName=} : {zname=}")
+                
+    return zname
+
+def get_comp (varName:str) -> Literal['OCE', 'ICE', 'ATM', 'SRF', 'SBG', 'CPL']|None :
+    '''
+    Return the component name of a monitoring variable
+    '''
+    match RegexEqual (varName) :
+
+        case '.*10m.*'              : comp = 'ATM'
+        case '.*nino.*'             : comp = 'ATM'
+        case '^evap.*'              : comp = 'ATM'
+        case '^fract_.*'            : comp = 'ATM'
+        case 'lat_itcz.*'           : comp = 'ATM'
+        case 'pourc_.*'             : comp = 'ATM'
+        case 'precip.*'             : comp = 'ATM'
+        case 'tsol.*'               : comp = 'ATM'
+        case 't2m.*'                : comp = 'ATM'
+        case 'net.*'                : comp = 'ATM'
+        case 'top.*'                : comp = 'ATM'
+
+        case 'aabw.*'               : comp = 'OCE'
+        case 'deacon.*'             : comp = 'OCE'
+        case 'friver.*'             : comp = 'OCE'
+        case 'mld.*'                : comp = 'OCE'
+        case 'nadw.*'               : comp = 'OCE'
+        case 'npdw.*'               : comp = 'OCE'
+        case '^so.*'                : comp = 'OCE'
+        case 'sss.*'                : comp = 'OCE'
+        case 'thetao.*'             : comp = 'OCE'
+        case 'wfo.*'                : comp = 'OCE'
+        case '^zos.*'               : comp = 'OCE'
+        case '^hc.*'                : comp = 'OCE'
+         
+        case '^ii.*'                : comp = 'ICE'
+        case '^si.*'                : comp = 'ICE'
+        case '^ic.*'                : comp = 'ICE'
+
+   
+        case '.*harvest.*'          : comp='SBG'
+
+        case 'delta_water_stock'    : comp='SRF'
+        case 'water_budget_closure' : comp='SRF'
+        case 'surface_.*'           : comp='SRF'
+        case '.*_lands   '          : comp='SRF'
+        case 'maxveget.*'           : comp='SRF'
+
+        case _ : comp = None
+
+    return comp

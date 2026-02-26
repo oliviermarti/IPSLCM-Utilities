@@ -40,7 +40,7 @@ else :
     import my_cyclic as cutil
 from plotIGCM.options import OPTIONS, push_stack, pop_stack
 
-lon_per = xr.DataArray (360.0    , name='lon_per', attrs={'units':"degrees_east"  , 'long_name':"Longitude range" })
+lon_per = xr.DataArray (360.0    , name='lon_per', attrs={'units':"degrees_east", 'long_name':"Longitude range" })
 RAAMO   = xr.DataArray (12       , name='RAAMO'  , attrs={'units':"month"  , 'long_name':"Number of months in one year" })
 RJJHH   = xr.DataArray (24       , name='RJJHH'  , attrs={'units':"hour"   , 'long_name':"Number of hours in one day"} )
 RHHMM   = xr.DataArray (60       , name='RHHMM'  , attrs={'units':"min"    , 'long_name':"Number of minutes in one hour"} )
@@ -467,7 +467,8 @@ def nord2sud (p2d:xr.DataArray) -> xr.DataArray :
     pop_stack ( 'nord2sud' )
     return z2d_inv
 
-def unify_dims (dd:Union[xr.DataArray,xr.Dataset], x:str='x', y:str='y', z:str='olevel', t:str='time_counter', c:str='cell', Debug:bool=False ) -> Union[xr.DataArray,xr.Dataset] :
+def unify_dims (dd:Union[xr.DataArray,xr.Dataset], x:str='lon', y:str='lat', z:str='olevel', t:str='time_counter', c:str='cell',
+                Debug:bool=False ) -> Union[xr.DataArray,xr.Dataset] :
     '''
     Rename dimensions to unify them between LMDZ versions
     '''
@@ -540,7 +541,7 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
     pop_stack ( 'add_cyclic' )
     return ztab, xx, yy
 
-def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int|None=None, jpj:int|None=None,
+def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int=0, jpj:int=0,
                share_pole:bool=False, lon_name:str|None=None, lat_name:str|None=None, Debug:bool=False) -> xr.DataArray :
     '''
     From 1D [..., points_physiques] (restart type) to 2D [..., lat, lon]
@@ -556,11 +557,6 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     jpn = p1d.shape[-1]
     # Get other dimension(s)
     form1 = list (p1d.shape [0:-1])
-
-    if not jpi :
-        jpi=0
-    if not jpj :
-        jpj=0
 
     # Check or compute 2D horizontal dimensions
     if jpi != 0 and jpj != 0 :
@@ -580,6 +576,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
 
     form_all   = form1 + [jpj  , jpi]
     form_shape = form1 + [jpj-2, jpi]
+
 
     p2d = np.empty (form_all)
     p2d [..., 1:-1, :] = np.reshape (p1d [..., 1:-1], form_shape )
@@ -753,6 +750,9 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     (jpj, jpi) = p2d.shape[-2:]
     jpn = jpi*(jpj-2) + 2
 
+    if OPTIONS['Debug'] or Debug :
+        print ( f'{jpj=} {jpi=} -> {jpn=}' )
+
     # Get other dimensions
     form1   = list(p2d.shape [0:-2])
     form_2D = form1 + [jpn,]
@@ -761,6 +761,7 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     form_1D = form1 + [jpn-2,]
 
     p1d [..., 1:-1] = np.reshape ( p2d[..., 1:-1, :].values.ravel(), form_1D )
+    
     if cumul_poles :
         p1d [...,  0] = np.sum ( p2d[...,  0, :], axis=-1 )
         p1d [..., -1] = np.sum ( p2d[..., -1, :], axis=-1 )

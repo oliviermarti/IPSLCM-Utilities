@@ -26,62 +26,66 @@ import json
 import cftime
 import numpy as np
 import xarray as xr
+import re
 
 import libIGCM
 from libIGCM.options import get_options
-from libIGCM.options import push_stack as push_stack
-from libIGCM.options import pop_stack  as pop_stack
+from libIGCM.options import push_stack
+from libIGCM.options import pop_stack
 
 class Config (libIGCM.sys.Config) :
     '''
     Defines the libIGCM directories and simulations characteristics
-    
+
     Overload libIGCM.sys.Config to add knowldege about some simulations
     described in a catalog (at json format)
     '''
-    def __init__ (self:Self, 
+    def __init__ (self:Self,
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
                   LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, Comment:str|None=None,
-                  Source:str|None=None, MASTER:str|None=None, 
+                  Source:str|None=None, MASTER:str|None=None,
                   ConfigCard:str|None=None, RunCard:str|None=None,
                   User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
-                  TGCC_User:str|None=None, TGCC_Group:str|None=None, 
+                  TGCC_User:str|None=None, TGCC_Group:str|None=None,
                   IDRIS_User:str|None=None, IDRIS_Group:str|None=None,
                   ARCHIVE:str|None=None, SCRATCHDIR:str|None=None,
-                  STORAGE:str|None=None, 
+                  STORAGE:str|None=None,
                   R_IN:str|None=None, R_OUT:str|None=None, R_FIG:str|None=None,
                   L_EXP:str|None=None,
-                  R_SAVE:str|None=None, R_FIGR:str|None=None, R_BUF:str|None=None, 
+                  R_SAVE:str|None=None, R_FIGR:str|None=None, R_BUF:str|None=None,
                   R_BUFR:str|None=None, R_BUF_KSH:str|None=None,
                   REBUILD_DIR:str|None=None, POST_DIR:str|None=None,
-                  ThreddsPrefix:str|None=None, DapPrefix:str|None=None, R_GRAF:str|None=None, 
+                  ThreddsPrefix:str|None=None, DapPrefix:str|None=None, R_GRAF:str|None=None,
                   DB:str|None=None,
-                  IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None, 
+                  IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None,
                   rebuild:str|None=None, TmpDir:str|None=None,
                   TGCC_ThreddsPrefix:str|None=None, TGCC_DapPrefix:str|None=None,
                   IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None,
-                  DateBegin:str|None=None, DateEnd:str|None=None, YearBegin:str|None=None, YearEnd:str|None=None, PeriodLength:str|None=None,
+                  DateBegin:str|None=None, DateEnd:str|None=None, YearBegin:str|None=None,
+                  YearEnd:str|None=None, PeriodLength:str|None=None,
                   SeasonalFrequency:str|None=None, CalendarType:str|None=None,
-                  DateBeginGregorian:str|None=None, DateEndGregorian:str|None=None, 
+                  DateBeginGregorian:str|None=None, DateEndGregorian:str|None=None,
                   FullPeriod:str|None=None, DatePattern:str|None=None,
-                  Period:str|None=None, PeriodSE:str|None=None, CumulPeriod:str|None=None, PeriodState:str|None=None,
+                  Period:str|None=None, PeriodSE:str|None=None, CumulPeriod:str|None=None,
+                  PeriodState:str|None=None,
                   PeriodDateBegin:str|None=None,
                   PeriodDateEnd:str|None=None,
                   Shading:str|np.ndarray|list|None=None,
                   Marker:str|Dict|None=None,
                   Line:str|Dict|None=None,
                   OCE:str|None=None, ATM:str|None=None,
-                  CMIP6_BUF:str|None=None, 
-                  IGCM_Catalog:str|None=None, IGCM_Catalog_list:list|None=None, config:libIGCM.sys.Config|None=None, Debug:bool=False,
+                  CMIP6_BUF:str|None=None,
+                  IGCM_Catalog:str|None=None, IGCM_Catalog_list:list|None=None,
+                  config:libIGCM.sys.Config|None=None, Debug:bool=False,
                   **kwargs) -> None :
-            
+
         ### ===========================================================================================
         ## Read catalog of known simulations
         push_stack ( 'libIGCM.post.__init__')
 
         OPTIONS = get_options ()
         ldebug = OPTIONS['Debug'] or Debug
-        
+
         self.ARCHIVE              = ARCHIVE
         self.ATM                  = ATM
         self.CMIP6_BUF            = CMIP6_BUF
@@ -102,12 +106,12 @@ class Config (libIGCM.sys.Config) :
         self.FullPeriod           = FullPeriod
         self.Group                = Group
         self.IDRIS_DapPrefix      = IDRIS_DapPrefix
-        self.IDRIS_Group          = IDRIS_Group 
+        self.IDRIS_Group          = IDRIS_Group
         self.IDRIS_ThreddsPrefix  = IDRIS_ThreddsPrefix
         self.IDRIS_User           = IDRIS_User
         self.IGCM_Catalog         = IGCM_Catalog
         self.IGCM_Catalog_list    = IGCM_Catalog_list
-        self.IGCM_OUT             = IGCM_OUT 
+        self.IGCM_OUT             = IGCM_OUT
         self.IGCM_OUT_name        = IGCM_OUT_name
         self.JobName              = JobName
         self.L_EXP                = L_EXP
@@ -121,7 +125,7 @@ class Config (libIGCM.sys.Config) :
         self.Period               = Period
         self.PeriodLength         = PeriodLength
         self.PeriodSE             = PeriodSE
-        self.REBUILD_DIR          = REBUILD_DIR  
+        self.REBUILD_DIR          = REBUILD_DIR
         self.R_BUF                = R_BUF
         self.R_BUFR               = R_BUFR
         self.R_BUF_KSH            = R_BUF_KSH
@@ -157,20 +161,20 @@ class Config (libIGCM.sys.Config) :
         #         if self[key] is None and value is not None :
         #             if ldebug :
         #                 print ( f'from OPTIONS, setting {key=} {value=}')
-        #             setattr (self, key, value)  
-            
+        #             setattr (self, key, value)
+
         # if config is not None :
         #     for key, value in config.items () :
         #         if self[key] is None and value is not None :
         #             if ldebug :
         #                 print ( f'from config, setting {key=} {value=}')
-        #             setattr (self, key, value)       
-                    
+        #             setattr (self, key, value)
+
         if not self.IGCM_Catalog      :
             self.IGCM_Catalog      = OPTIONS['IGCM_Catalog']
         if not IGCM_Catalog_list :
             self.IGCM_Catalog_list = OPTIONS['IGCM_Catalog_list']
-        
+
         if ldebug :
             print ( f'{self.IGCM_Catalog_list=}' )
             print ( f'{self.IGCM_Catalog=}' )
@@ -193,19 +197,19 @@ class Config (libIGCM.sys.Config) :
                 raise Exception ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
 
         else :
-            if self.IGCM_Catalog_list  is not None : 
+            if self.IGCM_Catalog_list  is not None :
                 for cfile in self.IGCM_Catalog_list :
                     if ldebug :
                         print ( f'Searching for {cfile=}')
                     if os.path.isfile (cfile) :
-                        if ldebug : 
+                        if ldebug :
                             print ( f'Reads catalog file : {cfile=}' )
-                        exp_file = open (cfile)
+                        exp_file = open (cfile, mode='r')
                         Experiments = json.load (exp_file)
                         if ldebug :
                             print ( f'{Experiments.keys()=}' )
                         if self.JobName in Experiments.keys () :
-                            if ldebug : 
+                            if ldebug :
                                 print (f'{self.JobName=} found')
                             exp = Experiments[self.JobName]
                             break
@@ -213,7 +217,7 @@ class Config (libIGCM.sys.Config) :
         if ldebug :
             print (f'exp    before analysing (1) : {exp=}')
             print (f'kwargs before analysing (1) : {kwargs=}')
-               
+
         if len(kwargs)>0 :
             if exp is None :
                 if ldebug :
@@ -236,11 +240,11 @@ class Config (libIGCM.sys.Config) :
             exp = dict (**exp)
             if ldebug :
                 print (f'exp at start of analysing : {exp=}')
-                    
+
             liste_pop = []
             for key, value in exp.items () :
                 liste_pop.append (key)
-        
+
                 if key in self.keys() :
                     if ldebug :
                         print ( f'  {key=} found in self : {self[key]}')
@@ -255,7 +259,7 @@ class Config (libIGCM.sys.Config) :
                     setattr (self, key, value)
                     if ldebug :
                         print ( f'{key:18} set from exp (2) : {self[key]}')
-                        
+
             for key in liste_pop :
                 exp.pop (key)
             if ldebug :
@@ -270,17 +274,17 @@ class Config (libIGCM.sys.Config) :
                                 print (f'  {key:18} set from OPTIONS : {self[key]}')
 
         else :
-            if IGCM_Catalog : 
-                raise Exception ( f'{self.JobName} not found in {self.IGCM_Catalog=}' )
+            if IGCM_Catalog :
+                raise RuntimeError ( f'{self.JobName} not found in {self.IGCM_Catalog=}' )
             elif IGCM_Catalog_list :
-                raise Exception ( f'{self.JobName} not found in {self.IGCM_Catalog_list=}' )
+                raise RuntimeError ( f'{self.JobName} not found in {self.IGCM_Catalog_list=}' )
             else :
-                raise Exception ( f'{self.JobName} not found' )
-            
+                raise RuntimeError ( f'{self.JobName} not found' )
+
         if self.YearBegin and self.YearEnd and not self.Period :
             self.Period = f'{self.YearBegin}0101_{self.YearEnd}1231'
             if YearBegin and self.YearEnd and not self.PeriodSE :
-               self.PeriodSE = f'{self.YearBegin}_{self.YearEnd}'
+                self.PeriodSE = f'{self.YearBegin}_{self.YearEnd}'
             if Period and not (self.YearBegin or not self.YearEnd) :
                 Y1, Y2 = self.Period.split ('_')
                 if not self.YearBegin :
@@ -302,45 +306,47 @@ class Config (libIGCM.sys.Config) :
             add_values = exp
 
         libIGCM.sys.Config.__init__ (self, JobName=self.JobName, TagName=self.TagName, SpaceName=self.SpaceName,
-                                     ExperimentName=self.ExperimentName, LongName=self.LongName, ModelName=self.ModelName,
-                                     ShortName=self.ShortName, Comment=self.Comment, Source=self.Source,
-                                     MASTER=self.MASTER, ConfigCard=self.ConfigCard, RunCard=self.RunCard,
-                                     User=self.User, Group=self.Group, TGCC_User=self.TGCC_User, TGCC_Group=self.TGCC_Group,
+                                     ExperimentName=self.ExperimentName, LongName=self.LongName,
+                                     ModelName=self.ModelName, ShortName=self.ShortName, Comment=self.Comment,
+                                     Source=self.Source, MASTER=self.MASTER, ConfigCard=self.ConfigCard,
+                                     RunCard=self.RunCard, User=self.User, Group=self.Group,
+                                     TGCC_User=self.TGCC_User, TGCC_Group=self.TGCC_Group,
                                      IDRIS_User=self.IDRIS_User, IDRIS_Group=self.IDRIS_Group,
-                                     ARCHIVE=self.ARCHIVE, SCRATCHDIR=self.SCRATCHDIR, STORAGE=self.STORAGE,
-                                     R_IN=self.R_IN, R_OUT=self.R_OUT, R_FIG=self.R_FIG, L_EXP=self.L_EXP,
-                                     R_SAVE=self.R_SAVE, R_FIGR=self.R_FIGR, R_BUF=self.R_BUF, R_BUFR=self.R_BUFR,
-                                     R_BUF_KSH=self.R_BUF_KSH,
+                                     ARCHIVE=self.ARCHIVE, SCRATCHDIR=self.SCRATCHDIR,
+                                     STORAGE=self.STORAGE, R_IN=self.R_IN, R_OUT=self.R_OUT, R_FIG=self.R_FIG,
+                                     L_EXP=self.L_EXP, R_SAVE=self.R_SAVE, R_FIGR=self.R_FIGR, R_BUF=self.R_BUF,
+                                     R_BUFR=self.R_BUFR, R_BUF_KSH=self.R_BUF_KSH,
                                      REBUILD_DIR=self.REBUILD_DIR, POST_DIR=self.POST_DIR,
                                      ThreddsPrefix=self.ThreddsPrefix, DapPrefix=self.DapPrefix,
                                      R_GRAF=self.R_GRAF, DB=self.DB,
                                      IGCM_OUT=self.IGCM_OUT, IGCM_OUT_name=self.IGCM_OUT_name, rebuild=self.rebuild,
-                                     TmpDir=self.TmpDir, TGCC_ThreddsPrefix=self.TGCC_ThreddsPrefix, TGCC_DapPrefix=self.TGCC_DapPrefix,
-                                     IDRIS_ThreddsPrefix=self.IDRIS_ThreddsPrefix, IDRIS_DapPrefix=self.IDRIS_DapPrefix,
+                                     TmpDir=self.TmpDir, TGCC_ThreddsPrefix=self.TGCC_ThreddsPrefix,
+                                     TGCC_DapPrefix=self.TGCC_DapPrefix, IDRIS_ThreddsPrefix=self.IDRIS_ThreddsPrefix,
+                                     IDRIS_DapPrefix=self.IDRIS_DapPrefix,
                                      DateBegin=self.DateBegin, DateEnd=self.DateEnd,
                                      YearBegin=self.YearBegin, YearEnd=self.YearEnd, PeriodLength=self.PeriodLength,
                                      SeasonalFrequency=self.SeasonalFrequency, CalendarType=self.CalendarType,
                                      DateBeginGregorian=self.DateBeginGregorian, DateEndGregorian=self.DateEndGregorian,
                                      FullPeriod=self.FullPeriod, DatePattern=self.DatePattern,
                                      Period=self.Period, PeriodSE=self.PeriodSE, Shading=self.Shading,
-                                     Marker=self.Marker, Line=self.Line, OCE=self.OCE, ATM=self.ATM, CMIP6_BUF=self.R_BUF,
+                                     Marker=self.Marker, Line=self.Line, OCE=self.OCE, ATM=self.ATM,
+                                     CMIP6_BUF=self.R_BUF,
                                      Debug=self.Debug, **add_values)
-        
+
         pop_stack ('libIGCM.post.__init__')
 
-
-def catalog (keep_all:bool=False, Debug:bool=False) -> Dict :
+def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
     '''
     Return a dictionnary from the catalog file
     By defaults, keeps only experiments entries
     '''
     OPTIONS = get_options ()
     ldebug= OPTIONS['Debug'] or Debug
-    
+
     cata_list = OPTIONS['IGCM_Catalog_list']
     cata_log  = OPTIONS['IGCM_Catalog']
 
-    catalog=None
+    lcatalog=None
 
     if cata_log is not None :
         if ldebug :
@@ -348,58 +354,34 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict :
         if os.path.isfile (cata_log) :
             if ldebug :
                 print ( f'Catalog file : {cata_log=}' )
-            exp_file = open (cata_log)
-            catalog = json.load (exp_file)
+            exp_file = open (cata_log, mode='r')
+            lcatalog = json.load (exp_file)
         else :
-            raise Exception ( f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
+            raise FileNotFoundError ( f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
 
     else :
-        if cata_list is not None : 
+        if cata_list is not None :
             for cfile in cata_list :
                 if ldebug :
                     print ( f'Searching for {cfile=}')
                 if os.path.isfile (cfile) :
-                    if ldebug : 
+                    if ldebug :
                         print ( f'Reads catalog file : {cfile=}' )
-                exp_file = open (cfile)
-                catalog = json.load (exp_file)
-                if ldebug :
-                    print ( f'{Experiments.keys()=}' )
+                exp_file = open (cfile, mode='r')
+                lcatalog = json.load (exp_file)
 
-    if catalog is not None and not keep_all :
-        ccz = catalog.copy ()
-        for kk in catalog.keys() :
+    if lcatalog is not None and not keep_all :
+        ccz = lcatalog.copy ()
+        for kk in lcatalog.keys() :
             if 'keys' not in dir(ccz[kk]) :
                 ccz.pop(kk)
             else :
                 if 'JobName' not in ccz[kk].keys() :
-                    ccz.pop (kk) 
-                
-        catalog = ccz
-                
-    return catalog
-                        
-def add_year (ptime_counter:xr.DataArray, year_shift:int=0, Debug=False) -> xr.DataArray :
-    '''
-    Add years to a time variable
-    Time variable is an xarray of cftime values
-    '''
-    dates_elements   = [ (date.year+year_shift, date.month, date.day, date.hour, date.minute, date.second, date.microsecond) for date in ptime_counter.values]
+                    ccz.pop (kk)
+        lcatalog = ccz
 
-    if isinstance ( ptime_counter[0].item(), cftime._cftime.DatetimeGregorian ) :
-        if Debug :
-            print ( 'add_year: Cas Gregorien' )
-        time_counter_new = [ cftime.DatetimeGregorian (*date_el,                      has_year_zero=False) for date_el in dates_elements ]
-    else :
-        if Debug :
-            print ( 'add_year: cas standard ' )
-        time_counter_new = [ cftime.datetime          (*date_el, calendar='standard', has_year_zero=False) for date_el in dates_elements ]
-    
-    time_counter = xr.DataArray (time_counter_new, dims=('time_counter',), coords=(time_counter_new,))
-    time_counter.attrs.update (ptime_counter.attrs)
-    
-    return time_counter
-        
+    return lcatalog
+
 # def comp ( varName ) :
 #     #OPTIONS=get_options ()
 #     class RegexEqual (str):
@@ -432,10 +414,10 @@ def add_year (ptime_counter:xr.DataArray, year_shift:int=0, Debug=False) -> xr.D
 #         case 'alp' | 'alp_bl.*' | 'bils.*' | 'bnds' | 'cape' | 'cdrh' | 'cdrm' | 'cin' | \
 #              'cldh' | 'cldicemxrat' | 'cldl' | 'cldm' | 'cldq' | 'cldt' | 'cldwatmxrat' | 'co2_ppm' | 'colO3.*' | 'concbc' | \
 #              'concdust' | 'concno3' | 'concoa' | 'concso4' | 'concso4' | 'concss' | 'cool_volc' :
-#              Comp = 'ATM' 
+#              Comp = 'ATM'
 #         case  '.*aer'| 'epmax' | 'evap' | 'evap_[oce|lic|ter|oce]' \
 #              'evappot_[oce|lic|sic|ter]' | 'f0_th'| 'f0_th'| 'fbase'| 'fder'| 'ffonte'| 'fl'| 'flat' :
-        #     Comp = 'ATM' 
+        #     Comp = 'ATM'
         # case 'fqcalving' | 'fqfonte'| 'fsnow' | \
         #      'ftime_con' | 'ftime_con' | 'ftime_deepcv' | 'ftime_deepcv' | 'ftime_th' | 'ftime_th'| 'geop' | 'geoph' | 'gusts'| \
         #      'heat_volc' | 'io_lat' | 'io_lon' | 'iwp' | 'lat'| 'lat_[sic|lic|oce|ter]' | 'lon' | 'lwp'| 'mass' | 'mrroli'| \
@@ -463,7 +445,7 @@ def add_year (ptime_counter:xr.DataArray, year_shift:int=0, Debug=False) -> xr.D
 
         # case  "so.*" | "vo.*" | "zo.*" | "NEMO*" | "e[123].*" | "tau[uv]o" | "qt_.*" :
         #     Comp = 'OCE'
-        
+
         # case  'BLT' | 'area' | 'calving' | 'depti' | 'emp' | 'emp_[oce|ice]' | 'friver' | 'hc300' | 'heatc' | 'hfcorr'|  \
         #       'iceberg' | 'iceshelf' | 'mldr10_1'|  \
     #           'nshfls' | 'olevel' | 'olevel_bounds' | 'qemp_[oce|ice]' | 'qt_[oce|ice]' | 'rain' | 'rsntds'| 'runoffs'|  \
@@ -477,7 +459,7 @@ def add_year (ptime_counter:xr.DataArray, year_shift:int=0, Debug=False) -> xr.D
 
     #     case "si.*|sn.*|ice.*|it.*" :
     #         Comp = 'ICE'
-        
+
     #     case 'Alkalini' | '*CHL' | 'DIC' | 'Fer' | 'NO*' | 'O2' | 'PO4' | 'Si' | 'TPP' | 'Cflx' | 'Dpco2' | 'EPC100' | 'INTPP' :
     #         Comp = 'MBG'
 
@@ -486,7 +468,7 @@ def add_year (ptime_counter:xr.DataArray, year_shift:int=0, Debug=False) -> xr.D
     #     case 'lai' | 'alb_nir'| 'alb_vis'| 'bqsb'| 'gqsb' | 'nee' | 'temp_sol' | 'nbp'| \
     #          'AGE'|  'CONTFRAC'|  'CONVFLUX'|  'GPP'| 'gpp'|  'npp'| 'HET_RESP' :
     #         Comp = 'SBG'
-            
+
     # pop_stack ( f"{comp=}" )
     # return Comp
 
@@ -496,23 +478,23 @@ def VarOut2VarIn (VarOut:str, JobName:str) -> str :
     Useful because variable names may be different for different model version (mainly for NEMO)
     '''
     push_stack ( f'VarOut2VarIn ({VarOut=} {JobName=})' )
-    
+
     VarIn = VarOut
 
     # match JobName :
-    #     case 'TR5AS-Vlr01' :	
+    #     case 'TR5AS-Vlr01' :
     #         match VarOut :
     #             case 'siconc'   :
     #                 VarIn='ice_pres'
     #             #case 'ice_conc' :
     #             #    VarIn='ice_pres'
     #             case 'sistem'   :
-    #                 VarIn='tsice'    
+    #                 VarIn='tsice'
     #             case 'sithic' | 'sivolu' :
-    #                 VarIn='iicethic' 
+    #                 VarIn='iicethic'
     #             case 'snthic' | 'snvolu' :
-    #                 VarIn='isnowthi' 
-    
+    #                 VarIn='isnowthi'
+
     #     case 'TR6AV-Sr02' :
     #         match VarOut :
     #             case 'siconc' :

@@ -22,17 +22,17 @@ the usage of his software by incorrectly or partially configured
 personal. Be warned that the author himself may not respect the prerequisites.                                                                  
 '''
 
-from plotIGCM.options import OPTIONS       as OPTIONS
-from plotIGCM.options import set_options   as set_options
-from plotIGCM.options import get_options   as get_options
-from plotIGCM.options import reset_options as reset_options
-from plotIGCM.options import push_stack    as push_stack
-from plotIGCM.options import pop_stack     as pop_stack
-from plotIGCM.utils   import copy_attrs    as copy_attrs
+from plotIGCM.options import OPTIONS
+from plotIGCM.options import set_options
+from plotIGCM.options import get_options
+from plotIGCM.options import reset_options
+from plotIGCM.options import push_stack
+from plotIGCM.options import pop_stack
+from plotIGCM.utils   import copy_attrs
 
-from plotIGCM import sphere   as sphere
-from plotIGCM import nemo     as nemo
-from plotIGCM import lmdz     as lmdz
-from plotIGCM import utils    as utils
-from plotIGCM import oasis    as oasis
-from plotIGCM import interp1d as interp1d
+from plotIGCM import sphere
+from plotIGCM import nemo
+from plotIGCM import lmdz
+from plotIGCM import utils
+from plotIGCM import oasis
+from plotIGCM import interp1d

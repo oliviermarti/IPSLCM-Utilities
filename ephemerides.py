@@ -195,7 +195,7 @@ def time2float (time, unit:str='year', year0:int=0, month0:int=1, day0:int=0, ho
     elif isinstance (time, cftime._cftime.DatetimeGregorian) :
         if ldebug : print ( f'Case : cftime')
         ztime = time
-    elif isinstance (time, numpy.ndarray) :
+    elif isinstance (time, np.ndarray) :
         if ldebug : print ( f'Case : numpy : {len(time) = }')
         if len(time.shape) == 0 : 
             ztime = time.item ()
@@ -261,7 +261,7 @@ def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, ho
     elif isinstance (time, cftime._cftime.DatetimeGregorian) :
         if ldebug : print ( f'Case : cftime')
         ztime = time
-    elif isinstance (time, numpy.ndarray) :
+    elif isinstance (time, np.ndarray) :
         if ldebug : print ( f'Case : numpy : {len(time) = }')
         if len(time.shape) == 0 : 
             ztime = time.item ()
@@ -300,6 +300,17 @@ def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, ho
 
     pop_stack ('time2BP')        
     return result
+
+def time_BP (var, time='time_counter', unit:str='year', year0:int=7999, month0:int=7, day0:int=0, hour0:int=0, Debug:bool=False) :
+    return time2BP (var.time_counter)
+
+def time_F (var, time='timer_counter') : 
+    years  = np.array ([ tt.year  for tt in var[time].values])
+    months = np.array ([ tt.month for tt in var[time].values])
+    timeF  = years + (months-5.5)/12.
+    
+    timeF = xr.DataArray (timeF, dims=('Year'), coords=(timeF,), attrs={'units':'Model Year'})
+    return timeF
 
 def mthday2day (month, day) :
     '''

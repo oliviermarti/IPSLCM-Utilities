@@ -1,9 +1,47 @@
 {   "Description" : "Catalogue des simulations perso",
     "Author"      : "Olivier Marti",
     "Institution" : "IPSL/LSCE",
-    "Date"        : "2025-01-07",
+    "Date"        : "2025-10-21",
     "mailto"      : "olivier.marti@lsce.ipsl.fr",
 
+    "CM712-ico-O4-pd-01":
+    {"JobName":"CM712-ico-O4-pd-01", "ShortName":"CM712-04", "TagName":"IPSLCM7", "SpaceName":"DEVT",
+     "ExperimentName":"pdControl", "TGCC_User":"p86caub", "TGCC_Group":"gencmip7", 
+     "DatePattern":"18?00101_19??1231",
+     "Period":"19500101_19591231",
+     "YearBegin"     : 1850, "YearEnd": 1949, "CalendarType":"leap",
+     "OCE"           :"eORCA1.4.2", "ATM" :"LMD270x135"
+    },
+    
+    "CM71NCAR":
+    {"JobName":"CM71NCAR", "ShortName":"CM71NCAR", "TagName":"IPSLCM7", "SpaceName":"DEVT",
+     "ExperimentName":"piControl", "TGCC_User":"dehondtc", "TGCC_Group":"gencmip6", 
+     "DatePattern":"22??0101_2299012231",
+     "Period":"22500101_22991231",
+     "YearBegin"     : 2250, "YearEnd": 2299, "CalendarType":"leap",
+     "OCE"           :"eORCA1.4.2", "ATM" :"LMD144x144"    
+    },
+    
+    "CM711-ico-O2-pi-testLMDZ":
+    { 	"JobName":"CM711-ico-O2-pi-testLMDZ", "ShortName":"CM771-LMDZ",
+	"TGCC_User":"p86caub", "TGCC_Group":"gencmip7", 
+	"TagName":"IPSLCM7", "SpaceName":"DEVT",
+	"ExperimentName":"piControl", 
+	"DatePattern":"187?0101_187?1231",
+	"Period":"19500101_19591231",
+	"YearBegin"     : 1850, "YearEnd": 1969, "CalendarType":"leap"
+    },
+
+   "CM711-ico-O2-routinterp-02":
+    { 	"JobName":"CM711-ico-O2-routinterp-02", "ShortName":"CM771_routing_interp",
+	"TGCC_User":"p86caub", "TGCC_Group":"gencmip7", 
+	"TagName":"IPSLCM7", "SpaceName":"DEVT",
+	"ExperimentName":"piControl", 
+	"DatePattern":"187?0101_187?1231",
+	"Period":"18700101_18791231",
+	"YearBegin"     : 1850, "YearEnd": 1879, "CalendarType":"leap"
+    },
+    
     "XML01": 
     {	"JobName"       :"XML01",
 	"SpaceName"     :"TEST", "TagName":"LMDZOR", "ShortName":"XML01", "ExperimentName":"clim", "ModelName":"LMDZ ORCHIDEE",

@@ -112,7 +112,7 @@ class Container :
     def __str__     (self:Self) :
         return str  (self.__dict__)
     def __repr__ (self:Self):
-        return pretty (self)
+        return str  (self.__dict__)
     
     def __name__    (self:Self) :
         return self.__class__.__name__
