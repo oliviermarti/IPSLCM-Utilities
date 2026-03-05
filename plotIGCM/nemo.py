@@ -184,8 +184,8 @@ ZLENGTH:list[int]   = [ 31, 75]
 XYZLENGTH:list[list[int]] = [ [180,148,31], [182,149,31], [360,331,75], [362,332,75] ]
 
 ## T, S arrays to plot TS diagrams
-Ttab:ndarray = np.linspace (-2, 40, 100)
-Stab:ndarray = np.linspace ( 0, 40, 100)
+Ttab:np.ndarray = np.linspace (-2, 40, 100)
+Stab:np.ndarray = np.linspace ( 0, 40, 100)
 
 Ttab:xr.DataArray = xr.DataArray (Ttab, dims=('Temperature',), coords=(Ttab,), attrs={'unit':'degrees_celcius', 'long_name':'Temperature'})
 Stab:xr.DataArray = xr.DataArray (Stab, dims=('Salinity'   ,), coords=(Stab,), attrs={'unit':'PSU'            , 'long_name':'Salinity'   })
@@ -794,7 +794,9 @@ class GridMask :
     Reads and builds all grids caracterestics
     '''
     @validate_types
-    def __init__ (self:Self, mm:libIGCM.sys.Config, domain:Domain, kw_uni:Dict={'use_xgcm':True}, pval=np.nan, Debug=False) -> None :
+    def __init__ (self:Self, mm:libIGCM.sys.Config, domain:Domain, kw_uni:Dict={'use_xgcm':True},
+                  e3file:str|None=None, e3dataset:xr.Dataset|None=None,
+                  pval=np.nan, Debug=False) -> None :
         f_g  = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_coordinates_mask.nc'  ) # type: ignore
         f_e  = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_coordinates.nc'       ) # type: ignore
         f_d1 = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_domcfg.nc'            ) # type: ignore
@@ -828,14 +830,23 @@ class GridMask :
             d_d = d_e
             d_b = xr.open_dataset (f_b , **kw_read).squeeze () if os.path.isfile (f_b)  else None # type: ignore
 
+        d_e3 = None
+        if e3dataset is not None :
+            d_e3 = e3dataset
+        else :
+            if e3file is not None :
+                d_e3 = xr.open_dataset (e3file , **kw_read).squeeze () if os.path.isfile (f_b)  else None # type: ignore
+
         if d_g is not None : 
-            d_g  = unify_dims (d_g, **kw_uni)
+            d_g   = unify_dims (d_g , **kw_uni)
         if d_e is not None : 
-            d_e  = unify_dims (d_e, **kw_uni)
+            d_e   = unify_dims (d_e , **kw_uni)
         if d_d is not None : 
-            d_d  = unify_dims (d_d, **kw_uni)
+            d_d   = unify_dims (d_d , **kw_uni)
         if d_b is not None : 
-            d_b  = unify_dims (d_b, **kw_uni)
+            d_b   = unify_dims (d_b , **kw_uni)
+        if d_e3 is not None : 
+            d_e3  = unify_dims (d_e3, **kw_uni)
 
         self.d_g = d_g
         self.d_e = d_e
@@ -968,13 +979,26 @@ class GridMask :
         e3w_0  = d_g.e3w_0  if 'e3w_0'  in d_g.variables else None
         e3t_ps = d_g.e3t_ps if 'e3t_ps' in d_g.variables else None
         e3w_ps = d_g.e3w_ps if 'e3w_ps' in d_g.variables else None
-        e3t    = e3t_0 if e3t_0 is not None else None
-        e3u    = e3t_0 if e3t_0 is not None else None
-        e3v    = e3t_0 if e3t_0 is not None else None
-        e3f    = e3t_0 if e3t_0 is not None else None
-        e3w    = e3w_0 if e3w_0 is not None else None
         
+        if 'e3t' in d_e3.variables :
+            e3t = d_e3.e3t
+        else :
+            if e3t_0 is not None :
+                e3t = e3t_0
+            else :
+                e3t = None
+        if 'e3w' in d_e3.variables :
+            e3w = d_e3.e3w
+        else :
+            if e3w_0 is not None :
+                e3w = e3w_0
+            else :
+                e3w = None
 
+        e3u = t2u (e3t)
+        e3v = t2v (e3t)
+        e3f = t2f (e3t)
+        
         # coast_poly, coast_poly_shp = build_feat (libIGCM.sys.Dap2Thredds(os.path.join (mm.DB, 'extras', f'{domain.cfg_name}_coast.json')    , mm), 
         #                                                facecolor='k', edgecolor='none') # type: ignore
         # land_poly , land_poly_shp  = build_feat (libIGCM.sys.Dap2Thredds(os.path.join (mm.DB, 'extras', f'{domain.cfg_name}_land.json')     , mm),

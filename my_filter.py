@@ -94,8 +94,9 @@ def fft_fft (tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=Fals
         ztab = ztab.interpolate_na (dim=dim, method='linear', limit=None, use_coordinate=False,
                                     max_gap=None, keep_attrs=None)
         ztab = ztab.fillna (0.)
-    if Debug : print (' fft_fft: Remove and store mean')
+    if Debug : print (' fft_fft: Remove and store mean 1')
     ztab_mean = ztab.mean (dim=dim)
+    if Debug : print (' fft_fft: Remove and store mean 2')
     ztab     -= ztab_mean
     if Debug : print ('  fft_fft: Detrend, and store trend' )
     ztab_d     = xrft.detrend (ztab, dim=dim, detrend_type='linear'  )

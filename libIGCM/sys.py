@@ -240,12 +240,13 @@ class Config :
                   R_SAVE:str|None=None, R_FIGR:str|None=None, R_BUF:str|None=None,
                   R_BUFR:str|None=None, R_BUF_KSH:str|None=None,
                   REBUILD_DIR:str|None=None, POST_DIR:str|None=None,
-                  ThreddsPrefix:str|None=None, DapPrefix:str|None=None, R_GRAF:str|None=None,
+                  ThreddsPrefix:str|None=None, DapPrefix:str|None=None, SshPrefix:str|None=None,
+                  R_GRAF:str|None=None,
                   DB:str|None=None,
                   IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None,
                   rebuild:str|None=None, TmpDir:str|None=None,
-                  TGCC_ThreddsPrefix:str|None=None, TGCC_DapPrefix:str|None=None,
-                  IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None,
+                  TGCC_ThreddsPrefix:str|None=None , TGCC_DapPrefix:str|None=None , TGCC_SshPrefix:str|None=None,
+                  IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None, IDRIS_SshPrefix:str|None=None,
                   DateBegin:str|None=None, DateEnd:str|None=None, YearBegin:str|None=None,
                   YearEnd:str|None=None, PeriodLength:str|None=None,
                   SeasonalFrequency:str|None=None, CalendarType:str|None=None,
@@ -269,11 +270,13 @@ class Config :
         ldebug = OPTIONS['Debug'] or Debug
 
         if ldebug :
+            print ( f'libIGCM.sys.Config : {Source    =}' )
             print ( f'libIGCM.sys.Config : {MASTER    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
             print ( f'libIGCM.sys.Config : {TGCC_User =}' )
             print ( f'libIGCM.sys.Config : {TGCC_Group=}' )
+            print ( f'libIGCM.sys.Config : {TGCC_SshPrefix=}' )
 
         if not Debug               :
             Debug               = OPTIONS['Debug']
@@ -293,14 +296,20 @@ class Config :
             TGCC_ThreddsPrefix  = OPTIONS['TGCC_ThreddsPrefix']
         if not TGCC_DapPrefix      :
             TGCC_DapPrefix      = OPTIONS['TGCC_DapPrefix']
+        if not TGCC_SshPrefix      :
+            TGCC_SshPrefix      = OPTIONS['TGCC_SshPrefix']
         if not IDRIS_ThreddsPrefix :
             IDRIS_ThreddsPrefix = OPTIONS['IDRIS_ThreddsPrefix']
         if not IDRIS_DapPrefix     :
             IDRIS_DapPrefix     = OPTIONS['IDRIS_DapPrefix']
+        if not IDRIS_SshPrefix     :
+            IDRIS_SshPrefix     = OPTIONS['IDRIS_SshPrefix']
         if not ThreddsPrefix       :
             ThreddsPrefix       = OPTIONS['ThreddsPrefix']
         if not DapPrefix           :
             DapPrefix           = OPTIONS['DapPrefix']
+        if not SshPrefix           :
+            SshPrefix           = OPTIONS['SshPrefix']
 
         if not MASTER :
             MASTER = Mach (long=False)
@@ -392,6 +401,8 @@ class Config :
 
             if not ARCHIVE :
                 ARCHIVE = f'{DapPrefix}/store/{TGCC_User}'
+            if not STORAGE :
+                STORAGE = f'{DapPrefix}/work/{TGCC_User}'
             if not R_FIG   :
                 R_FIG   = f'{DapPrefix}/work/{TGCC_User}'
             if not R_IN    :
@@ -420,6 +431,61 @@ class Config :
             if not R_GRAF  :
                 R_GRAF  = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds/work/p86mart/GRAF/DATA'
 
+        ### =================================================================
+        ## Part specific to access by SSH FS
+
+        # ===================================================================
+                
+        if Source == 'TGCC_ssh' :
+            if ldebug :
+                print ( 'Case TGCC_ssh' )
+            #if not User  and TGCC_User  :
+            #    User  = TGCC_User
+            #if not Group and TGCC_Group :
+            #    Group = TGCC_Group
+
+            if not IGCM_OUT_name :
+                IGCM_out_name = 'IGCM_OUT'
+            if not SshPrefix :
+                SshPrefix = OPTIONS['TGCC_SshPrefix']
+
+            if not ARCHIVE :
+                ARCHIVE = os.path.join ( SshPrefix, 'ccc', 'store'  , 'cont003', TGCC_Group, TGCC_User )
+            if not STORAGE :
+                STORAGE = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
+            if not R_FIG   :
+                R_FIG   = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
+            if not R_BUF   :
+                R_BUF   = os.path.join ( SshPrefix, 'ccc', 'scratch', 'cont003', TGCC_Group, TGCC_User )
+            if not R_IN    :
+                R_IN    = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', 'igcmg', 'IGCM' )
+
+        # ===========================================================================================
+
+        if Source == 'IDRIS_ssh' :
+            if ldebug :
+                print ( 'Case IDRIS_ssh' )
+            if not User  and IDRIS_User  :
+                User  = IDRIS_User
+            if not Group and IDRIS_Group :
+                Group = IDRIS_Group
+
+            if not IGCM_OUT_name :
+                IGCM_out_name = 'IGCM_OUT'
+            if not SshPrefix :
+                SshPrefix = OPTIONS['IDRIS_SshPrefix']
+
+            if not ARCHIVE :
+                ARCHIVE = os.path.join ( SshPrefix, 'gpfsstore'    , 'rech', IDRIS_Group, IDRIS_User )
+            if not STORAGE :
+                STORAGE = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
+            if not R_FIG   :
+                R_FIG   = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
+            if not R_BUF   :
+                R_BUF   = os.path.join ( SshPrefix, 'gpfsscfratch' , 'rech', IDRIS_Group, IDRIS_User )
+            if not R_IN    :
+                R_IN    = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', 'igcmg' ,'IGCM' )
+
         ### ===========================================================================================
         ## Machine dependant part
 
@@ -427,10 +493,12 @@ class Config :
         if MASTER == 'Obelix' :
             if not User   :
                 User = LocalUser
-            if Source :
-                IGCM_OUT_name = ''
-            else      :
-                IGCM_OUT_name = 'IGCM_OUT'
+            if not IGCM_OUT_name :
+                if Source in  [ 'TGCC_thredds', 'IDRIS_thredds'] :
+                    IGCM_OUT_name = ''
+                else      :
+                    IGCM_OUT_name = 'IGCM_OUT'
+                
             if not ARCHIVE    :
                 ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'), 'Data'    )
             if not SCRATCHDIR :
@@ -455,7 +523,7 @@ class Config :
         if MASTER == 'Spip' :
             if not User   :
                 User = LocalUser
-            if Source :
+            if Source in  [ 'TGCC_thredds', 'IDRIS_thredds'] :
                 IGCM_OUT_name = ''
             else      :
                 IGCM_OUT_name = 'IGCM_OUT'
@@ -507,7 +575,7 @@ class Config :
             if ldebug :
                 print ( f'{MASTER=} {LocalHome=} {LocalGroup=}' )
 
-            if not Source :
+            if Source in  [ 'TGCC_thredds', 'IDRIS_thredds'] :
                 IGCM_OUT_name = 'IGCM_OUT'
 
             if not R_IN        :
@@ -549,7 +617,7 @@ class Config :
                 if ccc_home :
                     R_FIG      = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
-                    R_FIG      = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
+                    R_FIG      = f'/ccc/work/cont003/{TGCC_Group}/{TGCC_User}'
             if ldebug :
                 print ( f'{R_FIG}' )
             if not R_GRAF or 'http' in str(R_GRAF) :
@@ -613,8 +681,11 @@ class Config :
             if not Group :
                 Group = LocalGroup
 
-            if not Source :
-                IGCM_OUT_name = 'IGCM_OUT'
+            if not IGCM_OUT_name :
+                if Source in [ 'TGCC_thredds', 'IDRIS_thredds'] :
+                    IGCM_OUT_name = 'IGCM_OUT'
+                else :
+                    IGCM_OUT_name = ''
 
             if not ARCHIVE    :
                 ARCHIVE    = os.path.join ( '/', 'gpfsstore'  , 'rech', Group, User )
@@ -642,6 +713,8 @@ class Config :
         ### ===========================================================================================
         ### The construction of the following variables is not machine dependant
         ### ===========================================================================================
+        if ldebug :
+            print ( 'General construction' )
         if SpaceName == 'TEST' :
             if SCRATCHDIR and not R_OUT :
                 R_OUT = SCRATCHDIR
@@ -665,24 +738,26 @@ class Config :
             IGCM_OUT = R_OUT
 
         if TagName and SpaceName and ExperimentName and JobName :
+            if ldebug :
+                print ( 'Construction L_EXP' )
             if not L_EXP :
                 L_EXP = os.path.join (TagName, SpaceName, ExperimentName, JobName)
 
             if ldebug :
+                print ( f'libIGCM.sys.Config : libIGCM.sys : {STORAGE=}' )
+                print ( f'libIGCM.sys.Config : libIGCM.sys : {ARCHIVE=}' )
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {R_BUF=}' )
+                print ( f'libIGCM.sys.Config : libIGCM.sys : {R_FIG=}' )
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {IGCM_OUT_name=}' )
                 print ( f'libIGCM.sys.Config : libIGCM.sys : {L_EXP=}' )
 
             if R_OUT and not R_SAVE :
-                R_SAVE      = os.path.join ( R_OUT  , L_EXP )
-            if IGCM_OUT_name :
-                if STORAGE and not R_FIGR :
-                    R_FIGR      = os.path.join (STORAGE, IGCM_OUT_name, L_EXP)
-            else :
-                if STORAGE and not R_FIGR  :
-                    R_FIGR      = os.path.join ( STORAGE, L_EXP )
-            if R_BUF   and not R_BUFR and IGCM_OUT_name and L_EXP :
-                R_BUFR      = os.path.join ( R_BUF  , IGCM_OUT_name, L_EXP )
+                R_SAVE      = os.path.join ( R_OUT, L_EXP )
+            if R_FIG and not R_FIGR :
+                R_FIGR      = os.path.join ( R_FIG, L_EXP )
+            if R_BUF   and not R_BUFR :
+                R_BUFR      = os.path.join ( R_BUF, L_EXP )
+                
             if R_BUFR  and not R_BUF_KSH   :
                 R_BUF_KSH   = os.path.join ( R_BUFR , 'Out' )
             if R_BUF   and not REBUILD_DIR :

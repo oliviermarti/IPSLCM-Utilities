@@ -26,6 +26,6 @@ Tol_light  = ['#BBCC33', '#AAAA00', '#77AADD', '#EE8866', '#EEDD88', '#FFAABB', 
 Okabe_Ito = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"]
 
 # 'noir', 'gris foncé', 'gris souris', 'blanc', 'gris violet fonce', 'vert canard', 'vert bleu', 'vert eclatant', 'violet', 'bleu azure', 'mauve', 'rose', 'rouge brun', 'orange brun', 'jaune'
-aaa = [ '#000000', '#252525', '#676767', '#FFFFFF', '#171723', '#004949', '#009999', '#22CF22', '#490092', '#006DDB', '#B66DFF', '#FF6DB6', '#920000', '#DB6D00', '#FFDF4D' ]
+couleurs_aaa = [ '#000000', '#252525', '#676767', '#FFFFFF', '#171723', '#004949', '#009999', '#22CF22', '#490092', '#006DDB', '#B66DFF', '#FF6DB6', '#920000', '#DB6D00', '#FFDF4D' ]
 
 

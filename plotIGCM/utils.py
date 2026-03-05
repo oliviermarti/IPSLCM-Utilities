@@ -82,14 +82,17 @@ def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
     Y4 = ptab2[dim][-1].item().year
     Y2 = Y3-1
 
-    print (Y1, Y2, Y3, Y4)
+    #print (Y1, Y2, Y3, Y4)
+
+    print ( f'Start of simu1: {Y1=} | End of simu 1: {Y2=} | End of simu 1 {Y3=} | End of simus 2 : {Y4=}' )
 
     T1 = f"{Y1:04d}-01-01"
     T2 = f"{Y2:04d}-12-31"
     T3 = f"{Y3:04d}-01-01"
     T4 = f"{Y4:04d}-12-31"
 
-    print (T1, T2, T3, T4)
+    if OPTIONS['Debug'] or Debug :
+        print ( f'Start of simu1: {T1=} | End of simu 1: {T2=} | End of simu 1 {T3=} | End of simus 2 : {T4=}' )
 
     ptab3 =  xr.concat ( [ ptab1.sel( {dim:slice(T1,T2)} ), ptab2.sel ( {dim:slice(T3,T4)} ) ], dim=dim )
     return ptab3
@@ -326,14 +329,19 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False) -> st
         case 'icevol_north'             : zname = 'Ice volume, northern hemisphere'
         case 'icevol_north_MAR'         : zname = 'Sea ice volume, northern hemisphere, March'
         case 'icevol_south'             : zname = 'Ice volume, southern hemisphere'
-        case 'nadw_ocean_*'             : zname = 'Atlantic Meridional Overturning'
         case 'precip_global'            : zname = 'Global precipitation'
-        case 'somxl010_Irminger'        : zname = 'Mixed layer depth, Irminger sea, annual max'
-        case 'somxl010_Labrador'        : zname = 'Mixed layer depth, Labrador sea, annual max'
-        case 'somxl010_NordicSeas'      : zname = 'Mixed layer depth, Nordic seas, annual max'
-        case 'somxl010_SubpolarNorthAtl': zname = 'Mixed layer depth, Subpolar North Atlantic, annual max'
         case 'sosaline_north'           : zname = 'Salinity, northern hemisphere'
         case 't2m_global.*'             : zname = 'Global air surface temperature'
+
+        case 'nadw_ocean.*'             : zname = 'AMOC index'
+        case 'somxl010_Irminger'        : zname = 'MXL depth, Irminger sea'
+        case 'somxl010_NordicSeas'      : zname = 'MXL depth, Nordic seas'
+        case 'somxl010_Labrador'        : zname = 'MXL depth, Labrador sea'
+        case 'sosaline_30N_50N'         : zname = 'Salinity, 30N-50N'
+        case 'sosaline_50N_70N'         : zname = 'Salinity, 50N-70N'
+        case 'sosaline_atl_30N_50N'     : zname = 'Salinity, Atlantic, 30N-50N'
+        case 'sosaline_atl_50N_70N'     : zname = 'Salinity, Atlantic, 50N-70N'
+        
         case _ :
             if long_name is not None :
                 zname = long_name

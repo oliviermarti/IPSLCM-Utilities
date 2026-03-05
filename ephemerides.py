@@ -299,7 +299,7 @@ def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, ho
             result.attrs.update ({'unit':'Year BP' , 'Comment':f'Year before {year0:04d}-{month0:02d}-{day0:02d}'})
 
     pop_stack ('time2BP')        
-    return result
+    return [ int(year) for year in result]
 
 def time_BP (var, time='time_counter', unit:str='year', year0:int=7999, month0:int=7, day0:int=0, hour0:int=0, Debug:bool=False) :
     return time2BP (var.time_counter)
