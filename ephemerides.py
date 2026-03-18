@@ -168,7 +168,7 @@ def pop_stack (string:str) -> None :
     OPTIONS['Depth'] -= 1
     OPTIONS['Stack'].pop ()
     #
-    
+
    
 ## ============================================================================
 def time2float (time, unit:str='year', year0:int=0, month0:int=1, day0:int=0, hour0:int=0, Debug:bool=False) :
@@ -282,24 +282,24 @@ def time2BP (time, unit:str='year', year0:int=7999, month0:int=7, day0:int=0, ho
         return zres
 
     if len(result.shape) == 0 :
-        result = np.array ( [float(zres(ztime))] )
+        result = np.array ( [int(zres(ztime))] )
     else :
         for ii, tt in enumerate (ztime) :
             if OPTIONS['Debug'] or Debug : print ( f'{tt=}')
-            result[ii] = float(zres (tt))
+            result[ii] = int(zres (tt))
             
     if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
-        result = result*12
+        result = int (result*12)
         
     if isinstance (time, xr.DataArray) :
-        result = xr.DataArray (result, dims=('YearBP',), coords=(result,))
+        result = xr.DataArray ([ int(year) for year in result], dims=('YearBP',), coords=(result,))
         if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
             result.attrs.update ({'unit':'Month BP', 'Comment':f'Month before {year0:04d}-{month0:02d}-{day0:02d}'})
         else : 
             result.attrs.update ({'unit':'Year BP' , 'Comment':f'Year before {year0:04d}-{month0:02d}-{day0:02d}'})
 
     pop_stack ('time2BP')        
-    return [ int(year) for year in result]
+    return result
 
 def time_BP (var, time='time_counter', unit:str='year', year0:int=7999, month0:int=7, day0:int=0, hour0:int=0, Debug:bool=False) :
     return time2BP (var.time_counter)

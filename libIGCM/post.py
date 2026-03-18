@@ -42,7 +42,7 @@ class Config (libIGCM.sys.Config) :
     '''
     def __init__ (self:Self,
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
-                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, Comment:str|None=None,
+                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, LongtName:str|None=None, Comment:str|None=None,
                   Source:str|None=None, MASTER:str|None=None,
                   ConfigCard:str|None=None, RunCard:str|None=None,
                   User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
@@ -80,6 +80,51 @@ class Config (libIGCM.sys.Config) :
                   config:libIGCM.sys.Config|None=None, Debug:bool=False,
                   **kwargs) -> None :
 
+
+        def search_catalog (pCatalog:str, pJobName:str|None=None, pShortName:str|None=None, Debug:bool=False) -> dict :
+            '''
+            Search for JobName or ShortName in a catalog file
+            Return the found experiment dictionnary
+            '''
+            push_stack ( f'search_catalog ( {pCatalog=} {pJobName=} {pShortName=} )' )
+            ldebug = OPTIONS['Debug'] or Debug
+            if ldebug :
+                    print ( f'Catalog file : {pCatalog=} {pJobName=} {pShortName=}' )
+            zExp_file    = open (pCatalog)
+            zExperiments = json.load (zExp_file)
+            exp_out=None
+            if ldebug :
+                    print ( f'zExperiments : {zExperiments.keys()=}' )
+            if pJobName is None :
+                if pShortName is not None :
+                    if ldebug :
+                            print ( f'searching {pShortName=} in Catalog {pCatalog}')
+                    for exp in zExperiments.values() :
+                        if ldebug :
+                            print ( f'searching {exp=}')
+                        if isinstance (exp, dict) :
+                            if ldebug :
+                                print ( f'searching dictionnary {exp=}')
+                            if 'ShortName' in exp.keys() :
+                                if exp['ShortName'] == pShortName :
+                                    exp_out=exp
+                                    pJobName = exp_out['JobName']
+                                    if ldebug :
+                                        print ( f'Found {pShortName=} in {pJobName=}')
+                                    break
+                    if not pJobName :
+                        raise KeyError ( f'libIGCM.post.Config : ShortName={pShortName} not found in Catalog {pCatalog}' )
+            else :
+                if ldebug :
+                    print ( f'searching {pJobName=} in Catalog {pCatalog}')
+                if pJobName in zExperiments.keys () :
+                    exp_out = zExperiments[pJobName]
+                else :
+                    raise KeyError ( f'libIGCM.post.Config : JobName={pJobName} not found in Catalog {pCatalog}' )
+
+            pop_stack ( 'libIGCM.post.search_catalog' )
+            return exp_out
+        
         ### ===========================================================================================
         ## Read catalog of known simulations
         push_stack ( 'libIGCM.post.__init__')
@@ -167,9 +212,10 @@ class Config (libIGCM.sys.Config) :
         self.YearEnd              = YearEnd
         self.rebuild              = rebuild
 
+        # - Set the catalog and the catalog list
         if not self.IGCM_Catalog      :
             self.IGCM_Catalog      = OPTIONS['IGCM_Catalog']
-        if not IGCM_Catalog_list :
+        if not self.IGCM_Catalog_list :
             self.IGCM_Catalog_list = OPTIONS['IGCM_Catalog_list']
 
         if ldebug :
@@ -184,32 +230,21 @@ class Config (libIGCM.sys.Config) :
             if ldebug :
                 print ( f'Searching for catalog file : {self.IGCM_Catalog=}' )
             if os.path.isfile (self.IGCM_Catalog) :
-                if ldebug :
-                    print ( f'Catalog file : {self.IGCM_Catalog=}' )
-                exp_file = open (self.IGCM_Catalog)
-                Experiments = json.load (exp_file)
-                if self.JobName in Experiments.keys () :
-                    exp = Experiments[JobName]
+                exp = search_catalog (pCatalog=self.IGCM_Catalog, pJobName=self.JobName, pShortName=self.ShortName, Debug=Debug)
             else :
-                raise Exception ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
+                raise ValueError ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
 
         else :
-            if self.IGCM_Catalog_list  is not None :
+            if self.IGCM_Catalog_list is not None :
                 for cfile in self.IGCM_Catalog_list :
                     if ldebug :
                         print ( f'Searching for {cfile=}')
                     if os.path.isfile (cfile) :
                         if ldebug :
                             print ( f'Reads catalog file : {cfile=}' )
-                        exp_file = open (cfile, mode='r')
-                        Experiments = json.load (exp_file)
-                        if ldebug :
-                            print ( f'{Experiments.keys()=}' )
-                        if self.JobName in Experiments.keys () :
-                            if ldebug :
-                                print (f'{self.JobName=} found')
-                            exp = Experiments[self.JobName]
-                            break
+                        exp = search_catalog (pCatalog=self.IGCM_Catalog, pJobName=self.JobName, pShortName=self.ShortName, Debug=Debug)    
+
+        ## End of catalog search
 
         if ldebug :
             print (f'exp    before analysing (1) : {exp=}')

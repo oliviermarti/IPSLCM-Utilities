@@ -27,7 +27,7 @@ personal.
 import numpy as np
 import xarray as xr
 from typing import Union
-#from plotIGCM.options import OPTIONS
+from plotIGCM.options import OPTIONS
 from plotIGCM.options import push_stack
 from plotIGCM.options import pop_stack
 
@@ -68,7 +68,6 @@ def interp1d (x:Union[np.ndarray,xr.DataArray], xp:xr.DataArray, yp:xr.DataArray
     ou_shape       = np.array (in_shape)
     ou_shape[axis] = nk_ou
     
-
     pdim           = x.dims[0]
     ou_dims[axis]  = pdim
 
@@ -116,3 +115,132 @@ def interp1d (x:Union[np.ndarray,xr.DataArray], xp:xr.DataArray, yp:xr.DataArray
     pop_stack ( 'interp1d' )
         
     return ou_tab.squeeze()
+
+def find_roots_np (x:np.ndarray, y:np.ndarray, Debug=True) -> float|np.ndarray :
+    '''https://stackoverflow.com/questions/46909373/how-to-find-the-exact-intersection-of-a-curve-as-np-array-with-y-0'''
+    s = np.abs(np.diff(np.sign(y))).astype(bool)
+
+    z0_1 = x[:-1][s]
+    z0_2 = np.diff(x)[s]
+    z0_3 = y[1:][s]
+    z0_4 = y[:-1][s]
+
+    z0 = z0_1 + z0_2 / ( np.abs(z0_3/z0_4) + 1 )
+
+    if OPTIONS['Debug'] or Debug :
+        print ( 's   :', s    )
+        print ( 'z0_1:', z0_1 )
+        print ( 'z0_2:', z0_2 )
+        print ( 'z0_3:', z0_3 )
+        print ( 'z0_4:', z0_4 )
+
+    return z0
+    #return x[:-1][s] + np.diff(x)[s]/ ( np.abs(y[1:][s]/y[:-1][s]) + 1 )
+
+
+def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
+                dim:str|None=None, direction:str='forward', Debug=False) -> xr.DataArray :
+    '''
+    Find the x-coordinate where a tabulated function crosses a given y-value.
+    
+    This function identifies the point where ytab(x) = y0 by finding a sign change
+    in (ytab - y0) along a specified dimension and performs linear interpolation
+    between the bracketing points.
+
+    Parameters
+    ----------
+    xc        : The x-coordinates corresponding to the tabulated function 
+    ytab      : The tabulated function values y = f(x)
+    y0        : The y-value for which to find the root. Default is 0.
+                If xr.DataArray, must be broadcastable with ytab.
+    dim       : The dimension along which to search for the root.
+                If None, uses the first dimension of xc.
+                Must be present in both xc and ytab.
+                if None, use first dimension of xc
+    direction search direction: 'forward' for the first root from the start,
+                'backward' for the last root from the end. Default is 'forward'.
+    Debug     : bool, optional
+                If True, prints debug information about intermediate calculations.
+
+    Adapted from 'https://stackoverflow.com/questions/46909373/how-to-find-the-exact-intersection-of-a-curve-as-np-array-with-y-0'
+    to multidimenson xarrays.
+
+    Return
+    ------
+    The interpolated x-coordinate where ytab crosses y0.
+        Contains np.nan where no root is found.
+        The dimension specified by `dim` is dropped from the result.
+
+    Raises
+    ------
+    ValueError
+        If dim is not found in ytab dimensions.
+        If direction is not 'forward' or 'backward'.
+
+    Notes
+    -----
+    - The function uses linear interpolation between adjacent points.
+    - If y0_bef == y0_aft (flat region), x0_bef is returned without interpolation.
+    - Results are set to NaN if no sign change is detected along the dimension.
+       
+    '''
+
+    # Validate and set the dimension if not provided
+    if dim is None :
+        dim = xc.dims[0]
+        if dim not in ytab.dims :
+            raise ValueError ( f'{dim=} (first dim of xc) not found in ytab dimensions = {ytab.dims}' )
+    else : 
+        if dim not in xc.dims :
+            raise ValueError ( f'{dim=} not found in xc dimensions = {xc.dims}' )
+    
+        if dim not in ytab.dims :
+            raise ValueError ( f'{dim=} not found in ytab dimensions = {ytab.dims}' )
+
+
+    # Detect sign changes in (ytab - y0) along the specified dimension.
+    # sc will be 1 where a sign change occurs, 0 elsewhere.
+    sc = np.abs (np.sign(ytab-y0).diff(dim=dim)).astype(int)
+
+    if   'back' in  direction :
+        # Search backward: find the LAST sign change
+        # Fill non-sign-change positions with max+10 to push them to the end
+        # Select last value of xc
+        sb = sc.where (sc, sc[dim].max()+10) # filling
+        first_pos = sb.argmin(dim=dim)
+    elif 'forw' in  direction :
+        # Search forward: find the FIRST sign change
+        # Fill non-sign-change positions with min-10 to push them to the start
+        sb = sc.where (sc, sc[dim].min()-10) # filling
+        first_pos = sb.argmax(dim=dim)
+    else :
+        raise ValueError ( f'direction parameter should be "forward|backward". You give {direction=}' )
+
+    # Extract the bracketing points (before and after the sign change)
+    x0_bef = xc.isel   ({dim:first_pos})   # x-coordinate before the root
+    x0_aft = xc.isel   ({dim:first_pos+1}) # x-coordinate after the root
+    y0_bef = ytab.isel ({dim:first_pos})   # y-value before the root
+    y0_aft = ytab.isel ({dim:first_pos+1}) # y-value after the root
+
+    # Linear interpolation: x0 = x0_bef + (x0_aft - x0_bef) * (y0_bef - y0) / (y0_bef - y0_aft)
+    # If the function is flat (y0_bef == y0_aft), use x0_bef directly
+    x0 = xr.where (y0_bef==y0_aft, x0_bef, x0_bef + (x0_aft-x0_bef)*np.abs ( (y0_bef-y0)/(y0_bef-y0_aft) ) )
+
+    # Set result to NaN where no sign change was detected
+    x0 = x0.where ( sb.any(dim=dim), np.nan ) # Set to nan if no root is found
+
+    # Remove the dimension coordinate from the result since it's no longer needed
+    if dim in x0.coords :
+        x0 = x0.drop_vars (dim)
+
+    # Print debug information if requested
+    if OPTIONS['Debug'] or Debug:
+        print('sc        :', sc.values)          # Sign change indicator
+        print('sb        :', sb.values)          # Filled sign change array
+        print('first_pos :', first_pos.values)   # Index of the bracketing point
+        print('x0_bef    :', x0_bef.values)      # x before root
+        print('x0_aft    :', x0_aft.values)      # x after root
+        print('y0_bef    :', y0_bef.values)      # y before root
+        print('y0_aft    :', y0_aft.values)      # y after root
+    
+    return x0

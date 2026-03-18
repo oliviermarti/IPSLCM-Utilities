@@ -222,7 +222,7 @@ class Config :
     def __init__ (self:Self,
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None,
                   ExperimentName:str|None=None,
-                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None,
+                  ModelName:str|None=None, ShortName:str|None=None, LongName:str|None=None,
                   Comment:str|None=None,
                   Source:str|None=None, MASTER:str|None=None,
                   ConfigCard:str|None=None, RunCard:str|None=None,
@@ -328,7 +328,7 @@ class Config :
         if ConfigCard :
             # Text existence of ConfigCard
             if not os.path.exists (ConfigCard ) :
-                raise FileExistsError ( f"libIGCM.sys.Config : File not found : {ConfigCard = }" )
+                raise FileNotFoundError ( f"libIGCM.sys.Config : File not found : {ConfigCard = }" )
 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
@@ -355,7 +355,7 @@ class Config :
         if RunCard :
             # Text existence of RunCard
             if not os.path.exists (RunCard) :
-                raise FileExistsError ( f"libIGCM.sys.Config : File not found : {RunCard = }" )
+                raise FileNotFoundError ( f"libIGCM.sys.Config : File not found : {RunCard = }" )
 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
@@ -528,22 +528,22 @@ class Config :
             else      :
                 IGCM_OUT_name = 'IGCM_OUT'
             if not ARCHIVE    :
-                ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
+                ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
             if not SCRATCHDIR :
-                SCRATCHDIR  = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
+                SCRATCHDIR  = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
             if not R_BUF      :
-                R_BUF       = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
+                R_BUF       = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
             if not R_FIG      :
-                R_FIG       = os.path.join ( os.path.expanduser (f'~{User}'), 'Data' )
+                R_FIG       = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
 
             if not STORAGE    :
                 STORAGE     = ARCHIVE
             if not R_IN       :
-                R_IN        = os.path.join ( os.path.expanduser (f'~{User}'), 'Data', 'IGCM' )
+                R_IN        = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch', 'IGCM' )
             if not R_GRAF or 'http' in str(R_GRAF) :
                 R_GRAF      = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DATA' )
             if not DB         :
-                DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'Data', 'database' )
+                DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch', 'database' )
             if not TmpDir     :
                 TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
 

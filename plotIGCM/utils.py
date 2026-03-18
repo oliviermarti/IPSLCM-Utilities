@@ -317,22 +317,51 @@ def unit2math (unit:str, Debug:bool=False) -> str :
 
     return zu
 
-def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False) -> str :
+def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False, short:bool=False) -> str :
     '''
     Return a full long_name of a Monitoring variable
     '''
     class RegexEqual (str) :
         def __eq__(self:Self, pattern:str) -> bool :
             return bool (re.search(pattern, self))
-        
+
     match RegexEqual (varName) :
-        case 'icevol_north'             : zname = 'Ice volume, northern hemisphere'
         case 'icevol_north_MAR'         : zname = 'Sea ice volume, northern hemisphere, March'
-        case 'icevol_south'             : zname = 'Ice volume, southern hemisphere'
+        case 'icevol_north_SEP'         : zname = 'Sea ice volume, northern hemisphere, September'
+        case 'icevol_south_MAR'         : zname = 'Sea ice volume, southern hemisphere, March'
+        case 'icevol_south_SEP'         : zname = 'Sea ice volume, southern hemisphere, September'
+        case 'icevol_north_MAR'         : zname = 'Sea ice volume, northern hemisphere, March'
+        case 'icevol_north_SEP'         : zname = 'Sea ice volume, northern hemisphere, September'
+        case 'icevol_north'             : zname = 'Sea ice volume, northern hemisphere'
+        case 'icevol_south'             : zname = 'Sea Ice volume, southern hemisphere'
+        case 'siconc_north_MAR'         : zname = 'Sea ice fraction, northern hemisphere, March'
+        case 'siconc_north_SEP'         : zname = 'Sea ice fraction, northern hemisphere, September'
+        case 'siconc_south_MAR'         : zname = 'Sea ice fraction, southern hemisphere, March'
+        case 'siconc_south_SEP'         : zname = 'Sea ice fraction, southern hemisphere, September'
+        case 'siconc_north'             : zname = 'Sea ice fraction, northern hemisphere'
+        case 'siconc_south'             : zname = 'Sea ice fraction, southern hemisphere'
+        case 'iicethic_north_MAR'       : zname = 'Sea ice thickness, northern hemisphere, March'
+        case 'iicethic_north_SEP'       : zname = 'Sea ice thickness, northern hemisphere, September'
+        case 'iicethic_south_MAR'       : zname = 'Sea ice thickness, southern hemisphere, March'
+        case 'iicethic_south_SEP'       : zname = 'Sea ice thickness, southern hemisphere, September'
+        case 'iicethic_north'           : zname = 'Sea ice thickness, northern hemisphere'
+        case 'iicethic_south'           : zname = 'Sea ice thickness, southern hemisphere'
+        case 'isnowthi_north'           : zname = 'Sea ice volume, northern hemisphere'
+        case 'isnowthi_south'           : zname = 'Sea ice volume, southern hemisphere'
+        case 'snowvol_north'            : zname = 'Snow volume on sea ice, northern hemisphere'
+        case 'snowvol_south'            : zname = 'Snow volume on sea ice, southern hemisphere'
+
+        case 'area_neg_scritd_Barents'          : zname = 'Area with SSS<Scrit, Barents Sea'
+        case 'area_neg_scritd_Irminger'         : zname = 'Area with SSS<Scrit, Irminger Sea'
+        case 'area_neg_scritd_Labrador'         : zname = 'Area with SSS<Scrit, Labrador Sea'
+        case 'area_neg_scritd_NordicSeas'       : zname = 'Area with SSS<Scrit, Nordic Seas'
+        case 'area_neg_scritd_NorthAtlantic'    : zname = 'Area with SSS<Scrit, North Atlantic'
+        case 'area_neg_scritd_SubpolarNorthAtl' : zname = 'Area with SSS<Scrit, Subpolar North Atl.'
+        
         case 'precip_global'            : zname = 'Global precipitation'
         case 'sosaline_north'           : zname = 'Salinity, northern hemisphere'
         case 't2m_global.*'             : zname = 'Global air surface temperature'
-
+        
         case 'nadw_ocean.*'             : zname = 'AMOC index'
         case 'somxl010_Irminger'        : zname = 'MXL depth, Irminger sea'
         case 'somxl010_NordicSeas'      : zname = 'MXL depth, Nordic seas'
@@ -347,6 +376,29 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False) -> st
                 zname = long_name
             else :
                 zname = varName
+
+    if short :
+        zname = zname.replace ( 'northern hemisphere', 'NH'   )
+        zname = zname.replace ( 'southern hemisphere', 'SH'   )
+        zname = zname.replace ( 'March'              , 'Mar.' )
+        zname = zname.replace ( 'September'          , 'Sep.' )
+        zname = zname.replace ( 'volume'  , 'vol.' )
+        zname = zname.replace ( 'concentration'  , 'conc.' )
+        zname = zname.replace ( 'fraction'  , 'frac.' )
+        zname = zname.replace ( 'thickness'  , 'thick.' )
+        zname = zname.replace ( 'Concentration'  , 'Conc.' )
+        zname = zname.replace ( 'Fraction'  , 'Frac.' )
+        zname = zname.replace ( 'Salinity', 'Sal.' )
+        zname = zname.replace ( 'salinity', 'sal.' )
+        zname = zname.replace ( 'Temperature', 'Temp.' )
+        zname = zname.replace ( 'temperature', 'temp.' )
+        zname = zname.replace ( 'Surface', 'surf.' )
+        zname = zname.replace ( 'surface', 'surf.' )
+        zname = zname.replace ( 'Precipitation', 'Precip.' )
+        zname = zname.replace ( 'precipitation', 'precip.' )
+        zname = zname.replace ( 'Barents Sea', 'Barents' )
+        zname = zname.replace ( 'Labrador Sea', 'Labrador' )
+        zname = zname.replace ( 'Irminger Sea', 'Irminger' )
 
     if Debug or OPTIONS['Debug'] :
         print ( f"{varName=} : {zname=}")
@@ -383,6 +435,7 @@ def get_comp (varName:str) -> Literal['OCE', 'ICE', 'ATM', 'SRF', 'SBG', 'CPL']|
         case 'wfo.*'                : comp = 'OCE'
         case '^zos.*'               : comp = 'OCE'
         case '^hc.*'                : comp = 'OCE'
+        case 'area_neg_scritd.*'    : comp = 'OCE'
          
         case '^ii.*'                : comp = 'ICE'
         case '^si.*'                : comp = 'ICE'

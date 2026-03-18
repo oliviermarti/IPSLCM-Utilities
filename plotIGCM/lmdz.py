@@ -751,7 +751,7 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     jpn = jpi*(jpj-2) + 2
 
     if OPTIONS['Debug'] or Debug :
-        print ( f'{jpj=} {jpi=} -> {jpn=}' )
+        print ( f'lmdz.geo2point: {jpj=}, {jpi=} -> {jpn=}' )
 
     # Get other dimensions
     form1   = list(p2d.shape [0:-2])

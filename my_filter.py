@@ -238,3 +238,115 @@ def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=
     else :
         return ftab
 
+def lowess ( endog:xr.DataArray, exog:np.ndarray|xr.DataArray=None, frac:float|None=None, length:int|None|float=None, it:int=3,
+                    delta:float=0.0, xvals:float|np.ndarray=None, is_sorted:bool=False, missing:Literal['drop','none','raise']='drop',
+                    return_sorted:bool=True, Debug:bool=False ) -> [ xr.DataArray, xr.DataArray ] :
+    '''
+    Implement lowless_filter for 1D xarray.
+
+    Parameters
+    ----------
+    endog : 1-D xarray array
+        The y-values of the observed points
+    exog : 1-D xarray or numpy array
+        The x-values of the observed points
+    frac : float
+        Between 0 and 1. The fraction of the data used
+        when estimating each y-value.
+    length : int
+        Length of the filter. Use to compute an ad hoc value of frac
+        as frac = length/len(endog)
+    it : int
+        The number of residual-based reweightings
+        to perform.
+    delta : float
+        Distance within which to use linear-interpolation
+        instead of weighted regression.
+    xvals: 1-D numpy array
+        Values of the exogenous variable at which to evaluate the regression.
+        If supplied, cannot use delta.
+    is_sorted : bool
+        If False (default), then the data will be sorted by exog before
+        calculating lowess. If True, then it is assumed that the data is
+        already sorted by exog. If xvals is specified, then it too must be
+        sorted if is_sorted is True.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'drop'.
+    return_sorted : bool
+        If True (default), then the returned array is sorted by exog and has
+        missing (nan or infinite) observations removed.
+        If False, then the returned array is in the same length and the same
+        sequence of observations as the input array.
+
+    Returns
+    -------
+    If endog is an xarray, returns an xarray with proper coordinates
+    If endog is a numpy array, sea documenation of sm.nonparametric.lowess for return values
+    
+    '''
+    import statsmodels.api as sm
+    ldebug = Debug
+    
+    if len (endog.shape) != 1 :
+        raise ValueError ( f'Works only for 1D arrays. You have {len(endog.dims)} dimensions' )
+
+    if frac is None :
+        if length is None :
+            frac = 2./3.
+        else :
+            frac = length / len(endog)
+    else :
+        if length is not None :
+            raise ValueError ( f'Both frac and length are specified. Give only one value')
+    
+    
+    zz = sm.nonparametric.lowess (endog, exog, frac=frac, it=it, delta=delta, xvals=xvals, is_sorted=is_sorted,
+                                  missing=missing, return_sorted=return_sorted )
+
+    if isinstance (endog, xr.DataArray) :
+        if ldebug : print ( 'endog xarray' )
+        if return_sorted :
+            if ldebug : print ( '  return sorted' )
+            if xvals is None :
+                if ldebug : print ( '    xvals is None' )
+                zz_r = xr.DataArray ( zz[:,1], dims=endog.dims, coords=[zz[:,0],])                                
+            else :
+                if ldebug : print ( 'xvals is not None' )
+                zz_r = xr.DataArray ( zz, dims=endog.dims, coords=[xvals,])
+            
+        else :
+            if xvals is None :
+                zz_r = xr.DataArray ( zz, dims=endog.dims, coords=[exog,])
+            else :
+                zz_r = xr.DataArray ( zz, dims=endog.dims, coords=[xvals,])
+
+        zz_r.attrs.update ( endog.attrs )
+        zz_r.attrs.update ( {'LOWLESS':f'{frac=}, {it=}, {delta=}, xvals={ f"{len(xvals)} values>" if xvals is not None else "None"}, {is_sorted=}, {missing=}, {return_sorted=}'} )
+        
+        if isinstance (endog, xr.DataArray) :
+            name = zz_r.coords[zz_r.dims[0]].name
+            zz_r[name].attrs.update (exog.attrs)
+            
+    else :
+        if ldebug : print ( 'endog numpy' )
+        if return_sorted :
+            if ldebug : print ( 'return sorted' )
+            if xvals is not None :
+                if ldebug : print ( 'endog numpy' )
+                zz_r = [ xvals, zz]
+            else :
+                if ldebug : print ( 'not return_sorted' )
+                zz_r = [ exog, zz ]
+        else :
+            if xvals is not None :
+                if ldebug : print ( 'xvals not None' )
+                zz_r = [ xvals, zz ]
+            else :
+                if ldebug : print ( 'xvals None' )
+                zz_r = zz
+
+
+    return zz_r
+     
