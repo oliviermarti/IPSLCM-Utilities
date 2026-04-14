@@ -6,32 +6,33 @@ Author : olivier.marti@lsce.ipsl.fr
 
 Github : https://github.com/oliviermarti/IPSLCM-Utilities
 
-This software is governed by the CeCILL  license under French law and      
-abiding by the rules of distribution of free software.  You can  use,      
-modify and/ or redistribute the software under the terms of the CeCILL     
-license as circulated by CEA, CNRS and INRIA at the following URL          
-"http://www.cecill.info".                                                  
-                                                                           
-Warning, to install, configure, run, use any of Olivier Marti's            
-software or to read the associated documentation you'll need at least      
-one (1) brain in a reasonably working order. Lack of this implement        
-will void any warranties (either express or implied).                      
-O. Marti assumes no responsability for errors, omissions,                  
-data loss, or any other consequences caused directly or indirectly by      
-the usage of his software by incorrectly or partially configured           
-personal. Be warned that the author himself may not respect the prerequisites.                                                               
+This software is governed by the CeCILL  license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal. Be warned that the author himself may not respect the prerequisites.
 '''
 import time
 import copy
-from typing import Self, Any, Optional, Type, cast
+from typing import Self, Any
 
 ## ============================================================================
-DEFAULT_OPTIONS = dict ( Debug                = False, 
+DEFAULT_OPTIONS = dict ( Debug                = False,
                          Trace                = False,
                          Timing               = None,
                          t0                   = None,
                          Depth                = 0,
                          Stack                = [],
+                         Check                = False,
                          DefaultCalendar      = 'Gregorian',
                          User                 = None,
                          Group                = None,
@@ -54,15 +55,15 @@ OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
 class set_options :
     '''
     Set OPTIONS for libIGCM
-    
+
     See Also :
     ----------
     reset_options, get_options
-    
+
     '''
     def __init__ (self:Self, **kwargs) -> None :
         self.old = dict ()
-        for k, v in kwargs.items() :
+        for k in kwargs :
             if k not in OPTIONS :
                 raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
@@ -70,12 +71,12 @@ class set_options :
 
     def _apply_update (self:Self, options_dict:dict) -> None :
         OPTIONS.update (options_dict)
-        
+
     def __enter__(self: Self) -> None:
         return None
 
-    def __exit__(self: Self, type: Optional[Type[BaseException]], value: Optional[BaseException], traceback: Optional[Any]) -> None:
-        self._apply_update(self.old)
+    #def __exit__(self: Self) -> Self|None :
+    #    self._apply_update(self.old)
 
 def get_options() -> dict[str, Any]:
     '''
@@ -96,12 +97,36 @@ def reset_options () :
     set_options, get_options
 
     '''
-    return set_options (**DEFAULT_OPTIONS) 
+    return set_options (**DEFAULT_OPTIONS)
 
 def return_stack() -> Any :
+    '''
+    Return the current stack from OPTIONS
+
+    Returns
+    -------
+    Any
+        The Stack list from OPTIONS
+
+    See Also
+    --------
+    push_stack, pop_stack
+    '''
     return OPTIONS['Stack']
 
 def push_stack (string:str) -> None :
+    '''
+    Push a string onto the stack and handle tracing and timing.
+
+    Parameters
+    ----------
+    string : str
+        The function name or identifier to push onto the stack
+
+    See Also
+    --------
+    pop_stack, return_stack
+    '''
     OPTIONS['Depth'] += 1
     if OPTIONS['Trace'] :
         print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
@@ -115,6 +140,18 @@ def push_stack (string:str) -> None :
             OPTIONS['t0'] = [time.time(),]
 
 def pop_stack (string:str) -> None :
+    '''
+    Pop a string from the stack and handle tracing and timing.
+
+    Parameters
+    ----------
+    string : str
+        The function name or identifier to pop from the stack
+
+    See Also
+    --------
+    push_stack, return_stack
+    '''
     if OPTIONS['Timing'] :
         dt = time.time() - OPTIONS['t0'][-1]
         OPTIONS['t0'].pop()
@@ -122,17 +159,15 @@ def pop_stack (string:str) -> None :
         dt = None
     if OPTIONS['Trace'] or dt :
         if dt :
-            if dt < 1e-3 : 
+            if dt < 1e-3 :
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
-            if dt >= 1e-3 and dt < 1 : 
+            if dt >= 1e-3 and dt < 1 :
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
-            if dt >= 1 : 
+            if dt >= 1 :
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
-        else : 
+        else :
             print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #
     OPTIONS['Depth'] -= 1
     OPTIONS['Stack'].pop ()
     #
-    
-   

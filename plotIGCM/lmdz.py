@@ -34,11 +34,12 @@ import numpy as np
 import xarray as xr
 
 import cartopy
+from plotIGCM.options import OPTIONS, push_stack, pop_stack
+
 if cartopy.__version__ > '0.20' :
     import cartopy.util as cutil
 else :
     import my_cyclic as cutil
-from plotIGCM.options import OPTIONS, push_stack, pop_stack
 
 lon_per = xr.DataArray (360.0    , name='lon_per', attrs={'units':"degrees_east", 'long_name':"Longitude range" })
 RAAMO   = xr.DataArray (12       , name='RAAMO'  , attrs={'units':"month"  , 'long_name':"Number of months in one year" })
@@ -598,6 +599,8 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
         p2d = p2d.rename        ({p2d.dims[idim]:p1d.dims[idim]} )
         p2d = p2d.assign_coords ({p2d.dims[idim]:p1d.coords[dim]})
 
+    zlon = None
+    zlat = None
     if isinstance (lon, str) :
         if not lon_name :
             lon_name = lon
@@ -622,14 +625,14 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     if isinstance(zlon, np.ndarray) == np :
         if not lon_name :
             lon_name = 'lon'
-        zlon = xr.DataArray ( zlon, dims=(lon_name,), coords=(zlon,) )
+        zlon = xr.DataArray ( zlon, dims=(lon_name,), coords={lon_name: zlon} )
         for aa in { 'units':'degrees_east', 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' }.items() :
             if aa[0] not in lon.attrs : # type: ignore
                 zlon.attrs.update ( { aa[0]:aa[1] } )
     if isinstance (zlat, np.ndarray) :
         if not lat_name :
             lat_name = 'lat'
-        zlat = xr.DataArray ( zlat, dims=(lat_name,), coords=(zlat,) )
+        zlat = xr.DataArray ( zlat, dims=(lat_name,), coords={lat_name: zlat} )
         for aa in  { 'units':'degrees_north', 'long_name':'Latitude' , 'standard_name':'latitude' , 'axis':'Y' }.items () :
             if aa[0] not in lat.attrs : # type: ignore
                 zlat.attrs.update ( { aa[0]:aa[1] } )
@@ -761,7 +764,7 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     form_1D = form1 + [jpn-2,]
 
     p1d [..., 1:-1] = np.reshape ( p2d[..., 1:-1, :].values.ravel(), form_1D )
-    
+
     if cumul_poles :
         p1d [...,  0] = np.sum ( p2d[...,  0, :], axis=-1 )
         p1d [..., -1] = np.sum ( p2d[..., -1, :], axis=-1 )

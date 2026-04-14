@@ -57,7 +57,7 @@ nam_config:Dict = {
             'ppkth2'      :   np.nan, #
             'ppacr2'      :   np.nan, #
             }
-        }, 
+        },
         'eorca1' : {
             'key_agrif' : False,
             #-----------------------------------------------------------------------
@@ -105,4 +105,3 @@ nam_config:Dict = {
                 }
             }
     }
-

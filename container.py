@@ -20,8 +20,8 @@ the usage of his software by incorrectly or partially configured
 personal.
 '''
 import copy
-from typing import Self, Dict, Any, Optional
-from collections.abc import ItemsView, KeysView, ValuesView, Iterable
+from typing import Self, Dict, Any
+from collections.abc import ItemsView, KeysView, ValuesView
 
 
 ## ============================================================================
@@ -37,14 +37,15 @@ def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=0) -> str:
         items = [ nlch + repr(key) + ': ' + pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
     elif '__dict__' in dir (value) :
-        items = [ nlch + repr(key) + ': ' + pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
+        items = [ nlch + repr(key) + ': ' +
+                 pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
     elif isinstance (value, list) or isinstance (value, tuple) :
         items = [ nlch + pretty(item, htchar, lfchar, indent+1) for item in value ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
     else:
         return repr (value)
-     
+
 ## ============================================================================
 class Container :
     '''
@@ -69,37 +70,46 @@ class Container :
 
     ## Public functions
     def keys(self: Self) -> KeysView[str]:
+        '''Return a view over the container attribute names.'''
         return self.__dict__.keys()
 
     def values(self: Self) -> ValuesView[Any]:
+        '''Return a view over the container attribute values.'''
         return self.__dict__.values()
 
     def items(self: Self) -> ItemsView[str, Any]:
+        '''Return a view over the container attribute/value pairs.'''
         return self.__dict__.items()
 
     def dict(self: Self) -> Dict[str, Any]:
+        '''Expose the underlying attribute dictionary.'''
         return self.__dict__
 
     def pop(self: Self, attr: str) -> Any:
+        '''Remove an attribute and return its value.'''
         value = self[attr]
         delattr(self, attr)
         return value
-    
+
     def copy (self:Self) -> 'Container' :
+        '''Return a shallow copy of the container.'''
         return Container (**self)
-    
+
     ## Hidden functions
     def __copy__    (self:Self) -> 'Container' :
+        '''Implement shallow copy support.'''
         return Container (**self)
-    
+
     def __deepcopy__(self:Self, memo=None)-> 'Container' :
+        '''Implement deep copy support.'''
         return Container (copy.deepcopy(self.__dict__, memo=memo))
-    
+
     def __replace__(
             self: Self,
             dico: Dict[str, Any]|Self|None = None,
             **kwargs: Any
     ) -> None:
+        '''Replace container content using the same rules as update.'''
         return self.update(dico=dico, **kwargs)
 
     def __update__(
@@ -107,42 +117,52 @@ class Container :
             dico: Dict[str, Any]|Self|None = None,
             **kwargs: Any
     ) -> None:
+        '''Backward-compatible alias to update the container content.'''
         return self.update(dico=dico, **kwargs)
-    
+
     def __str__     (self:Self) :
+        '''Return the string representation of the underlying dictionary.'''
         return str  (self.__dict__)
     def __repr__ (self:Self):
+        '''Return the representation of the underlying dictionary.'''
         return str  (self.__dict__)
-    
+
     def __name__    (self:Self) :
+        '''Return the class name.'''
         return self.__class__.__name__
-    
+
     def __getitem__ (self:Self, attr) :
+        '''Access an attribute with dictionary-like syntax.'''
         return getattr (self, attr)
-    
+
     def __setitem__ (self:Self, attr, value) -> None :
+        '''Assign an attribute with dictionary-like syntax.'''
         if isinstance (value, dict) :
             setattr (self, attr, Container(value))
         else :
             setattr (self, attr, value)
-            
+
     def __iter__    (self:Self) :
+        '''Iterate over attribute names.'''
         return self.__dict__.__iter__()
-    
+
     def __contains__ (self:Self, item) -> bool :
+        '''Return whether an attribute name exists in the container.'''
         if item in self.keys() :
             return True
         else :
             return False
-        
+
     #def __next__  (self:Self) :
     #    return self.__dict__.__next__()
-    
+
     def __len__     (self:Self) :
+        '''Return the number of stored attributes.'''
         return len (self.__dict__)
 
     ## Initialisation
     def __init__    (self:Self, dico:Dict|Self|None=None, Debug=False, level=0, **kwargs) -> None :
+        '''Initialize the container from a mapping-like object and keyword arguments.'''
         if dico is not None :
             zargs = dico
         else :
@@ -151,9 +171,8 @@ class Container :
         for attr, value in zargs.items () :
             if Debug :
                 print ( f"{level=} - {attr=} - {type(value)=}" )
-            if isinstance (value, dict) : 
+            if isinstance (value, dict) :
                 # Dictionnaries are handeld by recursivity
                 super().__setattr__ (attr, Container (value, level=level+1))
             else :
                 super().__setattr__ (attr, value)
-    

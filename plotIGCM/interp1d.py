@@ -26,14 +26,16 @@ personal.
 
 import numpy as np
 import xarray as xr
-from typing import Union
 from plotIGCM.options import OPTIONS
 from plotIGCM.options import push_stack
 from plotIGCM.options import pop_stack
 
 #from numba import jit
 
-def interp1d (x:Union[np.ndarray,xr.DataArray], xp:xr.DataArray, yp:xr.DataArray, zdim:str, name:Union[str,None]=None) :
+def interp1d (x:np.ndarray|xr.DataArray, xp:xr.DataArray,
+              yp:xr.DataArray,
+              zdim:str,
+              name:str|None=None) :
     '''
     One-dimensionnal interpolation of a multi-dimensionnal field
 
@@ -63,31 +65,31 @@ def interp1d (x:Union[np.ndarray,xr.DataArray], xp:xr.DataArray, yp:xr.DataArray
 
     in_dims        = list (yp.dims)
     ou_dims        = in_dims
-  
+
     in_shape       = np.array (xp.shape)
     ou_shape       = np.array (in_shape)
     ou_shape[axis] = nk_ou
-    
+
     pdim           = x.dims[0]
     ou_dims[axis]  = pdim
 
     # Determines orientation of x
     dx = x.differentiate (coord=zdim)
     if dx.min()*dx.max() < 0. :
-        raise Exception( 'interp1d : Coordinate not monotonic')
-    else : 
-        if ( dx.min() > 0. and dx.max()> 0. ) : or_up=True
-        if ( dx.min() < 0. and dx.max()< 0. ) : or_up=False
+        raise ValueError ( 'interp1d : Coordinate not monotonic')
+    else :
+        if   ( dx.min() > 0. and dx.max()> 0. ) : or_up=True
+        elif ( dx.min() < 0. and dx.max()< 0. ) : or_up=False
+        else : raise ValueError ( 'interp1d : Coordinate not monotonic')
 
     if or_up :
         x  = -x ; xp = -xp
-        
-    # Define the result array 
+
+    # Define the result array
     new_coords = []
     for coord in yp.dims :
         if coord == zdim : new_coords.append (x.coords [pdim] .values)
         else             : new_coords.append (yp.coords[coord].values)
-
 
     ou_tab = xr.DataArray (np.empty (ou_shape), dims=ou_dims, coords=new_coords)
 
@@ -97,27 +99,28 @@ def interp1d (x:Union[np.ndarray,xr.DataArray], xp:xr.DataArray, yp:xr.DataArray
         idk1   = np.minimum ( (x[k]-xp), 0.).argmax (dim=zdim) # type: ignore
         idk2   = idk1 - 1
         idk2   = np.maximum (idk2, 0)
-        
+
         x1     = xp[{zdim:idk1}]
         x2     = xp[{zdim:idk2}]
-        
+
         dx1    = x[k] - x1
         dx2    = x2   - x[k]
         dx     = x2   - x1
-        
+
         y1     = yp[{zdim:idk1}]
         y2     = yp[{zdim:idk2}]
-        
+
         ou_tab [{pdim:k}] = (dx1*y2 + dx2*y1) / (dx1 + dx2)
 
     if name : ou_tab = ou_tab.rename ( {pdim:name} )
-    
+
     pop_stack ( 'interp1d' )
-        
+
     return ou_tab.squeeze()
 
 def find_roots_np (x:np.ndarray, y:np.ndarray, Debug=True) -> float|np.ndarray :
-    '''https://stackoverflow.com/questions/46909373/how-to-find-the-exact-intersection-of-a-curve-as-np-array-with-y-0'''
+    '''https://stackoverflow.com/questions/46909373/
+    how-to-find-the-exact-intersection-of-a-curve-as-np-array-with-y-0'''
     s = np.abs(np.diff(np.sign(y))).astype(bool)
 
     z0_1 = x[:-1][s]
@@ -162,7 +165,8 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
     Debug     : bool, optional
                 If True, prints debug information about intermediate calculations.
 
-    Adapted from 'https://stackoverflow.com/questions/46909373/how-to-find-the-exact-intersection-of-a-curve-as-np-array-with-y-0'
+    Adapted from 'https://stackoverflow.com/questions/46909373/
+    how-to-find-the-exact-intersection-of-a-curve-as-np-array-with-y-0'
     to multidimenson xarrays.
 
     Return
@@ -187,13 +191,13 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
 
     # Validate and set the dimension if not provided
     if dim is None :
-        dim = xc.dims[0]
+        dim = xc.dims[0] # pyright: ignore[reportAssignmentType]
         if dim not in ytab.dims :
             raise ValueError ( f'{dim=} (first dim of xc) not found in ytab dimensions = {ytab.dims}' )
-    else : 
+    else :
         if dim not in xc.dims :
             raise ValueError ( f'{dim=} not found in xc dimensions = {xc.dims}' )
-    
+
         if dim not in ytab.dims :
             raise ValueError ( f'{dim=} not found in ytab dimensions = {ytab.dims}' )
 
@@ -242,5 +246,5 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
         print('x0_aft    :', x0_aft.values)      # x after root
         print('y0_bef    :', y0_bef.values)      # y before root
         print('y0_aft    :', y0_aft.values)      # y after root
-    
+
     return x0

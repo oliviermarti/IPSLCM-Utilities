@@ -50,7 +50,7 @@ def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=3) -> str:
     '''
     Pretty printing for almost anything hierachical
 
-    key can be of any valid type. Indent and Newline character can be
+    Key can be of any valid type. Indent and Newline character can be
     changed for everything we'd like. dict, list and tuples are pretty printed.
     '''
     nlch = lfchar + htchar * (indent + 1)
@@ -58,7 +58,8 @@ def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=3) -> str:
         items = [ nlch + repr(key) + ': ' + pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
     elif '__dict__' in dir (value) :
-        items = [ nlch + repr(key) + ': ' + pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
+        items = [ nlch + repr(key) + ': ' \
+                 + pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
     elif isinstance (value, list) or isinstance (value, tuple) :
         items = [ nlch + pretty(item, htchar, lfchar, indent+1) for item in value ]
@@ -106,7 +107,6 @@ def Mach (long:bool=False) -> str|None :
 
         if zmach == 'Irene' :
             CPU    = subprocess.getoutput ('lscpu')
-
             if "Intel(R) Xeon(R) Platinum" in CPU :
                 zmachfull = 'Irene'
 
@@ -116,9 +116,11 @@ def Mach (long:bool=False) -> str|None :
         zmach = zmachfull
 
     return zmach
-# =======================================================================
 
-MASTER    = Mach (long=False)
+# =======================================================================
+# Managing catalog list
+
+#Master    = Mach (long=False)
 LocalUser = os.environ ['USER']
 
 IGCM_Catalog      = get_options ()['IGCM_Catalog']
@@ -127,10 +129,6 @@ IGCM_Catalog_list = get_options ()['IGCM_Catalog_list']
 if LocalUser in  ['marti', 'omamce', 'p25mart', 'p86mart', 'rces009' ] :
     IGCM_Catalog_list.append (os.path.join(os.environ['HOME'], 'Python',
                 'Library', 'IGCM_Catalog.json' ))
-    IGCM_Catalog_list.append (os.path.join(os.environ['HOME'], 'Python',
-                'Library', 'TRHOL_Catalog.json'))
-
-# =======================================================================
 
 if 'IGCM_Catalog' in os.environ :
     IGCM_Catalog = os.environ['IGCM_Catalog']
@@ -140,8 +138,8 @@ if 'IGCM_Catalog_list' in os.environ :
 
 set_options (IGCM_Catalog=IGCM_Catalog, IGCM_Catalog_list=IGCM_Catalog_list)
 
-## Where do we run ?
-#SysName, NodeName, Release, Version, Machine = os.uname ()
+# =======================================================================
+##
 
 class Config :
     '''
@@ -155,10 +153,9 @@ class Config :
         IDRIS_thredds : thredds IDRIS via IPSL
     '''
     def update (self:Self, dico:Optional[Dict[str,Any]]=None,
-                action:Optional[str]=None,
-                Debug:bool=False, **kwargs:Any) -> None :
-        '''Use a dictionnary to update values
-        if action is set, add/del halo or cyclic
+                         **kwargs:Any) -> None :
+        '''
+        Use a dictionnary to update values
         '''
         if dico is not None :
             for attr in dico.keys () :
@@ -166,10 +163,9 @@ class Config :
         self.__dict__.update (kwargs)
 
     def replace (self:Self, dico:Optional[Dict[str,Any]]=None,
-                 action:Optional[str]=None, fatal:bool=True,
-                 Debug:bool=False, **kwargs:Any) -> None :
-        '''Use a dictionnary to update values
-        if action is set, add/del halo or cyclic
+                        fatal:bool=False, **kwargs:Any) -> None :
+        '''
+        Use a dictionnary to update values
         '''
         if dico :
             for attr, value in dico.items () :
@@ -217,14 +213,14 @@ class Config :
     def __iter__(self:Self) -> Iterable[str]: # pylint: disable=missing-function-docstring
         return iter(self.__dict__)
     def __contains__ (self:Self, attr:Any) -> bool : # pylint: disable=missing-function-docstring
-        return True if attr in self.__dict__.keys () else False
+        return True if attr in self.__dict__ else False
 
     def __init__ (self:Self,
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None,
                   ExperimentName:str|None=None,
                   ModelName:str|None=None, ShortName:str|None=None, LongName:str|None=None,
                   Comment:str|None=None,
-                  Source:str|None=None, MASTER:str|None=None,
+                  Source:str|None=None, Master:str|None=None,
                   ConfigCard:str|None=None, RunCard:str|None=None,
                   User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
                   TGCC_User:str|None=None,
@@ -271,7 +267,7 @@ class Config :
 
         if ldebug :
             print ( f'libIGCM.sys.Config : {Source    =}' )
-            print ( f'libIGCM.sys.Config : {MASTER    =}' )
+            print ( f'libIGCM.sys.Config : {Master    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
             print ( f'libIGCM.sys.Config : {TGCC_User =}' )
@@ -311,13 +307,13 @@ class Config :
         if not SshPrefix           :
             SshPrefix           = OPTIONS['SshPrefix']
 
-        if not MASTER :
-            MASTER = Mach (long=False)
-        if not MASTER :
-            MASTER = 'Unknown'
+        if not Master :
+            Master = Mach (long=False)
+        if not Master :
+            Master = 'Unknown'
 
         if ldebug :
-            print ( f'libIGCM.sys.Config : {MASTER    =}' )
+            print ( f'libIGCM.sys.Config : {Master    =}' )
             print ( f'libIGCM.sys.Config : {User      =}' )
             print ( f'libIGCM.sys.Config : {LocalUser =}' )
             print ( f'libIGCM.sys.Config : {TGCC_User =}' )
@@ -435,7 +431,6 @@ class Config :
         ## Part specific to access by SSH FS
 
         # ===================================================================
-                
         if Source == 'TGCC_ssh' :
             if ldebug :
                 print ( 'Case TGCC_ssh' )
@@ -448,17 +443,17 @@ class Config :
                 IGCM_out_name = 'IGCM_OUT'
             if not SshPrefix :
                 SshPrefix = OPTIONS['TGCC_SshPrefix']
-
-            if not ARCHIVE :
-                ARCHIVE = os.path.join ( SshPrefix, 'ccc', 'store'  , 'cont003', TGCC_Group, TGCC_User )
-            if not STORAGE :
-                STORAGE = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
-            if not R_FIG   :
-                R_FIG   = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
-            if not R_BUF   :
-                R_BUF   = os.path.join ( SshPrefix, 'ccc', 'scratch', 'cont003', TGCC_Group, TGCC_User )
-            if not R_IN    :
-                R_IN    = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', 'igcmg', 'IGCM' )
+            if SshPrefix is not None and TGCC_Group is not None and TGCC_User is not None :
+                if not ARCHIVE :
+                    ARCHIVE = os.path.join ( SshPrefix, 'ccc', 'store'  , 'cont003', TGCC_Group, TGCC_User )
+                if not STORAGE :
+                    STORAGE = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
+                if not R_FIG   :
+                    R_FIG   = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
+                if not R_BUF   :
+                    R_BUF   = os.path.join ( SshPrefix, 'ccc', 'scratch', 'cont003', TGCC_Group, TGCC_User )
+                if not R_IN    :
+                    R_IN    = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', 'igcmg', 'IGCM' )
 
         # ===========================================================================================
 
@@ -475,22 +470,23 @@ class Config :
             if not SshPrefix :
                 SshPrefix = OPTIONS['IDRIS_SshPrefix']
 
-            if not ARCHIVE :
-                ARCHIVE = os.path.join ( SshPrefix, 'gpfsstore'    , 'rech', IDRIS_Group, IDRIS_User )
-            if not STORAGE :
-                STORAGE = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
-            if not R_FIG   :
-                R_FIG   = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
-            if not R_BUF   :
-                R_BUF   = os.path.join ( SshPrefix, 'gpfsscfratch' , 'rech', IDRIS_Group, IDRIS_User )
-            if not R_IN    :
-                R_IN    = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', 'igcmg' ,'IGCM' )
+            if SshPrefix is not None and IDRIS_Group is not None and IDRIS_User is not None :
+                if not ARCHIVE :
+                    ARCHIVE = os.path.join ( SshPrefix, 'gpfsstore'    , 'rech', IDRIS_Group, IDRIS_User )
+                if not STORAGE :
+                    STORAGE = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
+                if not R_FIG   :
+                    R_FIG   = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
+                if not R_BUF   :
+                    R_BUF   = os.path.join ( SshPrefix, 'gpfsscfratch' , 'rech', IDRIS_Group, IDRIS_User )
+                if not R_IN    :
+                    R_IN    = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', 'igcmg' ,'IGCM' )
 
         ### ===========================================================================================
         ## Machine dependant part
 
         # ===========================================================================================
-        if MASTER == 'Obelix' :
+        if Master == 'Obelix' :
             if not User   :
                 User = LocalUser
             if not IGCM_OUT_name :
@@ -498,7 +494,7 @@ class Config :
                     IGCM_OUT_name = ''
                 else      :
                     IGCM_OUT_name = 'IGCM_OUT'
-                
+
             if not ARCHIVE    :
                 ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'), 'Data'    )
             if not SCRATCHDIR :
@@ -520,7 +516,7 @@ class Config :
                 TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
 
         # ===========================================================================================
-        if MASTER == 'Spip' :
+        if Master == 'Spip' :
             if not User   :
                 User = LocalUser
             if Source in  [ 'TGCC_thredds', 'IDRIS_thredds'] :
@@ -548,7 +544,7 @@ class Config :
                 TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
 
         # ===========================================================================================
-        if ( 'Irene' in MASTER ) or ( 'Rome' in MASTER ) :
+        if ( 'Irene' in Master ) or ( 'Rome' in Master ) :
             ccc_home = os.path.isfile ( subprocess.getoutput ( 'which ccc_home'))
 
             if ldebug :
@@ -573,7 +569,7 @@ class Config :
             LocalGroup = os.path.basename ( os.path.dirname (LocalHome))
 
             if ldebug :
-                print ( f'{MASTER=} {LocalHome=} {LocalGroup=}' )
+                print ( f'{Master=} {LocalHome=} {LocalGroup=}' )
 
             if Source in  [ 'TGCC_thredds', 'IDRIS_thredds'] :
                 IGCM_OUT_name = 'IGCM_OUT'
@@ -622,14 +618,16 @@ class Config :
                 print ( f'{R_FIG}' )
             if not R_GRAF or 'http' in str(R_GRAF) :
                 if ccc_home :
-                    R_GRAF     = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA')
+                    R_GRAF     = os.path.join ( subprocess.getoutput (
+                        'ccc_home --cccwork -d drf -u p86mart'), 'GRAF', 'DATA')
                 else        :
                     R_GRAF     = '/ccc/store/cont003/drf/p86mart'
             if ldebug :
                 print ( f'{R_GRAF}' )
             if not DB          :
                 if ccc_home :
-                    DB         = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg'), 'database')
+                    DB         = os.path.join ( subprocess.getoutput (
+                        'ccc_home --cccwork -d igcmg -u igcmg'), 'database')
                 else        :
                     DB         = '/ccc/store/cont003/igcmg/igcmg/database'
             if ldebug :
@@ -646,7 +644,7 @@ class Config :
                     TmpDir = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
 
         # ===========================================================================================
-        if MASTER in ['SpiritJ', 'SpiritX', 'Spirit'] :
+        if Master in ['SpiritJ', 'SpiritX', 'Spirit'] :
             if not IGCM_OUT_name :
                 IGCM_OUT_name = ''
 
@@ -668,13 +666,13 @@ class Config :
             if not DB         :
                 DB         = os.path.join  ( '/', 'data', 'igcmg', 'database' )
             if not TmpDir     :
-                if MASTER in ['SpiritJ',] :
+                if Master in ['SpiritJ',] :
                     TmpDir = os.path.join ( '/', 'scratchu', LocalUser )
-                if MASTER in ['SpiritX',] :
+                if Master in ['SpiritX',] :
                     TmpDir = os.path.join ( '/', 'scratchx', LocalUser )
 
         # ===========================================================================================
-        if MASTER == 'Jean-Zay' :
+        if Master == 'Jean-Zay' :
             if not User  :
                 User  = os.environ ['USER']
             LocalGroup = os.path.basename ( os.path.dirname ( os.path.expanduser ('~') ))
@@ -725,7 +723,7 @@ class Config :
                 R_OUT = ARCHIVE
             if STORAGE    and not R_FIG :
                 R_FIG = STORAGE
-                
+
         if R_OUT and IGCM_OUT_name :
             R_OUT = os.path.join ( R_OUT, IGCM_OUT_name )
         if R_FIG and IGCM_OUT_name :
@@ -733,7 +731,7 @@ class Config :
 
         if SCRATCHDIR and not R_BUF and IGCM_OUT_name :
             R_BUF  = os.path.join ( SCRATCHDIR, IGCM_OUT_name )
-            
+
         if not IGCM_OUT :
             IGCM_OUT = R_OUT
 
@@ -757,7 +755,6 @@ class Config :
                 R_FIGR      = os.path.join ( R_FIG, L_EXP )
             if R_BUF   and not R_BUFR :
                 R_BUFR      = os.path.join ( R_BUF, L_EXP )
-                
             if R_BUFR  and not R_BUF_KSH   :
                 R_BUF_KSH   = os.path.join ( R_BUFR , 'Out' )
             if R_BUF   and not REBUILD_DIR :
@@ -833,6 +830,7 @@ class Config :
         self.R_FIG               = R_FIG
         self.DB                  = DB
         self.IGCM_OUT            = IGCM_OUT
+        self.IGCM_OUT_name       = IGCM_OUT_name
         self.L_EXP               = L_EXP
         self.R_SAVE              = R_SAVE
         self.R_FIGR              = R_FIGR
@@ -840,7 +838,7 @@ class Config :
         self.REBUILD_DIR         = REBUILD_DIR
         self.POST_DIR            = POST_DIR
         self.R_IN                = R_IN
-        self.MASTER              = MASTER
+        self.Master              = Master
         self.Source              = Source
         self.User                = User
         self.Group               = Group
@@ -876,6 +874,7 @@ class Config :
 
         ### ===============================================================
         ## Add custom attributes
+
         return None
 
 ### =======================================================================

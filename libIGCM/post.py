@@ -23,10 +23,7 @@ personal.
 import os
 from typing import Self, Dict
 import json
-import cftime
 import numpy as np
-import xarray as xr
-import re
 
 import libIGCM
 from libIGCM.options import get_options
@@ -42,7 +39,7 @@ class Config (libIGCM.sys.Config) :
     '''
     def __init__ (self:Self,
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
-                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, LongtName:str|None=None, Comment:str|None=None,
+                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, Comment:str|None=None,
                   Source:str|None=None, MASTER:str|None=None,
                   ConfigCard:str|None=None, RunCard:str|None=None,
                   User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
@@ -77,11 +74,13 @@ class Config (libIGCM.sys.Config) :
                   OCE:str|None=None, ATM:str|None=None,
                   CMIP6_BUF:str|None=None,
                   IGCM_Catalog:str|None=None, IGCM_Catalog_list:list|None=None,
-                  config:libIGCM.sys.Config|None=None, Debug:bool=False,
+                  #config:libIGCM.sys.Config|None=None,
+                  Debug:bool=False,
                   **kwargs) -> None :
 
 
-        def search_catalog (pCatalog:str, pJobName:str|None=None, pShortName:str|None=None, Debug:bool=False) -> dict :
+        def search_catalog (pCatalog:str, pJobName:str|None=None,
+                            pShortName:str|None=None, Debug:bool=False) -> dict|None :
             '''
             Search for JobName or ShortName in a catalog file
             Return the found experiment dictionnary
@@ -89,16 +88,17 @@ class Config (libIGCM.sys.Config) :
             push_stack ( f'search_catalog ( {pCatalog=} {pJobName=} {pShortName=} )' )
             ldebug = OPTIONS['Debug'] or Debug
             if ldebug :
-                    print ( f'Catalog file : {pCatalog=} {pJobName=} {pShortName=}' )
-            zExp_file    = open (pCatalog)
+                print ( f'libIGCM.post.Config.search_catalog : Catalog file : {pCatalog=} {pJobName=} {pShortName=}' )
+            zExp_file    = open (pCatalog, encoding="utf-8", mode='r')
             zExperiments = json.load (zExp_file)
             exp_out=None
             if ldebug :
-                    print ( f'zExperiments : {zExperiments.keys()=}' )
+                print ( f'libIGCM.post.Config.search_catalog : zExperiments : {zExperiments.keys()=}' )
+
             if pJobName is None :
                 if pShortName is not None :
                     if ldebug :
-                            print ( f'searching {pShortName=} in Catalog {pCatalog}')
+                        print ( f'libIGCM.post.Config.search_catalog : searching {pShortName=} in Catalog {pCatalog}')
                     for exp in zExperiments.values() :
                         if ldebug :
                             print ( f'searching {exp=}')
@@ -113,18 +113,20 @@ class Config (libIGCM.sys.Config) :
                                         print ( f'Found {pShortName=} in {pJobName=}')
                                     break
                     if not pJobName :
-                        raise KeyError ( f'libIGCM.post.Config : ShortName={pShortName} not found in Catalog {pCatalog}' )
+                        raise KeyError ( f'libIGCM.post.Config.search_catalog'
+                                        f': ShortName={pShortName} not found in Catalog {pCatalog}' )
             else :
                 if ldebug :
                     print ( f'searching {pJobName=} in Catalog {pCatalog}')
                 if pJobName in zExperiments.keys () :
                     exp_out = zExperiments[pJobName]
                 else :
-                    raise KeyError ( f'libIGCM.post.Config : JobName={pJobName} not found in Catalog {pCatalog}' )
+                    raise KeyError ( f'libIGCM.post.Config.search_catalog'
+                                     f': JobName={pJobName} not found in Catalog {pCatalog}' )
 
             pop_stack ( 'libIGCM.post.search_catalog' )
             return exp_out
-        
+
         ### ===========================================================================================
         ## Read catalog of known simulations
         push_stack ( 'libIGCM.post.__init__')
@@ -133,12 +135,15 @@ class Config (libIGCM.sys.Config) :
         ldebug = OPTIONS['Debug'] or Debug
 
         if ldebug :
-            print ( f'libIGCM.post.Config : {Source    =}' )
-            print ( f'libIGCM.post.Config : {MASTER    =}' )
-            print ( f'libIGCM.post.Config : {User      =}' )
-            print ( f'libIGCM.post.Config : {TGCC_User =}' )
-            print ( f'libIGCM.post.Config : {TGCC_Group=}' )
+            print ( f'libIGCM.post.Config : {Source        =}' )
+            print ( f'libIGCM.post.Config : {MASTER        =}' )
+            print ( f'libIGCM.post.Config : {User          =}' )
+            print ( f'libIGCM.post.Config : {TGCC_User     =}' )
+            print ( f'libIGCM.post.Config : {TGCC_Group    =}' )
             print ( f'libIGCM.post.Config : {TGCC_SshPrefix=}' )
+            print ( )
+            print ( 'libIGCM.post : OPTIONS' )
+            print ( OPTIONS )
 
         self.ARCHIVE              = ARCHIVE
         self.ATM                  = ATM
@@ -178,6 +183,7 @@ class Config (libIGCM.sys.Config) :
         self.OCE                  = OCE
         self.POST_DIR             = POST_DIR
         self.Period               = Period
+        self.PeriodState          = PeriodState
         self.PeriodLength         = PeriodLength
         self.PeriodSE             = PeriodSE
         self.REBUILD_DIR          = REBUILD_DIR
@@ -225,12 +231,15 @@ class Config (libIGCM.sys.Config) :
         exp = None
 
         if ldebug :
-            print ( f'{IGCM_Catalog=}' )
+            print ( f'{self.IGCM_Catalog=}' )
+
         if self.IGCM_Catalog is not None :
             if ldebug :
                 print ( f'Searching for catalog file : {self.IGCM_Catalog=}' )
             if os.path.isfile (self.IGCM_Catalog) :
-                exp = search_catalog (pCatalog=self.IGCM_Catalog, pJobName=self.JobName, pShortName=self.ShortName, Debug=Debug)
+                exp = search_catalog (pCatalog=self.IGCM_Catalog,
+                                      pJobName=self.JobName,
+                                      pShortName=self.ShortName, Debug=Debug)
             else :
                 raise ValueError ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
 
@@ -242,7 +251,13 @@ class Config (libIGCM.sys.Config) :
                     if os.path.isfile (cfile) :
                         if ldebug :
                             print ( f'Reads catalog file : {cfile=}' )
-                        exp = search_catalog (pCatalog=self.IGCM_Catalog, pJobName=self.JobName, pShortName=self.ShortName, Debug=Debug)    
+                        exp = search_catalog (pCatalog=cfile,
+                                              pJobName=self.JobName,
+                                              pShortName=self.ShortName, Debug=Debug)
+                        if exp is not None :
+                            if ldebug :
+                                print ( f'Found {self.JobName=} , {self.ShortName=}' )
+                            break
 
         ## End of catalog search
 
@@ -262,8 +277,6 @@ class Config (libIGCM.sys.Config) :
 
         if ldebug :
             print (f'exp before analysing (2) : {exp=}')
-            #print (f'{len(exp)}')
-
 
         # A revoir : on prend les valeurs de self, puis de exp, puis celles de OPTIONS
         if exp is not None :
@@ -349,7 +362,8 @@ class Config (libIGCM.sys.Config) :
                                      L_EXP=self.L_EXP, R_SAVE=self.R_SAVE, R_FIGR=self.R_FIGR, R_BUF=self.R_BUF,
                                      R_BUFR=self.R_BUFR, R_BUF_KSH=self.R_BUF_KSH,
                                      REBUILD_DIR=self.REBUILD_DIR, POST_DIR=self.POST_DIR,
-                                     ThreddsPrefix=self.ThreddsPrefix, DapPrefix=self.DapPrefix, SshPrefix=self.SshPrefix,
+                                     ThreddsPrefix=self.ThreddsPrefix, DapPrefix=self.DapPrefix,
+                                     SshPrefix=self.SshPrefix,
                                      R_GRAF=self.R_GRAF, DB=self.DB,
                                      IGCM_OUT=self.IGCM_OUT, IGCM_OUT_name=self.IGCM_OUT_name, rebuild=self.rebuild,
                                      TmpDir=self.TmpDir,
@@ -375,13 +389,11 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
     Return a dictionnary from the catalog file
     By defaults, keeps only experiments entries
     '''
-    OPTIONS = get_options ()
-    ldebug= OPTIONS['Debug'] or Debug
-
+    OPTIONS   = get_options ()
+    ldebug    = OPTIONS['Debug'] or Debug
     cata_list = OPTIONS['IGCM_Catalog_list']
     cata_log  = OPTIONS['IGCM_Catalog']
-
-    lcatalog=None
+    lcatalog  = None
 
     if cata_log is not None :
         if ldebug :
@@ -389,7 +401,7 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
         if os.path.isfile (cata_log) :
             if ldebug :
                 print ( f'Catalog file : {cata_log=}' )
-            exp_file = open (cata_log, mode='r')
+            exp_file = open (cata_log, mode='r', encoding="utf-8")
             lcatalog = json.load (exp_file)
         else :
             raise FileNotFoundError ( f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
@@ -402,7 +414,7 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
                 if os.path.isfile (cfile) :
                     if ldebug :
                         print ( f'Reads catalog file : {cfile=}' )
-                exp_file = open (cfile, mode='r')
+                exp_file = open (cfile, mode='r', encoding="utf-8")
                 lcatalog = json.load (exp_file)
 
     if lcatalog is not None and not keep_all :

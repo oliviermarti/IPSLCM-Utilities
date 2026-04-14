@@ -138,7 +138,6 @@ def angle (latA:float|np.ndarray|xr.DataArray, lonA:float|np.ndarray|xr.DataArra
            ) -> float|np.ndarray|xr.DataArray :
     '''
     Angle between AB and AC
-
     '''
     push_stack ('angle')
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#
 '''
 This library handles date computations and convertions in different calendars.
 
@@ -265,9 +265,7 @@ def ConvertFormatToGregorian (date:str) -> str :
     From a yyyy-mm-dd or yyymmdd date format returns a yyymmdd date format
     '''
     push_stack ( f'ConvertFormatToGregorian ( {date=} )' )
-
     zz = PrintDate (*GetYearMonthDay (date), 'Gregorian' )
-
     pop_stack ( f'ConvertFormatToGregorian : {zz}' )
     return zz
 
