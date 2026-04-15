@@ -140,10 +140,12 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.Data
     src_address    = d_rmp ['src_address'].values - 1
     dst_address    = d_rmp ['dst_address'].values - 1
     remap_matrix   = d_rmp ['remap_matrix'][:,0].values
+    dst_lon        = d_rmp['dst_grid_center_lon']
+    dst_lat        = d_rmp['dst_grid_center_lat']
 
     # Get dimensions of source and destination field
-    src_nx, src_ny = d_rmp ['src_grid_dims'].values
-    dst_nx, dst_ny = d_rmp ['dst_grid_dims'].values
+    src_ny, src_nx = d_rmp ['src_grid_dims'].values
+    dst_ny, dst_nx = d_rmp ['dst_grid_dims'].values
 
     if ptab.shape[-2:] != (src_ny, src_nx) :
         print ('ptab dimensions : ', ptab.shape[-2:])
@@ -153,13 +155,9 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.Data
 
     if OPTIONS['Debug'] or Debug :
         print ('grid sizes      : ', src_grid_size, dst_grid_size)
-    if OPTIONS['Debug'] or Debug :
         print ('num_links       : ', num_links)
-    if OPTIONS['Debug'] or Debug :
         print ('address sizes   : ', src_address.shape, dst_address.shape, remap_matrix.shape)
-    if OPTIONS['Debug'] or Debug :
         print ('src dimensions  : ', src_ny, src_nx)
-    if OPTIONS['Debug'] or Debug :
         print ('dst dimensions  : ', dst_ny, dst_nx)
 
     # Get information to create the destination field
@@ -182,7 +180,6 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.Data
 
     if OPTIONS['Debug'] or Debug :
         print ('dims 2D         : ', src_dims_2D, dst_dims_2D)
-    if OPTIONS['Debug'] or Debug :
         print ('dims 1D         : ', src_dims_1D, dst_dims_1D)
 
     src_coords_2D = ptab.coords
@@ -199,7 +196,6 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.Data
 
     if OPTIONS['Debug'] or Debug :
         print ("shape fields 1D : ", src_field_1D.shape, dst_field_1D.shape, dst_mask_1D.shape)
-    if OPTIONS['Debug'] or Debug :
         print ("shape fields 1D : ", np.prod(src_field_1D.shape),
                np.prod(dst_field_1D.shape), np.prod(dst_mask_1D.shape) )
 
@@ -211,12 +207,24 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.Data
     dst_field_2D = np.reshape   (dst_field_1D, dst_shape_2D)
     dst_field_2D = xr.DataArray (dst_field_2D, dims=dst_dims_2D, coords=dst_coords_2D)
 
+    # Set lon/lat values of the interpolate field
+    dst_lon_2D = np.reshape   (dst_lon.values, dst_shape_2D[-2:])
+    dst_lat_2D = np.reshape   (dst_lat.values, dst_shape_2D[-2:])
+
+    dst_lon_2D = xr.DataArray (dst_lon_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:])
+    dst_lat_2D = xr.DataArray (dst_lat_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:])
+    dst_lon.name = 'longitude'
+    dst_lat.name = 'latitude'
+    dst_lon_2D.attrs.update ( {'unit':'degree_east' , 'long_name':'Longitude', 'axis':'X'} )
+    dst_lat_2D.attrs.update ( {'unit':'degree_north', 'long_name':'Latitude' , 'axis':'Y'} )
+
+
     # Copy attributes from source field to destination
     for attr in ptab.attrs :
         dst_field_2D.attrs [attr] = ptab.attrs [attr]
 
     pop_stack ( "rmp_remap")
-    return dst_field_2D
+    return dst_field_2D, dst_lon_2D, dst_lat_2D
 
 def progress (percent=0, width=30) :
     '''Display a progress bar.'''
