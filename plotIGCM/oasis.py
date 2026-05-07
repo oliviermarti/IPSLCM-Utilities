@@ -115,7 +115,8 @@ def compute_links (remap_matrix:np.ndarray|xr.DataArray,
     pop_stack ( 'compute_links')
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
-def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.DataArray :
+def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False
+               ) -> Tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     Remap a field using OASIS rmpfile
 
@@ -211,13 +212,10 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False) -> xr.Data
     dst_lon_2D = np.reshape   (dst_lon.values, dst_shape_2D[-2:])
     dst_lat_2D = np.reshape   (dst_lat.values, dst_shape_2D[-2:])
 
-    dst_lon_2D = xr.DataArray (dst_lon_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:])
-    dst_lat_2D = xr.DataArray (dst_lat_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:])
-    dst_lon.name = 'longitude'
-    dst_lat.name = 'latitude'
-    dst_lon_2D.attrs.update ( {'unit':'degree_east' , 'long_name':'Longitude', 'axis':'X'} )
-    dst_lat_2D.attrs.update ( {'unit':'degree_north', 'long_name':'Latitude' , 'axis':'Y'} )
-
+    dst_lon_2D = xr.DataArray (dst_lon_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:], name='longitude',
+                               attrs={'unit':'degree_east' , 'long_name':'Longitude', 'axis':'X'} )
+    dst_lat_2D = xr.DataArray (dst_lat_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:], name='latitude',
+                               attrs={'unit':'degree_north', 'long_name':'Latitude' , 'axis':'Y'} )
 
     # Copy attributes from source field to destination
     for attr in ptab.attrs :
@@ -334,10 +332,10 @@ def en2geo (pte, ptn, glam, gphi) :
     pop_stack ( 'en2geo' )
     return pxx, pyy, pzz
 
-## Sommes des poids à l'arrivée
+## Sum of weights on source and destination points
 def sum_matrix (rmp) :
     '''
-    Computes sum of weights on souce and destination points
+    Computes sum of weights on source and destination points
 
     rmp : an xarray dataset corresponding to a rmp file
           Weight files are at OASIS-MCT format (matching ESMF or CDO weights files format)

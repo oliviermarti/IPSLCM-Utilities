@@ -23,7 +23,6 @@ import copy
 from typing import Self, Dict, Any
 from collections.abc import ItemsView, KeysView, ValuesView
 
-
 ## ============================================================================
 def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=0) -> str:
     '''
@@ -115,8 +114,7 @@ class Container :
     def __update__(
             self: Self,
             dico: Dict[str, Any]|Self|None = None,
-            **kwargs: Any
-    ) -> None:
+            **kwargs: Any) -> None:
         '''Backward-compatible alias to update the container content.'''
         return self.update(dico=dico, **kwargs)
 

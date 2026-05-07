@@ -77,7 +77,9 @@ class Config (libIGCM.sys.Config) :
                   #config:libIGCM.sys.Config|None=None,
                   Debug:bool=False,
                   **kwargs) -> None :
-
+        """
+        Init function of the Config class in libIGM.post
+        """
 
         def search_catalog (pCatalog:str, pJobName:str|None=None,
                             pShortName:str|None=None, Debug:bool=False) -> dict|None :

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 ## ===========================================================================
 ##
 ##  This software is governed by the CeCILL  license under French law and
@@ -124,9 +123,9 @@ def zgr_z (config:str='orca2') -> tuple[xr.DataArray,xr.DataArray,xr.DataArray,x
 
     gdepw [0] = 0.                    # force first w-level to be exactly at zero
 
-    gdept = xr.DataArray (gdept, dims=('gdept',), coords=(gdept,))
-    e3t   = xr.DataArray (e3t  , dims=('gdept',), coords=(gdept,))
-    gdepw = xr.DataArray (gdepw, dims=('gdepw',), coords=(gdepw,))
-    e3w   = xr.DataArray (e3w  , dims=('gdepw',), coords=(gdepw,))
+    gdept = xr.DataArray (gdept, dims=('z_c',), coords=(gdept,))
+    e3t   = xr.DataArray (e3t  , dims=('z_c',), coords=(gdept,))
+    gdepw = xr.DataArray (gdepw, dims=('z_f',), coords=(gdepw,))
+    e3w   = xr.DataArray (e3w  , dims=('z_f',), coords=(gdepw,))
 
     return gdept, gdepw, e3t, e3w

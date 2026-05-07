@@ -10,21 +10,25 @@ Includes ColorShading, ColorLine, RCPColorLine, RCPColorShading
 
 '''
 import types
-from typing import Self, Any, Optional, Type
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+
 # plt.rcParams ['axes.prop_cycle'] = plt.cycler ('color', IPCC.ColorLineHexa )
 
 def color2hex ( r:int, g:int, b:int ) -> str :
-    return "#{:02X}{:02X}{:02X}".format ( int(r*255), int(g*255), int(b*255) )
+    """
+    Convert RGB values to a hexadecimal color string.
+    """
+    return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
 
 Color = types.SimpleNamespace ()
 Style = types.SimpleNamespace ()
 
 # Shading
-Color.Shading = [ 
+Color.Shading = [
     np.array ([128, 128, 128])/255,
     np.array ([ 91, 174, 178])/255,
     np.array ([204, 174, 113])/255,
@@ -46,8 +50,6 @@ Style.Line = ['-',]*len(Color.Line)
 Style.Line.extend( ['-.']*len(Color.Line))
 
 Color.Line.extend(Color.Line)
-
-
 Color.LineHexa = list ( map ( lambda x: color2hex (*x), Color.Line ) )
 
 # Markers
@@ -64,7 +66,6 @@ Marker = [
     {"marker":"v", "fillstyle":"none"},
     {"marker":"<", "fillstyle":"none"},
     {"marker":">", "fillstyle":"none"}, ]
-
 
 # RCPs
 RCP = types.SimpleNamespace ()
@@ -84,18 +85,24 @@ RCP.ColorShading = {
     'RCP6.0':np.array([204, 174, 113])/255,
     'RCP4.5':np.array([146, 197, 222])/255,
     'RCP2.6':np.array([ 67, 147, 195])/255 }
-    
-RCP.ColorShadingHexa = dict (zip (RCP.ColorShading.keys(), list(map(lambda x: color2hex (*x), RCP.ColorShading.values()))))
+
+RCP.ColorShadingHexa = dict (zip (RCP.ColorShading.keys(), \
+                                  list(map(lambda x: color2hex (*x), RCP.ColorShading.values()))))
 
 def c2c (tab) :
+    """
+    Convert a list of RGB colors to a list of hex colors
+    """
     ztab = tab
     if not isinstance (ztab, np.ndarray):
         ztab = np.array (ztab, dtype='float')
     if len (ztab.shape) == 1 :
         ztab = np.reshape (ztab, (ztab.shape[0]//3, 3))
     return ztab
-        
-def create_colormap (colors, position=None, bit=True, reverse=False, name='custom_colormap', liste=False, continuous=False, RGB=True, Debug=False):
+
+def create_colormap (colors, position=None, bit=True, reverse=False,
+                     name='custom_colormap', liste=False, continuous=False,
+                     RGB=True) -> LinearSegmentedColormap|ListedColormap :
     """
     returns a linear custom colormap
 
@@ -125,8 +132,7 @@ def create_colormap (colors, position=None, bit=True, reverse=False, name='custo
     """
 
     zfact = 255 if RGB else 1
-    
-    from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+
     if not isinstance (colors, np.ndarray):
         colors = np.array (colors, dtype='float')
     if liste or len (colors.shape) == 1 :
@@ -145,7 +151,7 @@ def create_colormap (colors, position=None, bit=True, reverse=False, name='custo
     if bit:
         colors[:] = [tuple(map(lambda x: x / zfact, color)) for color in colors]
     cdict = {'red':[], 'green':[], 'blue':[]}
-    if continuous : 
+    if continuous :
         for pos, color in zip (position, colors):
             cdict ['red']  .append((pos, color[0], color[0]))
             cdict ['green'].append((pos, color[1], color[1]))
@@ -155,22 +161,22 @@ def create_colormap (colors, position=None, bit=True, reverse=False, name='custo
         return ListedColormap (colors)
     #
 
-def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+def truncate_colormap(zcmap, minval=0.0, maxval=1.0, n=100):
     '''
     https://stackoverflow.com/a/18926541
     '''
-    if isinstance(cmap, str):
-        cmap = plt.get_cmap(cmap)
+    if isinstance(zcmap, str):
+        zcmap = plt.get_cmap(zcmap)
     new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
-        cmap(np.linspace(minval, maxval, n)))
+        f'trunc({zcmap.name},{minval:.2f},{maxval:.2f})',
+        zcmap(np.linspace(minval, maxval, n)))
     return new_cmap
-    
 
 cmap = types.SimpleNamespace ()
 
 # Shading
-cmap.colors_shading = [[128, 128, 128], [91, 174, 178], [204, 174, 113], [191, 191, 191], [67, 147, 195], [223, 237, 195]]
+cmap.colors_shading = [[128, 128, 128], [91, 174, 178], [204, 174, 113], [191, 191, 191],
+                       [67, 147, 195], [223, 237, 195]]
 cmap.shading   =  create_colormap (cmap.colors_shading, reverse=False, name='shading'  )
 cmap.shading_r =  create_colormap (cmap.colors_shading, reverse=False, name='shading_r'  )
 
@@ -230,7 +236,8 @@ cmap.precip_10_r = create_colormap (cmap.colors_precip_10, reverse=True , name='
 
 # Precip 11 colors
 cmap.colors_precip_11 = [[ 84,  48,   5], [140,  81,  10], [191, 129,  45], [223, 194, 125], [246, 232, 195],
-                         [245, 245, 245], [199, 234, 229], [128, 205, 193], [ 53, 151, 143], [  1, 102,  94], [0, 60, 48]]
+                         [245, 245, 245], [199, 234, 229], [128, 205, 193], [ 53, 151, 143], [  1, 102,  94],
+                         [0, 60, 48]]
 cmap.precip_11   = create_colormap (cmap.colors_precip_11, reverse=False, name='precip_11'  )
 cmap.precip_11_r = create_colormap (cmap.colors_precip_11, reverse=True , name='precip_11_r')
 
@@ -244,7 +251,8 @@ cmap.temp_5   = create_colormap (cmap.colors_temp_5, reverse=False, name='temp_5
 cmap.temp_5_r = create_colormap (cmap.colors_temp_5, reverse=True , name='temp_5_r')
 
 # Temp 6 colors
-cmap.colors_temp_6 = [[ 33, 102, 172], [103, 169, 207], [209, 229, 240], [253, 219, 199], [239, 138,  98], [178,  24,  43]]
+cmap.colors_temp_6 = [[ 33, 102, 172], [103, 169, 207], [209, 229, 240], [253, 219, 199],
+                      [239, 138,  98], [178,  24,  43]]
 cmap.temp_6   = create_colormap (cmap.colors_temp_6, reverse=False, name='temp_6'  )
 cmap.temp_6_r = create_colormap (cmap.colors_temp_6, reverse=True , name='temp_6_r')
 
@@ -255,7 +263,7 @@ cmap.temp_7   = create_colormap (cmap.colors_temp_7, reverse=False, name='temp_7
 cmap.temp_7_r = create_colormap (cmap.colors_temp_7, reverse=True , name='temp_7_r')
 
 # Temp 8 colors
-cmap.colors_temp_8 = [[ 33, 102, 172],  [67, 147, 195], [146, 197, 222], [209, 229, 240], 
+cmap.colors_temp_8 = [[ 33, 102, 172],  [67, 147, 195], [146, 197, 222], [209, 229, 240],
                       [253, 219, 199], [244, 165, 130], [214,  96,  77], [178,  24,  43]]
 cmap.temp_8   = create_colormap (cmap.colors_temp_8, reverse=False, name='temp_8'  )
 cmap.temp_8_r = create_colormap (cmap.colors_temp_8, reverse=True , name='temp_8_r')
@@ -274,7 +282,8 @@ cmap.temp_10_r = create_colormap (cmap.colors_temp_10, reverse=True , name='temp
 
 # Temp 11 colors
 cmap.colors_temp_11 = [[  5,  48,  97], [ 33, 102, 172], [ 67, 147, 195], [146, 197, 222], [209, 229, 240],
-                       [247, 247, 247], [253, 219, 199], [244, 165, 130], [214,  96,  77], [178,  24,  43], [103,   0,  31]]
+                       [247, 247, 247], [253, 219, 199], [244, 165, 130], [214,  96,  77], [178,  24,  43],
+                       [103,   0,  31]]
 cmap.temp_11   = create_colormap (cmap.colors_temp_11, reverse=False, name='temp_11'  )
 cmap.temp_11_r = create_colormap (cmap.colors_temp_11, reverse=True , name='temp_11_r')
 
@@ -428,38 +437,42 @@ cmap.MultiCat_5   = create_colormap (cmap.colors_MultiCat_5, reverse=False, name
 cmap.MultiCat_5_r = create_colormap (cmap.colors_MultiCat_5, reverse=True , name='MultiCat_5_r')
 
 
-def multicat (ncolors:int=19, trunk:str='high', reverse:bool=False, name:str='MultiCat', Debug=False) -> mpl.colors.ListedColormap :
+def multicat (ncolors:int=19, trunk:str='high', reverse:bool=False, name:str='MultiCat',
+              Debug=False) -> mpl.colors.ListedColormap :
     '''
     Builds a multicategory colormap
     '''
     dd = 2
-        
+
     nn     = ((ncolors-1)//4+1)*2
     nc     = nn-nn//2 # Number of value by color
     nrange = np.arange (nc, 0, -1) -1
 
-    
-    Green  = [ (np.array(cmap.colors_Green_5 [0]) - np.array(cmap.colors_Green_5 [-1])) * n/(nc+dd) + np.array(cmap.colors_Green_5 [-1]) for n in nrange ]
-    Purple = [ (np.array(cmap.colors_Purple_5[0]) - np.array(cmap.colors_Purple_5[-1])) * n/(nc+dd) + np.array(cmap.colors_Purple_5[-1]) for n in nrange ]
-    Red    = [ (np.array(cmap.colors_Red_5   [0]) - np.array(cmap.colors_Red_5   [-1])) * n/(nc+dd) + np.array(cmap.colors_Red_5   [-1]) for n in nrange ]
-    Blue   = [ (np.array(cmap.colors_Blue_5  [0]) - np.array(cmap.colors_Blue_5  [-1])) * n/(nc+dd) + np.array(cmap.colors_Blue_5  [-1]) for n in nrange ]
-    
+
+    Green  = [ (np.array(cmap.colors_Green_5 [0]) - np.array(cmap.colors_Green_5 [-1])) * n/(nc+dd)
+              + np.array(cmap.colors_Green_5 [-1]) for n in nrange ]
+    Purple = [ (np.array(cmap.colors_Purple_5[0]) - np.array(cmap.colors_Purple_5[-1])) * n/(nc+dd)
+              + np.array(cmap.colors_Purple_5[-1]) for n in nrange ]
+    Red    = [ (np.array(cmap.colors_Red_5   [0]) - np.array(cmap.colors_Red_5   [-1])) * n/(nc+dd)
+              + np.array(cmap.colors_Red_5   [-1]) for n in nrange ]
+    Blue   = [ (np.array(cmap.colors_Blue_5  [0]) - np.array(cmap.colors_Blue_5  [-1])) * n/(nc+dd)
+              + np.array(cmap.colors_Blue_5  [-1]) for n in nrange ]
+
     MultiCat = []
     MultiCat.extend (Red   )
     MultiCat.extend (Purple)
     MultiCat.extend (Blue  )
     MultiCat.extend (Green )
-    
+
     nd     =  len(MultiCat) - ncolors
-    
+
     if trunk == 'low'  : MultiCat = MultiCat [nd:]
     if trunk == 'high' : MultiCat = MultiCat [:ncolors]
     if trunk == 'both' : MultiCat = MultiCat [nd//2:ncolors+nd//2]
 
     if Debug :
         print ( f"{ncolors=} {nn=} {nc=} {nd=} {ncolors-nn*2+2=} {ncolors-nn+1=} {len(MultiCat)=}" )
-    
+
     MultiCat = create_colormap (MultiCat, reverse=reverse, name=name )
-    
+
     return MultiCat
-    

@@ -128,10 +128,11 @@ def push_stack (string:str) -> None :
     pop_stack, return_stack
     '''
     OPTIONS['Depth'] += 1
-    if OPTIONS['Trace'] :
-        print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
-    #
     OPTIONS['Stack'].append (string)
+
+    if OPTIONS['Trace'] :
+        #print ( '  '*(OPTIONS['Depth']-1), f'-->{__name__}.{string}' )
+        print ( f"-->{OPTIONS['Stack']}" )
     #
     if OPTIONS['Timing'] :
         if OPTIONS['t0'] :
@@ -166,7 +167,8 @@ def pop_stack (string:str) -> None :
             if dt >= 1 :
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else :
-            print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            #print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            print ( f"<--{OPTIONS['Stack']}")
     #
     OPTIONS['Depth'] -= 1
     OPTIONS['Stack'].pop ()

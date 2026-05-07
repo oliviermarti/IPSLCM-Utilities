@@ -19,28 +19,26 @@ data loss, or any other consequences caused directly or indirectly by
 the usage of his software by incorrectly or partially configured
 personal.
 '''
-
-from typing import Any
-
 import itertools
 
 import numpy as np
 import xarray as xr
 
 import matplotlib
+import matplotlib.colors
 import matplotlib.pyplot as plt
 from matplotlib.patheffects import Stroke, Normal
 from matplotlib.projections import PolarAxes
 import mpl_toolkits.axisartist.floating_axes as FA
 import mpl_toolkits.axisartist.grid_finder   as GF
 
-from libIGCM.options import push_stack as push_stack
-from libIGCM.options import pop_stack  as pop_stack
+from libIGCM.options import push_stack
+from libIGCM.options import pop_stack
 
 RPI   = np.pi
 RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
-REPSI = np.finfo (1.0).eps
+REPSI = np.finfo(np.float64).resolution.item()
 
 def pval (r:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
     '''p-value for a correlation r and a sample size n'''
@@ -48,7 +46,7 @@ def pval (r:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> f
 
 def rcor (p:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
     '''correlation r critical for a p-value p and and a sample size n'''
-    return np.sqrt ((1-p)/(n-1)) 
+    return np.sqrt ((1-p)/(n-1))
 
 def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
               lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray,
@@ -59,14 +57,15 @@ def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataA
     arg      = ( np.sin (RAD*lat1) * np.sin (RAD*lat2)
                + np.cos (RAD*lat1) * np.cos (RAD*lat2) *
                  np.cos(RAD*(lon1-lon2)) )
-    
+
     zdistance = np.arccos (arg) * radius
-    
+
     return zdistance
 
 def aire_triangle (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.DataArray,
                    lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
-                   lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
+                   lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray
+                   ) -> float|np.ndarray|xr.DataArray :
     '''
     Aire of a triangle on the sphere
     Girard's formula
@@ -75,25 +74,27 @@ def aire_triangle (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.
     b = distance (lat1 , lon1, lat2 , lon2)
     c = distance (lat2 , lon2, lat0 , lon0)
 
-    arg_alpha = (np.cos(a) - np.cos(b)*np.cos(c)) / ( np.sin(b)*np.sin(c) ) 
-    arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / ( np.sin(a)*np.sin(c) ) 
-    arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / ( np.sin(a)*np.sin(b) ) 
+    arg_alpha = (np.cos(a) - np.cos(b)*np.cos(c)) / ( np.sin(b)*np.sin(c) )
+    arg_beta  = (np.cos(b) - np.cos(a)*np.cos(c)) / ( np.sin(a)*np.sin(c) )
+    arg_gamma = (np.cos(c) - np.cos(a)*np.cos(b)) / ( np.sin(a)*np.sin(b) )
 
-    alpha = np.arccos ( arg_alpha ) 
-    beta  = np.arccos ( arg_beta  ) 
+    alpha = np.arccos ( arg_alpha )
+    beta  = np.arccos ( arg_beta  )
     gamma = np.arccos ( arg_gamma )
 
-    S = (alpha + beta + gamma - np.pi)
+    S = alpha + beta + gamma - np.pi
 
     return S
 
-def aire_maille (bounds_lat:xr.DataArray, bounds_lon:xr.DataArray, vertex:str|None=None ) :
+def aire_maille (bounds_lat:xr.DataArray, bounds_lon:xr.DataArray,
+                 vertex:str|None=None ) :
     '''
     Aire of a grid box on the sphere
     '''
     push_stack ( 'aire_maille')
-    if not vertex : vertex = bounds_lat.dims[-1]
-        
+    if not vertex :
+        vertex = bounds_lat.dims[-1] # pyright: ignore[reportAssignmentType]
+
     S1 = aire_triangle ( bounds_lat[{vertex:0}], bounds_lon[{vertex:0}],
                          bounds_lat[{vertex:1}], bounds_lon[{vertex:1}],
                          bounds_lat[{vertex:2}], bounds_lon[{vertex:2}] )
@@ -119,31 +120,31 @@ def cmap_long (cmap, ncolors:int) :
     for nn in range (ncolors) : colors[nn,:]= cmap (nn%nc)
 
     # Creation d'un objet colormap
-    cmap_long =  matplotlib.colors.ListedColormap (colors)
+    zcmap_long =  matplotlib.colors.ListedColormap (colors)
 
     pop_stack ('cmap_long')
-    return cmap_long
+    return zcmap_long
 
 def rgb2hex (r,g,b) :
     '''Converti du RGB décimal (valeurs dans [0,255]) vers HEXA [#00,#FF]'''
     push_stack ( 'rgb2hex')
-    zres =  "#{:02x}{:02x}{:02x}".format(r,g,b)
+    zres =  f"#{r:02x}{g:02x}{b:02x}"
     pop_stack  ( f'rgb2hex : {zres = }')
     return zres
 
 def hex2rgb (hexcode) :
     '''Converti RGB HEXA [#00,#FF] vers RGB décimal [0-255]'''
-    push_stack ( ' ')
-    zres = tuple (map(ord,hexcode[1:].decode('hex')))
-    pop_stack  ( f'{zres = }')
+    push_stack ( 'hex2rgb')
+    zres = tuple (int(hexcode[i:i+2], 16) for i in (1, 3, 5))
+    pop_stack  ( f'hex2rgb: {zres = }')
     return zres
 
 def color2hex (r, g, b) :
-    '''Converti du RGB fraactionaire (valeurs dans [0,1]) vers HEXA'''
+    '''Converti du RGB fractionaire (valeurs dans [0,1]) vers HEXA'''
     push_stack ( 'color2hex')
-    zres = "#{:02X}{:02X}{:02X}".format( int(r*255), int(g*255), int(b*255) )
+    zres = f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
     pop_stack  ( f'color2hex: {zres =}')
-    return
+    return zres
 
 def total_seconds (timedelta):
     """Convert timedeltas to seconds
@@ -178,26 +179,39 @@ def total_seconds (timedelta):
     return seconds
 
 
-def zebra_frame(self, lw:int=3, crs=None, zorder:int|None=None, iFlag_outer_frame_in:bool|None=None) -> None :    
+def zebra_frame(self, lw:int=3, crs=None, zorder:int|None=None, iFlag_outer_frame_in:bool|None=None) -> None :
+    """Draw alternating black and white frame segments around the map extent.
+    
+    Parameters
+    ----------
+    lw : int, optional
+        Line width for frame segments. Default is 3.
+    crs : optional
+        Coordinate reference system for the plot.
+    zorder : int or None, optional
+        Z-order for drawing. Default is None.
+    iFlag_outer_frame_in : bool or None, optional
+        Flag to use map projection extent. Default is None.
+    """
     # Alternate black and white line segments
     bws = itertools.cycle(["k", "w"])
     self.spines["geo"].set_visible(False)
-    
+
     if iFlag_outer_frame_in is not None:
-        #get the map spatial reference        
+        #get the map spatial reference
         left, right, bottom, top = self.get_extent()
         crs_map = self.projection
         xticks  = np.arange(left, right+(right-left)/9, (right-left)/8)
         yticks  = np.arange(bottom, top+(top-bottom)/9, (top-bottom)/8)
-        #check spatial reference are the same           
-        pass
-    else:        
+        #check spatial reference are the same
+
+    else:
         crs_map =  crs
         xticks  = sorted([*self.get_xticks()])
-        xticks  = np.unique(np.array(xticks))        
+        xticks  = np.unique(np.array(xticks))
         yticks  = sorted([*self.get_yticks()])
-        yticks  = np.unique(np.array(yticks))        
-        
+        yticks  = np.unique(np.array(yticks))
+
     for ticks, which in zip([xticks, yticks], ["lon", "lat"]):
         for idx, (start, end) in enumerate(zip(ticks, ticks[1:])):
             bw = next(bws)
@@ -207,11 +221,12 @@ def zebra_frame(self, lw:int=3, crs=None, zorder:int|None=None, iFlag_outer_fram
             else:
                 xs = [[xticks[0], xticks[0]], [xticks[-1], xticks[-1]]]
                 ys = [[start, end], [start, end]]
-                
+
                 # For first and last lines, used the "projecting" effect
                 capstyle = "butt" if idx not in (0, len(ticks) - 2) else "projecting"
                 for (xx, yy) in zip(xs, ys):
-                    self.plot(xx, yy, color=bw, linewidth=max(0, lw - self.spines["geo"].get_linewidth()*2), clip_on=False,
+                    self.plot(xx, yy, color=bw,
+                        linewidth=max(0, lw - self.spines["geo"].get_linewidth()*2), clip_on=False,
                         transform=crs_map, zorder=zorder, solid_capstyle=capstyle,
                         # Add a black border to accentuate white segments
                         path_effects=[
@@ -226,13 +241,13 @@ class TaylorDiagram (object) :
     Plot model standard deviation and correlation to reference (data)
     sample in a single-quadrant polar plot, with r=stddev and
     theta=arccos(correlation).
-    
+
     Based on Copin's implementation in Python.
-    Co-authors : 
+    Co-authors :
     - "Yannick Copin <yannick.copin@laposte.net>"
     - "Pritthijit Nath <pritthijit.nath@icloud.com>"
 
-    Useful links : 
+    Useful links :
     - https://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2000JD900719
     - http://www-pcmdi.llnl.gov/about/staff/Taylor/CV/Taylor_diagram_primer.htm
     - https://gist.github.com/ycopin/3342888
@@ -253,7 +268,7 @@ class TaylorDiagram (object) :
         * srange: stddev axis extension, in units of *refstd*
         * extend: extend diagram to negative correlations
         """
-        
+
         self.refstd = refstd            # Reference standard deviation
 
         tr = PolarAxes.PolarTransform ()
@@ -359,58 +374,58 @@ class TaylorDiagram (object) :
         x = np.linspace (0, 4*np.pi, 100)
         data = np.sin (x)
         refstd = data.std (ddof=1)           # Reference standard deviation
-        
+
         # Generate models
         m1 = data + 0.2*np.random.randn (len(x))     # Model 1
         m2 = 0.8*data + .1*np.random.randn (len(x))  # Model 2
         m3 = np.sin (x-np.pi/10)                     # Model 3
-        
+
         # Compute stddev and correlation coefficient of models
         samples = np.array ([ [m.std(ddof=1), np.corrcoef (data, m)[0, 1]]
                             for m in (m1, m2, m3)])
-        
+
         fig = plt.figure (figsize=(10, 4))
-        
+
         ax1 = fig.add_subplot (1, 2, 1, xlabel='X', ylabel='Y')
         # Taylor diagram
         dia = TaylorDiagram (refstd, fig=fig, rect=122, label="Reference",
                             srange=(0.5, 1.5))
-        
-        colors = plt.matplotlib.cm.jet (np.linspace(0, 1, len(samples)))
-        
+
+        colors = matplotlib.cm.jet (np.linspace(0, 1, len(samples))) # pyright: ignore[reportAttributeAccessIssue]
+
         ax1.plot(x, data, 'ko', label='Data')
         for i, m in enumerate ([m1, m2, m3]):
             ax1.plot (x, m, c=colors[i], label=f'Model {i+1}' )
             ax1.legend (numpoints=1, prop=dict(size='small'), loc='best')
-        
+
         # Add the models to Taylor diagram
         for i, (stddev, corrcoef) in enumerate (samples):
             dia.add_sample (stddev, corrcoef,
-                        marker='$%d$' % (i+1), ms=10, ls='',
+                        marker=f'${i+1}$', ms=10, ls='',
                         mfc=colors[i], mec=colors[i],
                         label=f"Model {i+1}" )
-            
+
         # Add grid
         dia.add_grid ()
-        
+
         # Add RMS contours, and label them
         contours = dia.add_contours (colors='0.5')
         plt.clabel (contours, inline=1, fontsize=10, fmt='%.2f')
-        
+
         # Add a figure legend
         fig.legend (dia.samplePoints,
                 [ p.get_label() for p in dia.samplePoints ],
                 numpoints=1, prop=dict(size='small'), loc='upper right')
 
         pop_stack  ('test1')
-        return 
-    
+        return
+
     def test2 (self) :
         """
         Climatology-oriented example (after iteration w/ Michael A. Rawlins).
         """
         push_stack ('test2')
-        
+
         # Reference std
         stdref = 48.491
 
@@ -424,26 +439,26 @@ class TaylorDiagram (object) :
                    [38.449, 0.342, "Model G"],
                    [35.807, 0.609, "Model H"],
                    [17.831, 0.360, "Model I"]]
-            
+
         fig = plt.figure ()
-        
+
         dia = TaylorDiagram (stdref, fig=fig, label='Reference', extend=True)
         dia.samplePoints[0].set_color('r')  # Mark reference point as a red star
-        
+
         # Add models to Taylor diagram
         for i, (stddev, corrcoef, name) in enumerate (samples):
             dia.add_sample(stddev, corrcoef,
-                        marker='$%d$' % (i+1), ms=10, ls='',
+                        marker=f'${i+1}$', ms=10, ls='',
                         mfc='k', mec='k',
                         label=name)
-            
+
         # Add RMS contours, and label them
         contours = dia.add_contours(levels=5, colors='0.5')  # 5 levels in grey
         plt.clabel (contours, inline=1, fontsize=10, fmt='%.0f')
-        
-        dia.add_grid ()                                  # Add grid
-        dia._ax.axis[:].major_ticks.set_tick_out (True)  # Put ticks outward
-        
+
+        dia.add_grid ()                                 # Add grid
+        dia.ax.axis[:].major_ticks.set_tick_out (True)  # Put ticks outward
+
         # Add a figure legend and title
         fig.legend (dia.samplePoints,
                 [ p.get_label() for p in dia.samplePoints ],

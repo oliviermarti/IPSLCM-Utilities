@@ -204,7 +204,7 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
 
     # Detect sign changes in (ytab - y0) along the specified dimension.
     # sc will be 1 where a sign change occurs, 0 elsewhere.
-    sc = np.abs (np.sign(ytab-y0).diff(dim=dim)).astype(int)
+    sc = np.abs ( (np.sign(ytab-y0)).diff(dim=dim)).astype(int)
 
     if   'back' in  direction :
         # Search backward: find the LAST sign change

@@ -111,7 +111,7 @@
 
     "TR6AV-Sr03":
     {	"JobName"       :"TR6AV-Sr03",
-	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"Sr03", "ShortName":"Sr03 CM6.0 Veg", "ExperimentName":"Holocene", "ModelName":"IPSL CM6 Veg",
+	"SpaceName"     :"PROD", "TagName":"IPSLCM6", "ShortName":"Sr03 CM6.0 Veg", "ExperimentName":"Holocene", "ModelName":"IPSL CM6 Veg",
 	"TGCC_User"     :"p86mart", "TGCC_Group":"gen2212",
 	"YearBegin"     : 2000,  "YearEnd":7999,
 	"CalendarType"  :"leap",

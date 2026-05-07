@@ -260,8 +260,10 @@ class Config :
                   OCE:str|None=None, ATM:str|None=None,
                   CMIP6_BUF:str|None=None,
                   Debug:bool=False,
-                  **kwargs) -> None : # pylint: disable=missing-function-docstring
-
+                  **kwargs) -> None :
+        """
+        Init function of the Config class in libIGM.sys
+        """
         OPTIONS = get_options ()
         ldebug = OPTIONS['Debug'] or Debug
 
@@ -328,7 +330,7 @@ class Config :
 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # To keep capitals
+            MyReader.optionxform = str # pyright: ignore[reportGeneralTypeIssues] # To keep capitals
             MyReader.read (ConfigCard)
 
             if not JobName        :
@@ -355,7 +357,7 @@ class Config :
 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # To keep capitals
+            MyReader.optionxform = str # pyright: ignore[reportGeneralTypeIssues] # To keep capitals
 
             MyReader.read (RunCard)
 
@@ -440,7 +442,7 @@ class Config :
             #    Group = TGCC_Group
 
             if not IGCM_OUT_name :
-                IGCM_out_name = 'IGCM_OUT'
+                IGCM_OUT_name = 'IGCM_OUT'
             if not SshPrefix :
                 SshPrefix = OPTIONS['TGCC_SshPrefix']
             if SshPrefix is not None and TGCC_Group is not None and TGCC_User is not None :
@@ -466,7 +468,7 @@ class Config :
                 Group = IDRIS_Group
 
             if not IGCM_OUT_name :
-                IGCM_out_name = 'IGCM_OUT'
+                IGCM_OUT_name = 'IGCM_OUT'
             if not SshPrefix :
                 SshPrefix = OPTIONS['IDRIS_SshPrefix']
 
@@ -842,7 +844,6 @@ class Config :
         self.Source              = Source
         self.User                = User
         self.Group               = Group
-        self.IGCM_OUT_name       = IGCM_OUT_name
         self.rebuild             = rebuild
         self.TmpDir              = TmpDir
         self.TGCC_User           = TGCC_User

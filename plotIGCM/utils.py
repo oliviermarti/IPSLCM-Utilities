@@ -422,14 +422,13 @@ def get_comp (varName:str) -> Literal['OCE', 'ICE', 'ATM', 'SRF', 'SBG', 'CPL']|
         case '^si.*'                : comp = 'ICE'
         case '^ic.*'                : comp = 'ICE'
 
+        case '.*harvest.*'          : comp = 'SBG'
 
-        case '.*harvest.*'          : comp='SBG'
-
-        case 'delta_water_stock'    : comp='SRF'
-        case 'water_budget_closure' : comp='SRF'
-        case 'surface_.*'           : comp='SRF'
-        case '.*_lands   '          : comp='SRF'
-        case 'maxveget.*'           : comp='SRF'
+        case 'delta_water_stock'    : comp = 'SRF'
+        case 'water_budget_closure' : comp = 'SRF'
+        case 'surface_.*'           : comp = 'SRF'
+        case '.*_lands   '          : comp = 'SRF'
+        case 'maxveget.*'           : comp = 'SRF'
 
         case _ : comp = None
 

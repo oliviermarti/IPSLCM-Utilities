@@ -4,7 +4,6 @@ ORCA namelists
 olivier.marti@lsce.ipsl.fr
 
 GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
-
 '''
 
 from typing import Dict

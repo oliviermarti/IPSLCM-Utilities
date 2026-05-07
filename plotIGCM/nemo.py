@@ -14,7 +14,7 @@ Author: olivier.marti@lsce.ipsl.fr
 
 GitHub : https://github.com/oliviermarti/IPSLCM-Utilities
 
-This software is governed by the CeCILL  license under French law and
+This software is governed by the CeCILL license under French law and
 abiding by the rules of distribution of free software.  You can  use,
 modify and/ or redistribute the software under the terms of the CeCILL
 license as circulated by CEA, CNRS and INRIA at the following URL
@@ -57,6 +57,8 @@ from plotIGCM.options import OPTIONS, get_options, push_stack, pop_stack
 from plotIGCM.utils import validate_types
 from plotIGCM.utils import copy_attrs
 from plotIGCM.utils import build_feat
+from plotIGCM import orca
+from plotIGCM import domzgr
 
 # Type xr.DataArray|xr.Dataset
 xrData = TypeVar ('xrData', xr.DataArray, xr.Dataset)
@@ -226,9 +228,9 @@ Regions:dict = \
         'Rockall'          : {'idyx': {'x':slice(130,143), 'y':slice(111,121)}},
         'MedWest'          : {'idyx': {'x':slice(141,153), 'y':slice(100,108)}},
         'MedEast'          : {'idyx': {'x':slice(153,179), 'y':slice( 95,105)}},
-        'Wedell'           : {'idyx': {'x':slice(112,149), 'y':slice(  2, 25)}},
+        'Wedell'           : {'idyx': {'x':slice(112,149), 'y':slice( 52, 25)}},
         'Davis'            : {'idyx': {'x':slice(  1, 10), 'y':slice( 10, 25)}},
-        'CircumPolar'      : {'idyx': {'x':slice(  2,180), 'y':slice( 10, 25)}},
+        'CircumPolar'      : {'idyx': {'x':slice(  2,180), 'y':slice( 52, 25)}},
       }
    }
 Regions['eORCA1.2']   = Regions['eORCA1']
@@ -791,21 +793,40 @@ class GridMask :
     Reads and builds all grids caracterestics
     '''
     @validate_types
+    def area (self:Self, cd_type='T', Debug=False ) :
+        zarea = None
+        match cd_type :
+            case ( 'T' | 't' ) :
+                if OPTIONS['Debug'] or Debug :
+                    print ( "case T" )
+                if self.e1t is not None and self.e2t is not None :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( "Computing" )
+                    zarea = self.e1t*self.e2t
+        return zarea
+
+    def vol (self:Self, cd_type='T' ) :
+        zvol = None
+        match cd_type :
+            case ( 'T' | 't' ) :
+                if self.e1t is not None and self.e2t is not None and self.e3t is not None :
+                    zarea = self.e1t*self.e2t*self.e3t
+        return zvol
+    
     def __init__ (self:Self, mm:libIGCM.sys.Config, domain:Domain,
                   kw_uni:Dict={'use_xgcm':True},
-                  e3file:str|None=None, e3dataset:xr.Dataset|None=None,
+                  e3file:str|None=None, e3dataset:xr.Dataset|None=None, e3t=None, e3w=None,
                   pval=np.nan, Debug=False) -> None :
+
         f_g  = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_coordinates_mask.nc'  ) # type: ignore
         f_e  = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_coordinates.nc'       ) # type: ignore
         f_d1 = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_domcfg.nc'            ) # type: ignore
         f_d2 = os.path.join (mm.R_IN, 'OCE', 'NEMO', domain.CFG_name, 'GRIDS', f'{domain.CFG_name}_domain_cfg.nc'        ) # type: ignore
-
         f_b  = os.path.join (mm.DB, 'extras', f'{domain.CFG_name}_subbasins.nc'   ) # type: ignore
 
         if domain.cfg_name in ['eorca1.2', 'eorca1.4.0'] :
             f_g = os.path.join (mm.R_IN, 'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS', 'eORCA1.2_coordinates_mask.nc' ) # type: ignore
             f_e = os.path.join (mm.R_IN, 'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS', 'eORCA1.2_coordinates.nc'      ) # type: ignore
-            #f_d = os.path.join (mm.R_IN, 'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS', 'eORCA1_domain_cfg.nc'         ) # type: ignore
 
         if domain.cfg_name in ['orca2.3' ] :
             f_g = os.path.join (mm.DB, 'grids', 'ORCA2.3_mesh_mask.nc'  ) # type: ignore
@@ -821,20 +842,29 @@ class GridMask :
 
         d_g = xr.open_dataset (f_g , **kw_read).squeeze () if os.path.isfile (f_g)  else None # type: ignore
         d_e = xr.open_dataset (f_e , **kw_read).squeeze () if os.path.isfile (f_e)  else None # type: ignore
-        d_d = xr.open_dataset (f_d1, **kw_read).squeeze () if os.path.isfile (f_d1) else None # type: ignore
-        if d_d is None :
-            d_d = xr.open_dataset (f_d2, **kw_read).squeeze () if os.path.isfile (f_d2) else None # type: ignore
-        if d_d is None :
-            d_d = d_e
-            d_b = xr.open_dataset (f_b , **kw_read).squeeze () if os.path.isfile (f_b)  else None # type: ignore
+        d_b = xr.open_dataset (f_b , **kw_read).squeeze () if os.path.isfile (f_b)  else None # type: ignore
 
+        d_d = None
+        if os.path.isfile (f_d1) :
+            d_d = xr.open_dataset (f_d1, **kw_read).squeeze () # type: ignore
+        else :
+            if os.path.isfile (f_d2) :
+                d_d = xr.open_dataset (f_d2, **kw_read).squeeze () # type: ignore
+
+        if OPTIONS['Debug'] or Debug :
+            print ( f"{d_d=}" )
+            
         d_e3 = None
         if e3dataset is not None :
             d_e3 = e3dataset
         else :
             if e3file is not None :
                 d_e3 = xr.open_dataset (e3file , **kw_read).squeeze () if os.path.isfile (f_b)  else None # type: ignore
-
+                
+        if d_e3 is None and d_d is not None :
+            if 'e3t_1d' in d_d :
+                d_e3 = d_d
+                
         if d_g is not None :
             d_g   = unify_dims (d_g , **kw_uni)
         if d_e is not None :
@@ -846,13 +876,7 @@ class GridMask :
         if d_e3 is not None :
             d_e3  = unify_dims (d_e3, **kw_uni)
 
-        self.d_g = d_g
-        self.d_e = d_e
-        self.d_d = d_d
-        self.d_b = d_b
-
         # ======================================================
-
         lon_T, lon_U, lon_V, lon_F, lon_W = None, None, None, None, None
         lat_T, lat_U, lat_V, lat_F, lat_W = None, None, None, None, None
 
@@ -873,20 +897,58 @@ class GridMask :
             lon_V   = lbcu (d_g.nav_lon_grid_V, cd_type='V', domain=domain, btype='lbc', **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
             lat_V   = lbcu (d_g.nav_lat_grid_V, cd_type='V', domain=domain, btype='lbc', **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
 
-        lon_T = unify_dims (lon_T, **kw_uni)
-        lon_U = unify_dims (lon_U, **kw_uni)
-        lon_V = unify_dims (lon_V, **kw_uni)
-        lon_F = unify_dims (lon_F, **kw_uni)
-        lat_T = unify_dims (lat_T, **kw_uni)
-        lat_U = unify_dims (lat_U, **kw_uni)
-        lat_V = unify_dims (lat_V, **kw_uni)
-        lat_F = unify_dims (lat_F, **kw_uni)
+        lon_T = unify_dims (lon_T, **kw_uni, xgrid='T')
+        lon_U = unify_dims (lon_U, **kw_uni, xgrid='U')
+        lon_V = unify_dims (lon_V, **kw_uni, xgrid='V')
+        lon_F = unify_dims (lon_F, **kw_uni, xgrid='F')
+        lat_T = unify_dims (lat_T, **kw_uni, xgrid='T')
+        lat_U = unify_dims (lat_U, **kw_uni, xgrid='U')
+        lat_V = unify_dims (lat_V, **kw_uni, xgrid='V')
+        lat_F = unify_dims (lat_F, **kw_uni, xgrid='F')
 
         lon_T   = fixed_lon (lon_T)
         lon_U   = fixed_lon (lon_U)
         lon_V   = fixed_lon (lon_V)
         lon_F   = fixed_lon (lon_F)
 
+        #if lat_T is not None and lon_T is not None :
+        #    lat_T, lont_T = fill_latlon (lat_T, lon_T)
+        #if lat_U is not None and lon_U is not None :
+        #    lat_U, lont_U = fill_latlon (lat_U, lon_U)
+        #if lat_V is not None and lon_V is not None :
+        #    lat_V, lont_V = fill_latlon (lat_V, lon_V)
+        #if lat_F is not None and lon_F is not None :
+        #    lat_F, lont_F = fill_latlon (lat_F, lon_F)
+
+        if lat_T is not None :
+            if Debug or OPTIONS['Debug'] :
+                print ( f"{lat_T.shape=} {lat_T.min()=} {lat_T.max()=} " )
+            je = jeq (lat_T)
+        else :
+            je = None
+
+        if lat_T is not None and lon_T is not None :
+            if Debug or OPTIONS['Debug'] :
+                print ( f"{lat_T.shape=} {lat_T.min()=} {lat_T.max()=} {lon_T.shape=} {lon_T.min()=} {lon_T.max()=}" )
+            lat1D, lon1D = latlon1d (lat_T, lon_T, dims=('y_c', 'x_c'), Debug=Debug)
+            lat_T.values = np.where ( lat_T.values==0., lat1D.values[:,np.newaxis], lat_T.values)
+            lon_T.values = np.where ( lon_T.values==0., lon1D.values[np.newaxis,:], lon_T.values)
+        else :
+            lat1D, lon1D = None, None
+            
+        if lat_U is not None and lon_U is not None :
+            lat1D_U, lon1D_U = latlon1d (lat_U, lon_U, dims=('y_c', 'x_f'), Debug=Debug)
+            lat_U.values = np.where ( lat_U.values==0., lat1D_U.values[:,np.newaxis], lat_U.values)
+            lon_U.values = np.where ( lon_U.values==0., lon1D_U.values[np.newaxis,:], lon_U.values)
+        if lat_V is not None and lon_V is not None :
+            lat1D_V, lon1D_V = latlon1d (lat_V, lon_V, dims=('y_c', 'x_f'), Debug=Debug)
+            lat_V.values = np.where ( lat_V.values==0., lat1D_V.values[:,np.newaxis], lat_V.values)
+            lon_V.values = np.where ( lon_V.values==0., lon1D_V.values[np.newaxis,:], lon_V.values)
+        if lat_F is not None and lon_F is not None :
+            lat1D_F, lon1D_F = latlon1d (lat_F, lon_F, dims=('y_c', 'x_f'), Debug=Debug)
+            lat_F.values = np.where ( lat_F.values==0., lat1D_F.values[:,np.newaxis], lat_F.values)
+            lon_F.values = np.where ( lon_F.values==0., lon1D_F.values[np.newaxis,:], lon_F.values)
+            
         mask_T , mask_U , mask_V , mask_F , mask_W  = None, None, None, None, None
         mask_3T, mask_3U, mask_3V, mask_3F, mask_3W = None, None, None, None, None
 
@@ -902,7 +964,7 @@ class GridMask :
             mask_U = xr.where (d_g.mask_U>0.5, 1, pval)
         else :
             mask_U = t2u (mask_T, action='mult', domain=domain)
-            mask_U = lbcu (mask_T, **kw_uni, domain=domain, cd_type='T', psgn=1, btype='lbc')
+            mask_U = lbcu (mask_T, **kw_uni, domain=domain, cd_type='U', psgn=1, btype='lbc')
 
         if d_g is not None and 'vmask' in d_g.variables :
             mask_V = xr.where (d_g.vmask>0.5, 1, pval)
@@ -917,11 +979,11 @@ class GridMask :
             mask_F = u2f (mask_U, action='mult', domain=domain)
             mask_F = lbcu (mask_F, **kw_uni, domain=domain, cd_type='F', psgn=1, btype='lbc')
 
-        mask_T = unify_dims (mask_T,**kw_uni)
-        mask_U = unify_dims (mask_U,**kw_uni)
-        mask_V = unify_dims (mask_V,**kw_uni)
-        mask_F = unify_dims (mask_F,**kw_uni)
-        mask_W = unify_dims (mask_W,**kw_uni)
+        mask_T = unify_dims (mask_T, **kw_uni, xgrid='T')
+        mask_U = unify_dims (mask_U, **kw_uni, xgrid='U')
+        mask_V = unify_dims (mask_V, **kw_uni, xgrid='V')
+        mask_F = unify_dims (mask_F, **kw_uni, xgrid='F')
+        mask_W = unify_dims (mask_W, **kw_uni, xgrid='T')
 
         maskdraw_T = lbc_plot (mask_T, cd_type='T', domain=domain)
         maskdraw_U = lbc_plot (mask_U, cd_type='U', domain=domain)
@@ -934,6 +996,31 @@ class GridMask :
         maskutil_V = lbc_mask (mask_V, cd_type='V', domain=domain)
         maskutil_F = lbc_mask (mask_F, cd_type='F', domain=domain)
         maskutil_W = lbc_mask (mask_W, cd_type='T', domain=domain)
+
+        gsintT, gcosT, gsinU, gcosU, gsinV, gcosV, gsinF, gcosF = None, None, None, None, None, None, None, None,
+        if lat_T is not None and lon_T is not None : 
+            gsinT, gcosT = angle (lon_T, lat_T , domain=domain, cd_type='T')
+        if lat_U is not None and lon_U is not None : 
+            gsinU, gcosU = angle (lon_U, lat_U , domain=domain, cd_type='U')
+        if lat_V is not None and lon_V is not None : 
+            gsinV, gcosV = angle (lon_V, lat_V , domain=domain, cd_type='V')
+        if lat_F is not None and lon_F is not None : 
+            gsinF, gcosF = angle (lon_F, lat_F , domain=domain, cd_type='F')
+
+        atlmsk, atlmsk_nomed, pacmsk, ipcmsk, indmsk = None, None, None, None, None
+        
+        if d_b is not None :
+            kw = {'domain':domain, 'psgn':1, 'cd_type':'T', 'btype':'lbc'}
+            if atlmsk in d_b :
+                atlmsk = lbcu (d_b.atlmsk, **kw_uni, **kw) 
+            if indmsk is not None and ipcmsk is not None :
+                ipcmsk = lbcu (d_b.indmsk, **kw_uni, **kw)
+            if pacmsk in d_b :
+                pacmsk = lbcu (d_b.pacmsk, **kw_uni, **kw)
+            if atlmsk is not None and ipcmsk is not None :
+                ipcmsk = np.clip (pacmsk + indmsk, 0, 1)
+            if atlmsk_nomed in d_b :
+                atlmsk_nomed = lbcu (d_b.atlmsk_nomed, **kw_uni, **kw) 
 
         if   d_g is not None and 'e1t' in d_g.variables :
             zd = d_g
@@ -957,20 +1044,14 @@ class GridMask :
         e1f  = lbcu (zd.e1f, **kw_uni, **kw, cd_type='F') # pyright: ignore[reportOptionalMemberAccess]
         e2f  = lbcu (zd.e2f, **kw_uni, **kw, cd_type='F') # pyright: ignore[reportOptionalMemberAccess]
 
-        e1t = unify_dims (e1t, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e1u = unify_dims (e1u, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e1v = unify_dims (e1v, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e1f = unify_dims (e1f, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e2t = unify_dims (e2t, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e2u = unify_dims (e2u, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e2v = unify_dims (e2v, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-        e2f = unify_dims (e2f, **kw_uni) # pyright: ignore[reportOptionalMemberAccess]
-
-        area_T = e1t*e2t if e1t is not None and e2t is not None else None
-        area_U = e1u*e2u if e1u is not None and e2u is not None else None
-        area_V = e1v*e2v if e1v is not None and e2v is not None else None
-        area_F = e1f*e2f if e1f is not None and e2f is not None else None
-        area_W = e1t*e2t if e1t is not None and e2t is not None else None
+        e1t = unify_dims (e1t, **kw_uni, xgrid='T') # pyright: ignore[reportOptionalMemberAccess]
+        e1u = unify_dims (e1u, **kw_uni, xgrid='U') # pyright: ignore[reportOptionalMemberAccess]
+        e1v = unify_dims (e1v, **kw_uni, xgrid='V') # pyright: ignore[reportOptionalMemberAccess]
+        e1f = unify_dims (e1f, **kw_uni, xgrid='F') # pyright: ignore[reportOptionalMemberAccess]
+        e2t = unify_dims (e2t, **kw_uni, xgrid='T') # pyright: ignore[reportOptionalMemberAccess]
+        e2u = unify_dims (e2u, **kw_uni, xgrid='U') # pyright: ignore[reportOptionalMemberAccess]
+        e2v = unify_dims (e2v, **kw_uni, xgrid='V') # pyright: ignore[reportOptionalMemberAccess]
+        e2f = unify_dims (e2f, **kw_uni, xgrid='F') # pyright: ignore[reportOptionalMemberAccess]
 
         e3t_0  = d_g.e3t_0  if 'e3t_0'  in d_g.variables else None # pyright: ignore[reportOptionalMemberAccess]
         e3w_0  = d_g.e3w_0  if 'e3w_0'  in d_g.variables else None # pyright: ignore[reportOptionalMemberAccess]
@@ -992,9 +1073,46 @@ class GridMask :
             else :
                 e3w = None
 
-        e3u = t2u (e3t)
-        e3v = t2v (e3t)
-        e3f = t2f (e3t)
+        z_c, z_f, ze3t, ze3w = None, None, None, None
+        if 'orca2' in domain.cfg_name :
+            zz_c, zz_f, ze3t, ze3w = domzgr.zgr_z (config='orca2')
+        if 'eorca1' in domain.cfg_name :
+            zz_c, zz_f, ze3t, ze3w = domzgr.zgr_z (config='eorca1')
+
+        if z_c is None and zz_c is not None :
+            z_c = unify_dims (zz_c, **kw_uni, xgrid='T')
+        if z_f is None and zz_f is not None :
+            z_f = unify_dims (zz_f, **kw_uni, xgrid='W')
+        if e3t is None and ze3t is not None :
+            e3t = unify_dims (ze3t, **kw_uni, xgrid='T')
+        if e3w is None and ze3w is not None :
+            e3w = unify_dims (ze3w, **kw_uni, xgrid='W')
+
+        #e3u = t2u (e3t) if e3t is not None else None
+        #e3v = t2v (e3t) if e3t is not None else None
+        #e3f = t2f (e3t) if e3t is not None else None
+        e3u = unify_dims (e3t, **kw_uni, xgrid='U')
+        e3v = unify_dims (e3t, **kw_uni, xgrid='V')
+        e3f = unify_dims (e3t, **kw_uni, xgrid='F')
+
+        #bt = area_t*e3t*mask_3T if area_T is not None and e3t is not None and mask_3T is not None else None
+
+        # Builds 1d bounds of z_c for xgcm
+        az_c, ik_c = find_axis (z_c, 'z')
+        az_f, ik_f = find_axis (z_f, 'z')
+        
+        lshape = list (z_c.shape)
+        lshape [ik_f] = lshape[ik_f]+1
+        ldims = list (z_c.dims)
+        ndim  = f'{ldims[ik_f]}_bnds1d' # type: ignore
+        ldims [ik_f] = f'{ldims[ik_f]}_bnds1d'
+        
+        z_c_bnds1d = xr.DataArray (np.empty (lshape), dims=ldims)
+        z_c_bnds1d [{ndim:slice(0,-1)}] = z_f.values
+        z_c_bnds1d [{ndim:-1}]          = z_f.isel({az_f:-1}).values
+
+        z_c_bnds1d = unify_dims (z_c_bnds1d, **kw_uni, xgrid='W')
+        #z_c_bnds1d = z_c_bnds1d.rename ( {'z_c_bnds1d':' z_c_bnds1d'} )
 
         # coast_poly, coast_poly_shp = build_feat (libIGCM.sys.Dap2Thredds(os.path.join (mm.DB, 'extras', f'{domain.cfg_name}_coast.json')    , mm),
         #                                                facecolor='k', edgecolor='none') # type: ignore
@@ -1037,6 +1155,29 @@ class GridMask :
         else :
             grid_line , grid_line_shp  = None, None
 
+        # Defines the class components
+
+        self.cfg_name = domain.cfg_name
+        self.CFG_name = domain.CFG_name
+        self.cd_cfg   = domain.cd_cfg
+        self.kk_cfg   = domain.kk_cfg
+        self.jpk      = domain.jpk
+        self.jpj      = domain.jpj
+        self.jpi      = domain.jpi
+        self.Iperio   = domain.Iperio
+        self.Jperio   = domain.Jperio
+        self.NFold    = domain.NFold
+        self.NFtype   = domain.NFtype
+        self.nperio   = domain.nperio
+        self.aperio   = domain.aperio
+        self.Halo     = domain.Halo
+        self.Cyclic   = domain.Cyclic
+        
+        self.d_g = d_g
+        self.d_e = d_e
+        self.d_d = d_d
+        self.d_b = d_b
+        
         self.lon    = lon_T
         self.lat    = lat_T
         self.lon_T  = lon_T
@@ -1050,18 +1191,41 @@ class GridMask :
         self.lon_W  = lon_W
         self.lat_W  = lat_W
 
+        self.je      = je
+        self.lon1D   = lon1D
+        self.lat1D   = lat1D
+
         self.mask    = mask_T
         self.mask_T  = mask_T
         self.mask_U  = mask_U
         self.mask_V  = mask_V
         self.mask_F  = mask_F
         self.mask_W  = mask_W
-        self.mask_3T = mask_3T
-        self.mask_3U = mask_3U
-        self.mask_3V = mask_3V
-        self.mask_3F = mask_3F
-        self.mask_3W = mask_3W
+        #self.mask_3T = mask_3T
+        #self.mask_3U = mask_3U
+        #self.mask_3V = mask_3V
+        #self.mask_3F = mask_3F
+        #self.mask_3W = mask_3W
 
+        self.gcosT   = gcosT
+        self.gsinT   = gsinT
+        self.gcosU   = gcosU
+        self.gsinU   = gsinU
+        self.gcosV   = gcosV
+        self.gsinV   = gsinV
+        self.gcosF   = gcosF
+        self.gsinF   = gsinF
+
+        self.atlmsk       = atlmsk
+        self.atlmsk_nomed = atlmsk
+        self.pacmsk       = pacmsk
+        self.indmsk       = indmsk
+        self.ipcmsk       = ipcmsk
+
+        self.z_c     = z_c
+        self.z_f     = z_f
+        self.z_c_bnds1d = z_c_bnds1d
+        
         self.e1t     = e1t
         self.e1u     = e1u
         self.e1v     = e1v
@@ -1078,8 +1242,8 @@ class GridMask :
         self.e3v     = e3v
         self.e3f     = e3f
         self.e3w     = e3w
-        self.e3t_ps = e3t_ps
-        self.e3w_ps = e3w_ps
+        self.e3t_ps  = e3t_ps
+        self.e3w_ps  = e3w_ps
 
         self.coast_poly = coast_poly
         self.land_poly  = land_poly
@@ -1104,12 +1268,6 @@ class GridMask :
         self.maskutil_V = maskutil_V
         self.maskutil_F = maskutil_F
         self.maskutil_W = maskutil_W
-
-        self.area_T     = area_T
-        self.area_U     = area_U
-        self.area_V     = area_V
-        self.area_F     = area_F
-        self.area_W     = area_W
 
 @validate_types
 def essai ( a:int|float, b:Domain) : # pylint: disable=missing-function-docstring
@@ -1210,34 +1368,34 @@ def find_axis (ptab:xr.DataArray|xr.Dataset, axis:str|Literal['x', 'y', 'z', 't'
             print ( f'Working on axis found by name : {axis=} : {ax_name=} {unit_list=} {length=}' )
 
     # Try by 'axis' attribute
-    if ix is None :
-        if OPTIONS['Debug'] or Debug :
+    if ix is None: # pylint: disable=too-many-nested-blocks
+        if OPTIONS['Debug'] or Debug:
             print ( 'ix not found - 1' )
-        for ii, dim in enumerate (ptab.dims) :
-            if OPTIONS['Debug'] or Debug :
+        for ii, dim in enumerate (ptab.dims):
+            if OPTIONS['Debug'] or Debug:
                 print ( f'{ii=} {dim=}' )
             if 'coords' in dir(ptab) :
                 if 'axis' in ptab.coords[dim].attrs.keys() :
                     l_axis = ptab.coords[dim].attrs['axis']
-                    if OPTIONS['Debug'] or Debug :
+                    if OPTIONS['Debug'] or Debug:
                         print ( f'Rule 1 : Trying {ii=} {dim=} {l_axis=}' )
-                    if l_axis in ax_name and l_axis == str('X') :
-                        if OPTIONS['Debug'] or Debug :
+                    if l_axis in ax_name and l_axis == str('X'):
+                        if OPTIONS['Debug'] or Debug:
                             print ( 'Rule 1 : xaxis found by attribute : ',
                                    f'{ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
                         ix, ax = ii, str(dim)
-                    if l_axis in ax_name and l_axis == str('Y') :
-                        if OPTIONS['Debug'] or Debug :
+                    if l_axis in ax_name and l_axis == str('Y'):
+                        if OPTIONS['Debug'] or Debug:
                             print ( 'Rule 1 : yaxis found by attribute : ',
                                    f'{ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
                         ix, ax = ii, str(dim)
-                    if l_axis in ax_name and l_axis == str('Z') :
-                        if OPTIONS['Debug'] or Debug :
+                    if l_axis in ax_name and l_axis == str('Z'):
+                        if OPTIONS['Debug'] or Debug:
                             print ( 'Rule 1 : zaxis found by attribute : ',
                                 f'{ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
                         ix, ax = ii, str(dim)
                     if l_axis in ax_name and l_axis == str('T') :
-                        if OPTIONS['Debug'] or Debug :
+                        if OPTIONS['Debug'] or Debug:
                             print ( 'Rule 1 : taxis found by attribute : ',
                                 f'{ax=} {l_axis=} {axis=} : {ax_name=} {l_axis=} {ii=} {dim=}' )
                         ix, ax = ii, str(dim)
@@ -2183,18 +2341,23 @@ def jeq (plat:xr.DataArray, Debug=False) -> int :
     '''
     push_stack ( 'jeq (plat) ' )
     ay, jy = find_axis (plat, 'y')
+    ax, ix = find_axis (plat, 'x')
     if OPTIONS['Debug'] or Debug :
         print ( f'{ay=}, {jy=}, {plat.sizes=}' )
 
-    aa = np.argmin (np.abs (plat.values), axis=jy)
-    jj = int (np.nanmean (np.where (aa!=0, aa, np.nan)))
+    jmin = plat.sizes[ay]//6 # Trick because latitude on Antartic may be at zero
+    aa = np.argmin (np.abs (plat.isel({ay:slice(jmin,None)}).values), axis=jy)
+    if OPTIONS['Debug'] or Debug :
+        print ( f"{aa=}" )
+        
+    jj = int (np.nanmean (np.where (aa!=0, aa, np.nan))) + jmin
     jj = np.minimum ( jj, plat.sizes[ay]-1 )
 
     pop_stack ( f'jeq : {jj}' )
     return jj
 
 @validate_types
-def lon1d (plon:xr.DataArray, plat:xr.DataArray|None=None, Debug:bool=False) -> xr.DataArray :
+def lon1d (plon:xr.DataArray, plat:xr.DataArray|None=None, Debug:bool=False, dim='x_c') -> xr.DataArray :
     '''
     Returns 1D longitude for simple plots.
 
@@ -2203,8 +2366,8 @@ def lon1d (plon:xr.DataArray, plat:xr.DataArray|None=None, Debug:bool=False) -> 
     '''
     push_stack ( 'lon1d (plon, plat) ' )
 
-    ax, _ = find_axis (plon, 'x')
-    ay, _ = find_axis (plon, 'y')
+    ax, _ = find_axis (plon, 'x', Debug=Debug)
+    ay, _ = find_axis (plon, 'y', Debug=Debug)
     jpj, jpi  = plon.sizes [ay], plon.sizes [ax] # type: ignore
     if plat is not None :
         je     = jeq (plat)
@@ -2216,7 +2379,7 @@ def lon1d (plon:xr.DataArray, plat:xr.DataArray|None=None, Debug:bool=False) -> 
         dlon   = (plon [..., jpj//3, 1].copy() - plon [..., jpj//3, 0].copy()).values.item()
         lon_1d = np.linspace ( start=lon0, stop=lon0+360.+2*dlon, num=jpi )
 
-    lon_1d = xr.DataArray (lon_1d, dims=('lon',), coords=(lon_1d,))
+    lon_1d = xr.DataArray (lon_1d, dims=(dim,), coords=(lon_1d,))
     lon_1d.attrs.update (plon.attrs)
     lon_1d.attrs.update ({'units': 'degrees_east', 'standard_name':'longitude', 'long_name':'Longitude'})
     if OPTIONS['Debug'] or Debug :
@@ -2273,7 +2436,7 @@ def latreg (plat:xr.DataArray, diff:float=0.1, Debug:bool=False) -> tuple[int, f
     return jreg, lareg
 
 @validate_types
-def lat1d (plat:xr.DataArray, Debug:bool=False) -> xr.DataArray :
+def lat1d (plat:xr.DataArray, dim='y_c', Debug:bool=False) -> xr.DataArray :
     '''
     Returns 1D latitudes for zonal means and simple plots.
 
@@ -2325,15 +2488,11 @@ def lat1d (plat:xr.DataArray, Debug:bool=False) -> xr.DataArray :
     lat_1d[-1] = lat_N
 
     # Et le sud ?
-    # Cherche la décroissance
-    #js = np.diff (lat_1d).argmin()
-    #ys = np.maximum (-89, lat_1d[js+1].values.item()-5.)
-    #if OPTIONS['Debug'] or Debug :
-    #    print (f'{js=} {lat_1d[js]=} {lat_1d[js+1]=} {ys=}')
-    #    print (f'{lat_1d[0:js+3]=}')
-    #lat_1d [0:js+1] = np.linspace(-89.0, ys, js+1)
+    js = lat_1d.argmin().item()  
+    ys = np.maximum (-80, lat_1d[js+1].values.item()-5.)
+    lat_1d [0:js+1] = np.linspace(-89.0, ys, js+1)
 
-    lat_1d = xr.DataArray (lat_1d.values, dims=('lat',), coords=(lat_1d,))
+    lat_1d = xr.DataArray (lat_1d.values, dims=(dim,), coords=(lat_1d,))
     lat_1d.attrs.update (plat.attrs)
     lat_1d.attrs.update ( {'units':'degrees_north', 'standard_name':'latitude', 'long_name':'Latitude'})
 
@@ -2341,15 +2500,15 @@ def lat1d (plat:xr.DataArray, Debug:bool=False) -> xr.DataArray :
     return lat_1d
 
 @validate_types
-def latlon1d (plat:xr.DataArray, plon:xr.DataArray, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
+def latlon1d (plat:xr.DataArray, plon:xr.DataArray, dims=('y_c', 'x_c'), Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Returns simple latitude and longitude (1D) for simple plots.
 
     plat, plon : latitudes and longitudes of the grid (2D)
     '''
     push_stack ( 'latlon1d ( plat, plon) ' )
-    zla = lat1d (plat, Debug=Debug)
-    zlo = lon1d (plon, plat, Debug=Debug)
+    zla = lat1d (plat, dim=dims[0], Debug=Debug)
+    zlo = lon1d (plon, plat, dim=dims[1], Debug=Debug)
 
     pop_stack ( 'latlon1d' )
     return zla, zlo
@@ -3404,7 +3563,7 @@ def find_ji (lat_data:xr.DataArray, lon_data:xr.DataArray, lat_grid:xr.DataArray
 
     # Compute distance from the point to all grid points (in RADian)
     arg      = ( np.sin (RAD*lat_data) * np.sin (RAD*lat_grid)
-              + np.cos (RAD*lat_data) * np.cos (RAD*lat_grid) * np.cos (RAD*(lon_data-lon_grid)) )
+              +  np.cos (RAD*lat_data) * np.cos (RAD*lat_grid) * np.cos (RAD*(lon_data-lon_grid)) )
 
     if OPTIONS['Debug'] or Debug :
         print ( f'{type(arg)=} {arg.shape=}' )
@@ -4266,8 +4425,6 @@ def f2t (ftab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action='ave',
     ttab = v2t (f2v (ftab_0, domain=zdom, psgn=psgn, zdim=zdim, action=action),
                              domain=zdom, psgn=psgn, zdim=zdim, action=action)
 
-    ttab = lbc_todom (ttab, src_dom=zdom_ext, dst_dom=zdom, cd_type='T', psgn=psgn)
-
     pop_stack ( 'f2t' )
     return ttab
 
@@ -4445,7 +4602,7 @@ def u2f (utab:xr.DataArray, psgn:int|float=-1, zdim:str|None=None, action:str='a
     return ftab
 
 @validate_types
-def t2f (ttab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='mean',
+def t2f (ttab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='ave',
          Iperio:bool|None=None, Jperio:bool|None=None, NFold:bool|None=None,
          NFtype:NFTYPE_LITERAL|str|None=None, Halo:bool|None=None, Cyclic:bool|None=None,
          aperio:int|float|None=None, nperio:int|None=None, domain:Domain|None=None,
@@ -4461,8 +4618,6 @@ def t2f (ttab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='me
     ttab_0 = lbc_add (ttab_0 , domain=zdom, cd_type='T', psgn=psgn)
     ftab = t2u (u2f (ttab, domain=zdom, psgn=psgn, zdim=zdim, action=action),
                            domain=zdom, psgn=psgn, zdim=zdim, action=action)
-
-    ftab = lbc_todom (ftab, src_dom=zdom_ext, dst_dom=zdom, cd_type='F', psgn=psgn)
 
     pop_stack ( 'v2f' )
     return ftab
@@ -4757,12 +4912,15 @@ def zonmean (var:xr.DataArray, bb:xr.DataArray, plat1d:xr.DataArray, Debug:bool=
         print ('zonmean : zonal mean of volume')
     zon_bb  = unify_dims (bb, **ldims).sum(dim=ldims['x'], min_count=1, keep_attrs=True)
     zon_bb  = zon_bb.where (zon_bb>0., np.nan)
+    
     if OPTIONS['Debug'] or Debug :
         print ( f'zonmean : {zon_bb.dims = }' )
     if OPTIONS['Debug'] or Debug :
         print ('zonmean : zonal mean of variable')
     zon_var = (var * unify_dims (bb, **ldims)).sum(dim=ldims['x'], min_count=1, keep_attrs=True) / zon_bb
     zon_var = zon_var.where ( np.logical_not(np.isnan(zon_bb)), np.nan)
+    zon_var = zon_var.where ( zon_bb>0, np.nan)
+    
     if OPTIONS['Debug'] or Debug :
         print ( f'zonmean : {zon_var.dims = }' )
 
@@ -4918,7 +5076,8 @@ s
     if bsf0 is not None :
         zbsf = zbsf - zbsf.isel (bsf0)
 
-    zbsf = zbsf.where (mask !=0, np.nan)
+    zbsf = zbsf.where (mask>0, np.nan)
+    
     if OPTIONS['Debug'] or Debug :
         print ( f'3 - {zbsf.dims=}' )
     zbsf.attrs.update (uu.attrs)

@@ -72,20 +72,20 @@ SliceSE = { 'Annual':slice(0,12),
             'JAN':slice(0), 'FEB':slice(1), 'MAR':slice(2), 'APR':slice(3), 'MAY':slice( 4), 'JUN':slice( 5),
             'JUL':slice(6), 'AUG':slice(7), 'SEP':slice(8), 'OCT':slice(9), 'NOV':slice(10), 'DEC':slice(11)}
 
-SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice(1,None,12), 'MAR':slice(2,None,12),
-            'APR':slice(3,None,12), 'MAY':slice(4,None,12), 'JUN':slice( 5,None,12),
-            'JUL':slice(6,None,12), 'AUG':slice(7,None,12), 'SEP':slice(8,None,12), 
+SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice( 1,None,12), 'MAR':slice( 2,None,12),
+            'APR':slice(3,None,12), 'MAY':slice( 4,None,12), 'JUN':slice( 5,None,12),
+            'JUL':slice(6,None,12), 'AUG':slice( 7,None,12), 'SEP':slice( 8,None,12), 
             'OCT':slice(9,None,12), 'NOV':slice(10,None,12), 'DEC':slice(11,None,12)}
 
 SOLAR = 1365.0          # Solar constant (W/m^2)
 
 # Ephemerides internal options
-DEFAULT_OPTIONS = dict (Debug  = False,
-                        Trace  = False,
-                        Timing = False,
-                        t0     = [],
-                        Depth  = 0,
-                        Stack  = [])
+DEFAULT_OPTIONS = { "Debug"  : False,
+                    "Trace"  : False,
+                    "Timing" : False,
+                    "t0"     : [],
+                    "Depth"  : 0,
+                    "Stack"  : []}
 
 OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
 

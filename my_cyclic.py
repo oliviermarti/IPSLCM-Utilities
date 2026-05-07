@@ -7,13 +7,13 @@
 This module contains utilities that are useful in conjunction with
 cartopy.
 
-Copied here because Spirit has too old version of cartopy
-
+Copied here because Spirit has too old version of cartopy (0.18) and the one in cartopy.util is not available.
 """
 import numpy as np
 import numpy.ma as ma
 
-def add_cyclic_point (data, coord=None, axis:int=-1) :
+def add_cyclic_point (data:np.ndarray, coord:np.ndarray|None=None, axis:int=-1
+                      ) -> np.ndarray|tuple[np.ndarray, np.ndarray]:
     """
     Add a cyclic point to an array and optionally a corresponding
     coordinate.
@@ -79,20 +79,23 @@ def add_cyclic_point (data, coord=None, axis:int=-1) :
         if not np.allclose(delta_coord, delta_coord[0]):
             raise ValueError('The coordinate must be equally spaced.')
         new_coord = ma.concatenate((coord, coord[-1:] + delta_coord[0]))
+    else :
+        new_coord = None
     slicer = [slice(None)] * data.ndim
     try:
         slicer[axis] = slice(0, 1)
-    except IndexError:
+    except IndexError as exc :
         raise ValueError('The specified axis does not correspond to an '
-                         'array dimension.')
+                         'array dimension.') from exc
     new_data = ma.concatenate((data, data[tuple(slicer)]), axis=axis)
     if coord is None:
         return_value = new_data
     else:
         return_value = new_data, new_coord
+     
     return return_value
 
-def _add_cyclic_data (data, axis=-1) :
+def _add_cyclic_data (data:np.ndarray, axis:int=-1) -> np.ndarray :
     """
     Add a cyclic point to a data array.
 
@@ -112,14 +115,14 @@ def _add_cyclic_data (data, axis=-1) :
     slicer = [slice(None)] * data.ndim
     try:
         slicer[axis] = slice(0, 1)
-    except IndexError:
+    except IndexError as exc:
         raise ValueError(
-            'The specified axis does not correspond to an array dimension.')
+            'The specified axis does not correspond to an array dimension.') from exc
     npc = np.ma if np.ma.is_masked(data) else np
     return npc.concatenate((data, data[tuple(slicer)]), axis=axis)
 
 
-def _add_cyclic_x (x, axis=-1, cyclic=360) :
+def _add_cyclic_x (x:np.ndarray, axis:int=-1, cyclic:float=360) -> np.ndarray :
     """
     Add a cyclic point to a x/longitude coordinate array.
 
@@ -152,7 +155,8 @@ def _add_cyclic_x (x, axis=-1, cyclic=360) :
     #     cx = npc.where(cx <= cyclic, cx, np.mod(cx, cyclic))
     return npc.concatenate((x, cx), axis=axis)
 
-def has_cyclic (x, axis=-1, cyclic=360, precision=1e-4) :
+
+def has_cyclic (x:np.ndarray, axis:int=-1, cyclic:float=360, precision:float=1e-4) -> bool :
     """
     Check if x/longitude coordinates already have a cyclic point.
 
@@ -207,8 +211,8 @@ def has_cyclic (x, axis=-1, cyclic=360, precision=1e-4) :
     else:
         return False
 
-def add_cyclic (data, x=None, y=None, axis=-1,
-               cyclic=360, precision=1e-4):
+def add_cyclic (data:np.ndarray, x:np.ndarray|None=None, y:np.ndarray|None=None, axis:int=-1,
+               cyclic:float=360, precision:float=1e-4) -> tuple[np.ndarray, np.ndarray|None, np.ndarray|None]:
     """
     Add a cyclic point to an array and optionally corresponding
     x/longitude and y/latitude coordinates.

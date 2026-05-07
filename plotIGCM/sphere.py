@@ -52,7 +52,6 @@ def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataA
                + np.cos (np.deg2rad(zlat1)) * np.cos (np.deg2rad(zlat2)) *
                  np.cos (np.deg2rad(zlon1-zlon2)) )
 
-
     zdistance = np.arccos (arg) * radius
     if OPTIONS['Debug'] or Debug :
         print ( f'1 - {zdistance = }' )

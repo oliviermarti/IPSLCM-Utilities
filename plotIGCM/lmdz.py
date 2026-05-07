@@ -28,18 +28,16 @@ data loss, or any other consequences caused directly or indirectly by
 the usage of his software by incorrectly or partially configured
 personal.
 '''
-
 from typing import Literal, Union, Optional
 import numpy as np
 import xarray as xr
-
 import cartopy
-from plotIGCM.options import OPTIONS, push_stack, pop_stack
-
 if cartopy.__version__ > '0.20' :
     import cartopy.util as cutil
 else :
     import my_cyclic as cutil
+
+from plotIGCM.options import OPTIONS, push_stack, pop_stack
 
 lon_per = xr.DataArray (360.0    , name='lon_per', attrs={'units':"degrees_east", 'long_name':"Longitude range" })
 RAAMO   = xr.DataArray (12       , name='RAAMO'  , attrs={'units':"month"  , 'long_name':"Number of months in one year" })
@@ -88,8 +86,8 @@ ZLENGTH :list[int] = [ 39, 59, 79, ]
 
 
 ## ============================================================================
-
-def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't', 'b', 'c']='z', back:bool=True, Debug:bool=False) -> tuple[Optional[str], Optional[int]] :
+def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't', 'b', 'c']='z',
+                    back:bool=True, Debug:bool=False) -> tuple[Optional[str], Optional[int]] :
     '''
     Returns name and name of the requested axis
     '''
@@ -190,7 +188,8 @@ def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't'
     pop_stack ( f'__find_axis__ ( {ax=} {ix=} )' )
     return ax, ix # type: ignore
 
-def find_axis ( ptab:Union[xr.DataArray,xr.Dataset], axis:Literal['x', 'y', 'z', 't', 'b', 'c']='z', back:bool=True, Debug:bool=False ) -> tuple[Union[str,None], Union[int,None]] :
+def find_axis ( ptab:Union[xr.DataArray,xr.Dataset], axis:Literal['x', 'y', 'z', 't', 'b', 'c']='z', back:bool=True,
+                 ) -> tuple[Union[str,None], Union[int,None]] :
     '''
     Version of find_axis with no __'''
     push_stack ( f'find_axis__ ( ptab {axis=} {back=} )' )
@@ -224,7 +223,8 @@ def get_shape ( ptab:xr.DataArray ) -> str :
     push_stack ( f'get_shape : {g_shape=} ' )
     return g_shape
 
-def extend (tab:xr.DataArray, Lon:bool=False, jplus:int=25, jpi:Union[int,None]=None, lonplus:Union[float,xr.DataArray]=lon_per, Debug:bool=False) -> xr.DataArray :
+def extend (tab:xr.DataArray, Lon:bool=False, jplus:int=25, jpi:Union[int,None]=None, lonplus:Union[float,xr.DataArray]=lon_per,
+            ) -> xr.DataArray :
     '''
     Returns extended field eastward to have better plots, and box average crossing the boundary
 
@@ -352,6 +352,12 @@ def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presni
             raise ValueError
 
     def __interp (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, pdim:str='presnivs', Debug:bool=Debug) -> xr.DataArray :
+        '''
+        Interpolation of a 1D field
+         x  : levels at wich we want to interpolate (i.e. standard pressure levels)
+         xp : position of the input points (i.e. pressure)
+         yp : fields values at these points (temperature, humidity, etc ..)
+        '''
         # Interpolate
         # Find index of the just above level
         push_stack ( f'interp1d.__interp (x, xp, yp, {pdim=})' )
@@ -509,7 +515,7 @@ def unify_dims (dd:Union[xr.DataArray,xr.Dataset], x:str='lon', y:str='lat', z:s
     return dd
 
 def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
-                cyclic:float|xr.DataArray=lon_per, precision:float=0.0001, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
+                cyclic:float|xr.DataArray=lon_per, precision:float=0.0001) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     Add a cyclic point to an array and optionally corresponding x/longitude and y/latitude coordinates.
 
@@ -534,7 +540,7 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
     for dim in ptab.dims :
         if dim == ptab.dims[axis] :
             new_coords.append (xx)
-        else                      :
+        else :
             new_coords.append (ptab.coords[dim].values)
 
     ztab = xr.DataArray (ztab, dims=ptab.dims, coords=new_coords)
@@ -577,7 +583,6 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
 
     form_all   = form1 + [jpj  , jpi]
     form_shape = form1 + [jpj-2, jpi]
-
 
     p2d = np.empty (form_all)
     p2d [..., 1:-1, :] = np.reshape (p1d [..., 1:-1], form_shape )
@@ -664,8 +669,10 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     pop_stack ('point2geo')
     return p2d
 
-def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=False, lev:bool=False, jpi:Union[int,None]=None, jpj:Union[int,None]=None, jpk:Union[int,None]=None,
-               share_pole:bool=False, lon_name:Union[str,None]=None, lat_name:Union[str,None]=None, lev_name:Union[str,None]=None, Debug:Union[bool,None]=None) -> xr.DataArray :
+def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=False, lev:bool=False,
+               jpi:Union[int,None]=None, jpj:Union[int,None]=None, jpk:Union[int,None]=None,
+               share_pole:bool=False, lon_name:Union[str,None]=None, lat_name:Union[str,None]=None,
+               lev_name:Union[str,None]=None, Debug:Union[bool,None]=None) -> xr.DataArray :
     '''
     From 2D [..., horizon_vertical] (restart type) to 3D [..., lev, lat, lon]
 
