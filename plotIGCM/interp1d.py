@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals
+
 '''
 Utilities 1D vertical interpolation
 
@@ -77,10 +79,13 @@ def interp1d (x:np.ndarray|xr.DataArray, xp:xr.DataArray,
     dx = x.differentiate (coord=zdim)
     if dx.min()*dx.max() < 0. :
         raise ValueError ( 'interp1d : Coordinate not monotonic')
+
+    if   ( dx.min() > 0. and dx.max()> 0. ) :
+        or_up=True
+    elif ( dx.min() < 0. and dx.max()< 0. ) :
+        or_up=False
     else :
-        if   ( dx.min() > 0. and dx.max()> 0. ) : or_up=True
-        elif ( dx.min() < 0. and dx.max()< 0. ) : or_up=False
-        else : raise ValueError ( 'interp1d : Coordinate not monotonic')
+        raise ValueError ( 'interp1d : Coordinate not monotonic')
 
     if or_up :
         x  = -x ; xp = -xp
@@ -88,8 +93,10 @@ def interp1d (x:np.ndarray|xr.DataArray, xp:xr.DataArray,
     # Define the result array
     new_coords = []
     for coord in yp.dims :
-        if coord == zdim : new_coords.append (x.coords [pdim] .values)
-        else             : new_coords.append (yp.coords[coord].values)
+        if coord == zdim :
+            new_coords.append (x.coords [pdim] .values)
+        else             :
+            new_coords.append (yp.coords[coord].values)
 
     ou_tab = xr.DataArray (np.empty (ou_shape), dims=ou_dims, coords=new_coords)
 

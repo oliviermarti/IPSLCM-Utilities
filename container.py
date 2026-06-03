@@ -28,22 +28,28 @@ def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=0) -> str:
     '''
     Pretty printing for almost anything hierachical
 
-    key can be of any valid type. Indent and Newline character can be changed for everything we'd like.
+    key can be of any valid type. Indent and Newline character
+    can be changed for everything we'd like.
     Dict, Container, List and Tuples are pretty printed.
     '''
     nlch = lfchar + htchar * (indent + 1)
     if isinstance (value, dict) :
-        items = [ nlch + repr(key) + ': ' + pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
+        items = [ nlch + repr(key) + ': ' + \
+                  pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
-    elif '__dict__' in dir (value) :
+
+    if '__dict__' in dir (value) :
         items = [ nlch + repr(key) + ': ' +
-                 pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
+                  pretty(value.__dict__[key], htchar, lfchar, indent+1)\
+                  for key in value.__dict__.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
-    elif isinstance (value, list) or isinstance (value, tuple) :
-        items = [ nlch + pretty(item, htchar, lfchar, indent+1) for item in value ]
+
+    if isinstance (value, (list, tuple)) :
+        items = [ nlch + pretty(item, htchar, lfchar, indent+1) \
+                  for item in value ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
-    else:
-        return repr (value)
+
+    return repr (value)
 
 ## ============================================================================
 class Container :
@@ -146,10 +152,7 @@ class Container :
 
     def __contains__ (self:Self, item) -> bool :
         '''Return whether an attribute name exists in the container.'''
-        if item in self.keys() :
-            return True
-        else :
-            return False
+        return item in self.keys()
 
     #def __next__  (self:Self) :
     #    return self.__dict__.__next__()

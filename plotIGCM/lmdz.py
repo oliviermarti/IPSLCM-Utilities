@@ -1,7 +1,5 @@
 #-*- coding: utf-8 -*-
-
-# pylint: disable=multiple-statements, unused-argument, line-too-long, invalid-name
-# pylint: disable=missing-function-docstring, too-many-lines
+# pylint: disable=too-many-locals, too-many-positional-arguments, too-many-arguments, too-many-instance-attributes, too-many-branches, too-many-statements, too-many-nested-blocks, too-many-function-args
 
 '''
 Utilities for LMDZ grid
@@ -31,33 +29,50 @@ personal.
 from typing import Literal, Union, Optional
 import numpy as np
 import xarray as xr
+from plotIGCM.options import OPTIONS, push_stack, pop_stack
 import cartopy
 if cartopy.__version__ > '0.20' :
     import cartopy.util as cutil
 else :
     import my_cyclic as cutil
 
-from plotIGCM.options import OPTIONS, push_stack, pop_stack
+lon_per = xr.DataArray (360.0    , name='lon_per',
+                        attrs={'units':"degrees_east", 'long_name':"Longitude range" })
+RAAMO   = xr.DataArray (12       , name='RAAMO'  ,
+                        attrs={'units':"month"  , 'long_name':"Number of months in one year" })
+RJJHH   = xr.DataArray (24       , name='RJJHH'  ,
+                        attrs={'units':"hour"   , 'long_name':"Number of hours in one day"} )
+RHHMM   = xr.DataArray (60       , name='RHHMM'  ,
+                        attrs={'units':"min"    , 'long_name':"Number of minutes in one hour"} )
+RMMSS   = xr.DataArray (60       , name='RMMSS'  ,
+                        attrs={'units':"second" , 'long_name':"Number of seconds in one minute"} )
+RA      = xr.DataArray (6371229.0, name='RA'     ,
+                        attrs={'units':"meter"  , 'long_name':"Earth radius"} )
+GRAV    = xr.DataArray (9.80665  , name='GRAV'   ,
+                        attrs={'units':"m/s2"   , 'long_name':"Gravity"} )
+RT0     = xr.DataArray (273.15   , name='RT0'    ,
+                        attrs={'units':"K"      , 'long_name':"Freezing point of fresh water"} )
+RAU0    = xr.DataArray (1026.0   , name='RAU0'   ,
+                        attrs={'units':"kg/m3"  , 'long_name':"Volumic mass of sea water"} )
+SICE    = xr.DataArray (6.0      , name='SICE'   ,
+                        attrs={'units':"psu"    , 'long_name':"Salinity of ice (for pisces)"} )
+SOCE    = xr.DataArray (34.7     , name='SOCE'   ,
+                        attrs={'units':"psu"    , 'long_name':"Salinity of sea (for pisces and isf)"} )
+RLEVAP  = xr.DataArray (2.5e+6   , name='RLEVAP' ,
+                        attrs={'units':"J/K"    , 'long_name':"Latent heat of evaporation (water)"} )
+VKARMN  = xr.DataArray (0.4      , name='VKARMN' ,
+                        attrs={                   'long_name':"Von Karman constant"} )
+STEFAN  = xr.DataArray (5.67e-8  , name='STEFAN' ,
+                        attrs={'units':"W/m2/K4", 'long_name':"Stefan-Boltzmann constant"} )
 
-lon_per = xr.DataArray (360.0    , name='lon_per', attrs={'units':"degrees_east", 'long_name':"Longitude range" })
-RAAMO   = xr.DataArray (12       , name='RAAMO'  , attrs={'units':"month"  , 'long_name':"Number of months in one year" })
-RJJHH   = xr.DataArray (24       , name='RJJHH'  , attrs={'units':"hour"   , 'long_name':"Number of hours in one day"} )
-RHHMM   = xr.DataArray (60       , name='RHHMM'  , attrs={'units':"min"    , 'long_name':"Number of minutes in one hour"} )
-RMMSS   = xr.DataArray (60       , name='RMMSS'  , attrs={'units':"second" , 'long_name':"Number of seconds in one minute"} )
-RA      = xr.DataArray (6371229.0, name='RA'     , attrs={'units':"meter"  , 'long_name':"Earth radius"} )
-GRAV    = xr.DataArray (9.80665  , name='GRAV'   , attrs={'units':"m/s2"   , 'long_name':"Gravity"} )
-RT0     = xr.DataArray (273.15   , name='RT0'    , attrs={'units':"K"      , 'long_name':"Freezing point of fresh water"} )
-RAU0    = xr.DataArray (1026.0   , name='RAU0'   , attrs={'units':"kg/m3"  , 'long_name':"Volumic mass of sea water"} )
-SICE    = xr.DataArray (6.0      , name='SICE'   , attrs={'units':"psu"    , 'long_name':"Salinity of ice (for pisces)"} )
-SOCE    = xr.DataArray (34.7     , name='SOCE'   , attrs={'units':"psu"    , 'long_name':"Salinity of sea (for pisces and isf)"} )
-RLEVAP  = xr.DataArray (2.5e+6   , name='RLEVAP' , attrs={'units':"J/K"    , 'long_name':"Latent heat of evaporation (water)"} )
-VKARMN  = xr.DataArray (0.4      , name='VKARMN' , attrs={                   'long_name':"Von Karman constant"} )
-STEFAN  = xr.DataArray (5.67e-8  , name='STEFAN' , attrs={'units':"W/m2/K4", 'long_name':"Stefan-Boltzmann constant"} )
-
-RDAY    = xr.DataArray (RJJHH*RHHMM*RMMSS           , name='RDAY'  , attrs={'units':"second", 'long_name':"Day length"})
-RSIYEA  = xr.DataArray (365.25*RDAY*2*np.pi/6.283076, name='RSIYEA', attrs={'units':"second", 'long_name':"Sideral year length"})
-RSIDAY  = xr.DataArray (RDAY/(1+RDAY/ RSIYEA)       , name='RSIDAY', attrs={'units':"second", 'long_name':"Sideral day length"})
-ROMEGA  = xr.DataArray (2*np.pi/RSIDAY              , name='ROMEGA', attrs={'units':"s-1"   , 'long_name':"Earth rotation parameter"})
+RDAY    = xr.DataArray (RJJHH*RHHMM*RMMSS           , name='RDAY'  ,
+                        attrs={'units':"second", 'long_name':"Day length"})
+RSIYEA  = xr.DataArray (365.25*RDAY*2*np.pi/6.283076, name='RSIYEA',
+                        attrs={'units':"second", 'long_name':"Sideral year length"})
+RSIDAY  = xr.DataArray (RDAY/(1+RDAY/ RSIYEA)       , name='RSIDAY',
+                        attrs={'units':"second", 'long_name':"Sideral day length"})
+ROMEGA  = xr.DataArray (2*np.pi/RSIDAY              , name='ROMEGA',
+                        attrs={'units':"s-1"   , 'long_name':"Earth rotation parameter"})
 
 ## Default names of dimensions
 UDIMS:dict[str,str] = {'x':'lon', 'y':'lat', 'z':'presnivs', 't':'time_counter'}
@@ -67,7 +82,8 @@ XNAME:list[str] = [ 'x', 'X', 'lon', ]
 YNAME:list[str] = [ 'y', 'Y', 'lat', ]
 CNAME:list[str] = [ 'c', 'cell', ]
 ZNAME:list[str] = [ 'z', 'Z', 'presnivs', ]
-TNAME:list[str] = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered', 'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
+TNAME:list[str] = [ 't', 'T', 'tt', 'TT', 'time', 'time_counter', 'time_centered',
+                    'TIME', 'TIME_COUNTER', 'TIME_CENTERED', ]
 BNAME:list[str] = [ 'bnd', 'bnds', 'bound', 'bounds', 'vertex', 'nvertex', 'two', 'two1', 'two2', 'four' ]
 
 ## All possibles name of units of dimensions in LMDZ files
@@ -409,7 +425,7 @@ def interp1d (x:xr.DataArray, xp:xr.DataArray, yp:xr.DataArray, zdim:str='presni
     return ou_tab.squeeze()
 
 def correct_uv (u:xr.DataArray, v:xr.DataArray,
-                lon:xr.DataArray, lat:xr.DataArray, Debug:bool=False) :
+                lat:xr.DataArray, Debug:bool=False) :
     '''
     Corrects a Cartopy bug in orthographic projection
 
@@ -533,8 +549,8 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
                                      axis   = axis,
                                      cyclic = lon_per.item(),
                                      precision=0.0001)
-    xx = xr.DataArray (xx, dims=(x.dims[0],), coords=(xx.squeeze(),) )
-    yy = xr.DataArray (yy, dims=(y.dims[0],), coords=(yy.squeeze(),) )
+    xx = xr.DataArray (xx, dims=(x.dims[0],), coords=(xx.squeeze(),) ) # pyright : ignore[reportOptionalMemberAccess]
+    yy = xr.DataArray (yy, dims=(y.dims[0],), coords=(yy.squeeze(),) ) # pyright : ignore[reportOptionalMemberAccess]
 
     new_coords = []
     for dim in ptab.dims :
@@ -681,7 +697,8 @@ def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=
     if lon/lat is True, add longitude/latitude values (regular grid), with name lon_name (or 'lon' if lon_name not defined)
     if lon/lat is a string, add longitude/latitude values (regular grid), with name lon/lat
     '''
-    push_stack ( f'point3geo (p1d, {lon=}, {lat=}, {lev=}, {jpi=}, {jpj=}, {jpk=}, {share_pole=}, {lon_name=}, {lat_name=}, {lev_name=}) ' )
+    push_stack ( f'point3geo (p1d, {lon=}, {lat=}, {lev=}, {jpi=}, ' ,\
+                 f'{jpj=}, {jpk=}, {share_pole=}, {lon_name=}, {lat_name=}, {lev_name=}) ' )
 
     # Get the horizontal dimension
     jpn = p1d.shape[-1]
@@ -712,7 +729,8 @@ def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=
         jpij = jpn / jpk
         if jpi*jpj !=0 :
             if jpk * ( jpi*(jpj-2) + 2 ) != jpn :
-                raise ValueError (f'{jpn=}, {jpij=} {jpi=}, {jpj}, {jpk=}, {jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]')
+                raise ValueError (f'{jpn=}, {jpij=} {jpi=}, {jpj}, {jpk=}, ' ,\
+                                  f'{jpi*(jpj-2)+2=} does match rule jpi·(jpj-2)+2==p1d.shape[-1]')
         if jpi==0 and jpj>0    :
             jpi = (jpi*jpj-2)//(jpj-2)
         if jpi>0  and jpj == 0 :
@@ -784,7 +802,7 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     p1d.attrs.update ( p2d.attrs )
     if len(p2d.shape [0:-2]) > 0 :
         for idim in range ( len(p2d.shape [0:-2]) ):
-            dim=p2d.dims[idim]
+            dim = p2d.dims[idim]
             p1d = p1d.rename        ( {p1d.dims[idim]:p2d.dims[idim]}   )
             p1d = p1d.assign_coords ( {p1d.dims[idim] :p2d.coords[dim].values} )
     p1d = p1d.rename ( {p1d.dims[-1]:dim1d} )
@@ -792,7 +810,8 @@ def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physi
     pop_stack ( 'geo2point' )
     return p1d
 
-def geo2en (pxx:xr.DataArray, pyy:xr.DataArray, pzz:xr.DataArray, glam:xr.DataArray, gphi:xr.DataArray, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
+def geo2en (pxx:xr.DataArray, pyy:xr.DataArray, pzz:xr.DataArray,
+            glam:xr.DataArray, gphi:xr.DataArray, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Change vector from geocentric to east/north
 
@@ -812,7 +831,8 @@ def geo2en (pxx:xr.DataArray, pyy:xr.DataArray, pzz:xr.DataArray, glam:xr.DataAr
     pop_stack ( 'geo2en ')
     return pte, ptn
 
-def en2geo (pte:xr.DataArray, ptn:xr.DataArray, glam:xr.DataArray, gphi:xr.DataArray, Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
+def en2geo (pte:xr.DataArray, ptn:xr.DataArray, glam:xr.DataArray, gphi:xr.DataArray,
+            Debug:bool=False) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     Change vector from east/north to geocentric
 

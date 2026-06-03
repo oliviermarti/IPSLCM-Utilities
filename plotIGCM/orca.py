@@ -11,7 +11,7 @@ import numpy as np
 
 nam_config:Dict = {
     'orca2' : {
-        'key_agrif'   : False, 
+        'key_agrif'   : False,
         #-----------------------------------------------------------------------
         # namcfg        #   parameters of the configuration
         # -----------------------------------------------------------------------
@@ -34,7 +34,7 @@ nam_config:Dict = {
         #-----------------------------------------------------------------------
         # namdom        #   space and time domain (bathymetry, mesh, timestep)
         #-----------------------------------------------------------------------
-        'namdom' : { 
+        'namdom' : {
             'rn_rdt'      :    5760., #  time step for the dynamics (and tracer if nn_acc=0)
             'nn_closea'   :        1, #  remove (=0) or keep (=1) closed seas and lakes (ORCA)
             'jphgr_msh'   :        0, #  type of horizontal mesh

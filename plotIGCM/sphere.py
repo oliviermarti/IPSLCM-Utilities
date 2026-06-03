@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=multiple-statements, line-too-long, invalid-name
+# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments
 '''
 plotIGCM : a few utilities for post processing
 
@@ -35,6 +35,18 @@ rad = np.deg2rad(1.0)
 full_name = {'tos':{'standard_name':'sea_surface_temperature', 'Title':'Sea surface temperature'},
      'sos':{'standard_name':'sea_surface_salinity'   , 'Title':'Sea surface salinity'   }
      }
+
+def latlon2cart (lat_deg:np.ndarray|xr.DataArray|float, lon_deg:np.ndarray|xr.DataArray|float,
+              r:float=1.0) -> np.ndarray|xr.DataArray|float:
+    '''
+    Convert lon/lat to cartesain coordinates
+    '''
+    lon = np.radians(lon_deg)
+    lat = np.radians(lat_deg)
+    x = r * np.cos(lat) * np.cos(lon)
+    y = r * np.cos(lat) * np.sin(lon)
+    z = r * np.sin(lat)
+    return x, y, z
 
 def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
               lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray,
@@ -204,7 +216,8 @@ def somme_angles (lat0:float|xr.DataArray, lon0:float|xr.DataArray,
     zz = lat*0
 
     for nn in range (nd) :
-        zz[{edim:nn}] = angle (lat0, lon0, lat.isel({edim:nn}), lon.isel({edim:nn}), lat.isel({edim:(nn+1)%nd}), lon.isel({edim:(nn+1)%nd}))
+        zz[{edim:nn}] = angle (lat0, lon0, lat.isel({edim:nn}),
+                               lon.isel({edim:nn}), lat.isel({edim:(nn+1)%nd}), lon.isel({edim:(nn+1)%nd}))
 
     zn = zz.sum(dim=edim) # type: ignore
 

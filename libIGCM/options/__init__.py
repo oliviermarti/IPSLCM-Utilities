@@ -6,7 +6,7 @@ Author : olivier.marti@lsce.ipsl.fr
 
 Github : https://github.com/oliviermarti/IPSLCM-Utilities
 
-This software is governed by the CeCILL  license under French law and      
+This software is governed by the CeCILL license under French law and      
 abiding by the rules of distribution of free software.  You can  use,      
 modify and/ or redistribute the software under the terms of the CeCILL     
 license as circulated by CEA, CNRS and INRIA at the following URL          
@@ -26,31 +26,31 @@ import copy
 from typing import Self, Any, Optional, Type
 
 ## ============================================================================
-DEFAULT_OPTIONS = dict ( Debug                = False,
-                         Trace                = False,
-                         Timing               = None,
-                         t0                   = None,
-                         Depth                = 0,
-                         Stack                = [],
-                         DefaultCalendar      = 'Gregorian',
-                         User                 = None,
-                         Group                = None,
-                         TGCC_User            = 'p86mart',
-                         TGCC_Group           = 'gen12006',
-                         IDRIS_User           = 'rces009',
-                         IDRIS_Group          = 'ces',
-                         TGCC_DapPrefix       = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-                         TGCC_ThreddsPrefix   = 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
-                         TGCC_SshPrefix       = '/Users/marti/Volumes/TGCC',
-                         IDRIS_DapPrefix      = 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-                         IDRIS_ThreddsPrefix  = 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
-                         IDRIS_SshPrefix      = '/Users/marti/Volumes/IDRIS',
-                         DapPrefix            = None,
-                         ThreddsPrefix        = None,
-                         SshPrefix            = None,
-                         IGCM_Catalog         = None,
-                         IGCM_Catalog_list    = [ 'IGCM_Catalog.json', ],
-                         )
+DEFAULT_OPTIONS ={ 'Debug'                : False,
+                   'Trace'                : False,
+                   'Timing'               : None,
+                   't0'                   : None,
+                   'Depth'                : 0,
+                   'Stack'                : [],
+                   'DefaultCalendar'      : 'Gregorian',
+                   'User'                 : None,
+                   'Group'                : None,
+                   'TGCC_User'            : 'p86mart',
+                   'TGCC_Group'           : 'gen12006',
+                   'IDRIS_User'           : 'rces009',
+                   'IDRIS_Group'          : 'ces',
+                   'TGCC_DapPrefix'       : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+                   'TGCC_ThreddsPrefix'   : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
+                   'TGCC_SshPrefix'       : '/Users/marti/Volumes/TGCC',
+                   'IDRIS_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+                   'IDRIS_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
+                   'IDRIS_SshPrefix'      : '/Users/marti/Volumes/IDRIS',
+                   'DapPrefix'            : None,
+                   'ThreddsPrefix'        : None,
+                   'SshPrefix'            : None,
+                   'IGCM_Catalog'         : None,
+                   'IGCM_Catalog_list'    : [ 'IGCM_Catalog.json', ],
+                  }
 
 OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
 
@@ -72,7 +72,7 @@ class set_options :
         **kwargs
             Option names and values to update.
         '''
-        self.old = dict ()
+        self.old = {}
         for k in kwargs :
             if k not in OPTIONS :
                 raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
@@ -142,10 +142,11 @@ def pop_stack (string:str) -> None :
         if dt :
             if dt < 1e-3 :
                 print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
-            if dt >= 1e-3 and dt < 1 :
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
-            if dt >= 1 :
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+            else :
+                if dt < 1 :
+                    print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                else :
+                    print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else :
             print (     '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
     #

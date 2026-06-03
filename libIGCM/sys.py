@@ -57,18 +57,20 @@ def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=3) -> str:
     if isinstance (value, dict) :
         items = [ nlch + repr(key) + ': ' + pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
-    elif '__dict__' in dir (value) :
+
+    if '__dict__' in dir (value) :
         items = [ nlch + repr(key) + ': ' \
                  + pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
-    elif isinstance (value, list) or isinstance (value, tuple) :
+
+    if isinstance (value, (list, tuple)) :
         items = [ nlch + pretty(item, htchar, lfchar, indent+1) for item in value ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
-    else:
-        return repr (value)
+
+    return repr (value)
 
 ## ============================================================================
-def Mach (long:bool=False) -> str|None :
+def Mach (long:bool=False) -> str|None : # pylint: disable=too-many-branches
     '''
     Find the computer we are on
 
@@ -141,7 +143,7 @@ set_options (IGCM_Catalog=IGCM_Catalog, IGCM_Catalog_list=IGCM_Catalog_list)
 # =======================================================================
 ##
 
-class Config :
+class Config : # pylint: disable=too-many-instance-attributes
     '''
     ! Defines the libIGCM directories
 
@@ -213,9 +215,11 @@ class Config :
     def __iter__(self:Self) -> Iterable[str]: # pylint: disable=missing-function-docstring
         return iter(self.__dict__)
     def __contains__ (self:Self, attr:Any) -> bool : # pylint: disable=missing-function-docstring
-        return True if attr in self.__dict__ else False
+        if attr in self.__dict__ :
+            return True
+        return False
 
-    def __init__ (self:Self,
+    def __init__ (self:Self, # pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-statements, too-many-branches
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None,
                   ExperimentName:str|None=None,
                   ModelName:str|None=None, ShortName:str|None=None, LongName:str|None=None,
@@ -330,7 +334,8 @@ class Config :
 
             ## Creates parser for reading .ini input file
             MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # pyright: ignore[reportGeneralTypeIssues] # To keep capitals
+            # To keep capitals
+            MyReader.optionxform = str # pyright: ignore[reportGeneralTypeIssues, reportAttributeAccessIssue]
             MyReader.read (ConfigCard)
 
             if not JobName        :
@@ -781,10 +786,10 @@ class Config :
             if 'linestyle' not in Line.keys() :
                 Line['linestyle']='solid'
         else :
-            Line = dict (color='black', linestyle='solid')
+            Line = {'color':'black', 'linestyle':'solid'}
 
         if Marker is None :
-            Marker = dict (marker='D', fillstyle='full' )
+            Marker = {'marker':'D', 'fillstyle':'full' }
         else :
             if isinstance (Marker, dict) :
                 if "marker" not in Marker.keys () :
@@ -875,8 +880,6 @@ class Config :
 
         ### ===============================================================
         ## Add custom attributes
-
-        return None
 
 ### =======================================================================
 def Dap2Thredds (file:str, mm:Config|None=None) -> str :

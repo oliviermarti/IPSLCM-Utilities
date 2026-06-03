@@ -131,7 +131,7 @@ def DaysInMonth (yy:int, mm:int|None=None, Calendar:CALENDAR_TYPE|None=None) -> 
     pop_stack ( f'DaysInMonth : {length}' )
     return length
 
-def DaysSinceJC (date:str, Calendar:CALENDAR_TYPE|None=None) -> int :
+def DaysSinceJC (date:str, Calendar:CALENDAR_TYPE|None=None) -> int : # pylint: disable=too-many-branches
     '''
     Calculate the days difference between a date and 00010101
 
@@ -175,7 +175,7 @@ def DaysSinceJC (date:str, Calendar:CALENDAR_TYPE|None=None) -> int :
     pop_stack ( f'DaysSinceJC : {ndays}' )
     return ndays
 
-def IsLeapYear (year:int, Calendar:CALENDAR_TYPE|None=None, Debug:bool=False) -> bool :
+def IsLeapYear (year:int, Calendar:CALENDAR_TYPE|None=None, Debug:bool=False) -> bool :  # pylint: disable=too-many-branches
     '''
     True if year is a leap year
     '''
@@ -278,7 +278,7 @@ def ConvertFormatToHuman (date:str) -> str :
     pop_stack ( f'ConvertFormatToHuman : {zz}' )
     return zz
 
-def GetYearMonthDay (date:str|int, Debug:bool=False) -> Tuple[int, int, int] :
+def GetYearMonthDay (date:str|int, Debug:bool=False) -> Tuple[int, int, int] :  # pylint: disable=too-many-branches
     '''
     Split Date in format [yy]yymmdd or [yy]yy-mm-dd to yy, mm, dd
     '''
@@ -393,7 +393,7 @@ def CorrectYearMonthDay (ye:int, mo:int, da:int, Calendar:CALENDAR_TYPE|None=Non
     pop_stack ( f'CorrectYearMonthDay : {ye_new}, {mo_new}, {da_new}' )
     return ye_new, mo_new, da_new
 
-def DateAddMonth (date:str, month_inc:int=1, Calendar:CALENDAR_TYPE|None=None,
+def DateAddMonth (date:str, month_inc:int=1, Calendar:CALENDAR_TYPE|None=None, # pylint: disable=too-many-locals
                   Debug:bool=False) -> str :
     '''
     Add on year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
@@ -698,10 +698,7 @@ def AnaPeriod (period:str) -> tuple[str, int] :
     periodName   = rmDigits  (period)
     periodLength = getDigits (period)
 
-    if '-' in periodName :
-        Neg = True
-    else :
-        Neg = False
+    Neg = '-' in periodName
 
     periodName = periodName.replace ( '-', '')
 

@@ -30,14 +30,14 @@ from libIGCM.options import get_options
 from libIGCM.options import push_stack
 from libIGCM.options import pop_stack
 
-class Config (libIGCM.sys.Config) :
+class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attributes
     '''
     Defines the libIGCM directories and simulations characteristics
 
     Overload libIGCM.sys.Config to add knowldege about some simulations
     described in a catalog (at json format)
     '''
-    def __init__ (self:Self,
+    def __init__ (self:Self,# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-statements, too-many-branches
                   JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
                   LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, Comment:str|None=None,
                   Source:str|None=None, MASTER:str|None=None,
@@ -81,7 +81,7 @@ class Config (libIGCM.sys.Config) :
         Init function of the Config class in libIGM.post
         """
 
-        def search_catalog (pCatalog:str, pJobName:str|None=None,
+        def search_catalog (pCatalog:str, pJobName:str|None=None, # pylint: disable=too-many-branches
                             pShortName:str|None=None, Debug:bool=False) -> dict|None :
             '''
             Search for JobName or ShortName in a catalog file
@@ -91,13 +91,14 @@ class Config (libIGCM.sys.Config) :
             ldebug = OPTIONS['Debug'] or Debug
             if ldebug :
                 print ( f'libIGCM.post.Config.search_catalog : Catalog file : {pCatalog=} {pJobName=} {pShortName=}' )
-            zExp_file    = open (pCatalog, encoding="utf-8", mode='r')
-            zExperiments = json.load (zExp_file)
+
+            with open (pCatalog, encoding="utf-8", mode='r') as zExp_file :
+                zExperiments = json.load (zExp_file)
             exp_out=None
             if ldebug :
                 print ( f'libIGCM.post.Config.search_catalog : zExperiments : {zExperiments.keys()=}' )
 
-            if pJobName is None :
+            if pJobName is None : # pylint: disable=too-many-nested-blocks
                 if pShortName is not None :
                     if ldebug :
                         print ( f'libIGCM.post.Config.search_catalog : searching {pShortName=} in Catalog {pCatalog}')
@@ -131,7 +132,7 @@ class Config (libIGCM.sys.Config) :
 
         ### ===========================================================================================
         ## Read catalog of known simulations
-        push_stack ( 'libIGCM.post.__init__')
+        push_stack ('libIGCM.post.__init__')
 
         OPTIONS = get_options ()
         ldebug = OPTIONS['Debug'] or Debug
@@ -235,7 +236,7 @@ class Config (libIGCM.sys.Config) :
         if ldebug :
             print ( f'{self.IGCM_Catalog=}' )
 
-        if self.IGCM_Catalog is not None :
+        if self.IGCM_Catalog is not None : # pylint: disable=too-many-nested-blocks
             if ldebug :
                 print ( f'Searching for catalog file : {self.IGCM_Catalog=}' )
             if os.path.isfile (self.IGCM_Catalog) :
@@ -271,7 +272,7 @@ class Config (libIGCM.sys.Config) :
             if exp is None :
                 if ldebug :
                     print ( 'Updates exp with *kwargs')
-                exp = dict (**kwargs)
+                exp = {**kwargs}
             else :
                 if ldebug :
                     print ( 'Creates exp from *kwargs')
@@ -281,10 +282,10 @@ class Config (libIGCM.sys.Config) :
             print (f'exp before analysing (2) : {exp=}')
 
         # A revoir : on prend les valeurs de self, puis de exp, puis celles de OPTIONS
-        if exp is not None :
+        if exp is not None : # pylint: disable=too-many-nested-blocks
             if ldebug :
                 print ( f'Read catalog file for {self.JobName=}' )
-            exp = dict (**exp)
+            exp = {**exp}
             if ldebug :
                 print (f'exp at start of analysing : {exp=}')
 
@@ -323,10 +324,9 @@ class Config (libIGCM.sys.Config) :
         else :
             if IGCM_Catalog :
                 raise RuntimeError ( f'{self.JobName} not found in {self.IGCM_Catalog=}' )
-            elif IGCM_Catalog_list :
+            if IGCM_Catalog_list :
                 raise RuntimeError ( f'{self.JobName} not found in {self.IGCM_Catalog_list=}' )
-            else :
-                raise RuntimeError ( f'{self.JobName} not found' )
+            raise RuntimeError ( f'{self.JobName} not found' )
 
         if self.YearBegin and self.YearEnd and not self.Period :
             self.Period = f'{self.YearBegin}0101_{self.YearEnd}1231'
@@ -346,7 +346,7 @@ class Config (libIGCM.sys.Config) :
                     self.YearEnd   = Y2
 
         if len(exp)== 0 :
-            add_values = dict ()
+            add_values = {}
         else :
             if ldebug :
                 print ( f'exp after analyzing : {exp=}' )
@@ -386,7 +386,7 @@ class Config (libIGCM.sys.Config) :
 
         pop_stack ('libIGCM.post.__init__')
 
-def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
+def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None : # pylint: disable=too-many-branches
     '''
     Return a dictionnary from the catalog file
     By defaults, keeps only experiments entries
@@ -403,8 +403,8 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
         if os.path.isfile (cata_log) :
             if ldebug :
                 print ( f'Catalog file : {cata_log=}' )
-            exp_file = open (cata_log, mode='r', encoding="utf-8")
-            lcatalog = json.load (exp_file)
+            with open (cata_log, mode='r', encoding="utf-8") as exp_file :
+                lcatalog = json.load (exp_file)
         else :
             raise FileNotFoundError ( f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
 
@@ -416,8 +416,8 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None :
                 if os.path.isfile (cfile) :
                     if ldebug :
                         print ( f'Reads catalog file : {cfile=}' )
-                exp_file = open (cfile, mode='r', encoding="utf-8")
-                lcatalog = json.load (exp_file)
+                with open (cfile, mode='r', encoding="utf-8") as exp_file :
+                    lcatalog = json.load (exp_file)
 
     if lcatalog is not None and not keep_all :
         ccz = lcatalog.copy ()

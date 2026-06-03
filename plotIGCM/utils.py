@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-branches, too-many-statements
 '''
 libIGCM_utils : a few utilities
 
@@ -61,8 +62,10 @@ def build_feat (file, Debug=False, facecolor='none', edgecolor='k') :
     '''
     From a geojson file, build a cartopy feature
     '''
-    if 'http' in file : zf = open (GetFile (file), 'r', encoding='utf-8')
-    else              : zf = open (file, 'r', encoding='utf-8')
+    if 'http' in file :
+        zf = open (GetFile (file), 'r', encoding='utf-8')
+    else              :
+        zf = open (file, 'r', encoding='utf-8')
     if OPTIONS['Debug'] or Debug :
         print ( f'Reading shapefile in {file=}' )
     file_shp  = shp.from_geojson (zf.read())
