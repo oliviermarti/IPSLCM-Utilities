@@ -1,67 +1,66 @@
 #!/usr/bin/env python3
 '''
-libIGCM_utils : a few utilities
-
 Author : olivier.marti@lsce.ipsl.fr
 
 Github : https://github.com/oliviermarti/IPSLCM-Utilities
 
-This software is governed by the CeCILL license under French law and      
-abiding by the rules of distribution of free software.  You can  use,      
-modify and/ or redistribute the software under the terms of the CeCILL     
-license as circulated by CEA, CNRS and INRIA at the following URL          
-"http://www.cecill.info".                                                  
-                                                                           
-Warning, to install, configure, run, use any of Olivier Marti's            
-software or to read the associated documentation you'll need at least      
-one (1) brain in a reasonably working order. Lack of this implement        
-will void any warranties (either express or implied).                      
-O. Marti assumes no responsability for errors, omissions,                  
-data loss, or any other consequences caused directly or indirectly by      
-the usage of his software by incorrectly or partially configured           
-personal. Be warned that the author himself may not respect the prerequisites.                                                               
+This software is governed by the CeCILL license under French law and
+abiding by the rules of distribution of free software.  You can  use,
+modify and/ or redistribute the software under the terms of the CeCILL
+license as circulated by CEA, CNRS and INRIA at the following URL
+"http://www.cecill.info".
+
+Warning, to install, configure, run, use any of Olivier Marti's
+software or to read the associated documentation you'll need at least
+one (1) brain in a reasonably working order. Lack of this implement
+will void any warranties (either express or implied).
+O. Marti assumes no responsability for errors, omissions,
+data loss, or any other consequences caused directly or indirectly by
+the usage of his software by incorrectly or partially configured
+personal. Be warned that the author himself may not respect the prerequisites.
 '''
 import time
 import copy
 from typing import Self, Any, Optional, Type
 
 ## ============================================================================
-DEFAULT_OPTIONS ={ 'Debug'                : False,
-                   'Trace'                : False,
-                   'Timing'               : None,
-                   't0'                   : None,
-                   'Depth'                : 0,
-                   'Stack'                : [],
-                   'DefaultCalendar'      : 'Gregorian',
-                   'User'                 : None,
-                   'Group'                : None,
-                   'TGCC_User'            : 'p86mart',
-                   'TGCC_Group'           : 'gen12006',
-                   'IDRIS_User'           : 'rces009',
-                   'IDRIS_Group'          : 'ces',
-                   'TGCC_DapPrefix'       : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-                   'TGCC_ThreddsPrefix'   : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
-                   'TGCC_SshPrefix'       : '/Users/marti/Volumes/TGCC',
-                   'IDRIS_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-                   'IDRIS_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
-                   'IDRIS_SshPrefix'      : '/Users/marti/Volumes/IDRIS',
-                   'DapPrefix'            : None,
-                   'ThreddsPrefix'        : None,
-                   'SshPrefix'            : None,
-                   'IGCM_Catalog'         : None,
-                   'IGCM_Catalog_list'    : [ 'IGCM_Catalog.json', ],
-                  }
+DEFAULT_OPTIONS ={
+    'Debug'               : False,
+    'Trace'               : False,
+    'Timing'              : None,
+    't0'                  : None,
+    'Depth'               : 0,
+    'Stack'               : [],
+    'DefaultCalendar'     : 'Gregorian',
+    'User'                : None,
+    'Group'               : None,
+    'TGCC_User'           : 'p86mart',
+    'TGCC_Group'          : 'gen12006',
+    'IDRIS_User'          : 'rces009',
+    'IDRIS_Group'         : 'ces',
+    'TGCC_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+    'TGCC_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
+    'TGCC_SshPrefix'      : '/Users/marti/Volumes/TGCC',
+    'IDRIS_DapPrefix'     : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+    'IDRIS_ThreddsPrefix' : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
+    'IDRIS_SshPrefix'     : '/Users/marti/Volumes/IDRIS',
+    'DapPrefix'           : None,
+    'ThreddsPrefix'       : None,
+    'SshPrefix'           : None,
+    'IGCM_Catalog'        : None,
+    'IGCM_Catalog_list'   : [ 'IGCM_Catalog.json', ],
+}
 
 OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
 
-class set_options :
+class set_options : # pylint: disable=invalid-name
     '''
     Set OPTIONS for libIGCM
-    
+
     See Also :
     ----------
     reset_options, get_options
-    
+
     '''
     def __init__ (self:Self, **kwargs) -> None :
         '''
@@ -75,7 +74,8 @@ class set_options :
         self.old = {}
         for k in kwargs :
             if k not in OPTIONS :
-                raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
+                raise ValueError (
+                    f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
         self._apply_update (kwargs)
 
@@ -141,14 +141,18 @@ def pop_stack (string:str) -> None :
     if OPTIONS['Trace'] or dt :
         if dt :
             if dt < 1e-3 :
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+                print ( '  '*(OPTIONS['Depth']-1),
+                    f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
             else :
                 if dt < 1 :
-                    print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                    print ( '  '*(OPTIONS['Depth']-1),
+                        f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
                 else :
-                    print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+                    print ( '  '*(OPTIONS['Depth']-1),
+                        f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else :
-            print (     '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
+            print (     '  '*(OPTIONS['Depth']-1),
+                        f'<--{__name__}.{string}')
     #
     OPTIONS['Depth'] -= 1
     OPTIONS['Stack'].pop ()

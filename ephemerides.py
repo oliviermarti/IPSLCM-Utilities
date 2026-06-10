@@ -81,7 +81,7 @@ SliceSE = { 'Annual':slice(0,12),
 
 SliceTS = { 'JAN':slice(0,None,12), 'FEB':slice( 1,None,12), 'MAR':slice( 2,None,12),
             'APR':slice(3,None,12), 'MAY':slice( 4,None,12), 'JUN':slice( 5,None,12),
-            'JUL':slice(6,None,12), 'AUG':slice( 7,None,12), 'SEP':slice( 8,None,12), 
+            'JUL':slice(6,None,12), 'AUG':slice( 7,None,12), 'SEP':slice( 8,None,12),
             'OCT':slice(9,None,12), 'NOV':slice(10,None,12), 'DEC':slice(11,None,12)}
 
 SOLAR = 1365.0          # Solar constant (W/m^2)
@@ -336,9 +336,10 @@ def time2BP (time_coord, unit:str='year',
         result = int (result*12)
 
     if isinstance (time_coord, xr.DataArray) :
-        result = xr.DataArray ([ int(year) for year in result],
-                                dims=('YearBP',),
-                                coords=(result,)) # pyright: ignore[reportArgumentType]
+        result = xr.DataArray (
+            [ int(year) for year in result], # type: ignore[reportGeneralTypeIssue]
+            dims=('YearBP',),
+            coords=(result,)) # pyright: ignore[reportArgumentType]
         if unit in ['month', 'Month', 'months', 'Months', 'M', 'm' ] :
             result.attrs.update (
                 {'unit':'Month BP', 'Comment':f'Month before {year0:04d}-{month0:02d}-{day0:02d}'})

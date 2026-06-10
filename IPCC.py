@@ -171,7 +171,8 @@ def truncate_colormap(zcmap, minval=0.0, maxval=1.0, n=100):
     '''
     if isinstance(zcmap, str):
         zcmap = plt.get_cmap(zcmap)
-    new_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+    new_cmap = \
+        mpl.colors.LinearSegmentedColormap.from_list( # pyright: ignore[reportAttributeAccessIssue]
         f'trunc({zcmap.name},{minval:.2f},{maxval:.2f})',
         zcmap(np.linspace(minval, maxval, n)))
     return new_cmap
@@ -472,7 +473,8 @@ cmap.MultiCat_5_r = create_colormap (cmap.colors_MultiCat_5, reverse=True , name
 
 
 def multicat (ncolors:int=19, trunk:str='high', reverse:bool=False, name:str='MultiCat',
-              Debug=False) -> mpl.colors.ListedColormap :
+              Debug=False
+              ) -> mpl.colors.ListedColormap : # pyright: ignore[reportAttributeAccessIssue]
     '''
     Builds a multicategory colormap
     '''

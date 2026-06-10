@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-branches, too-many-statements
+# pylint: disable=too-many-branches, too-many-statements, invalid-name
 '''
 libIGCM_utils : a few utilities
 
@@ -23,7 +23,9 @@ the usage of his software by incorrectly or partially configured
 personal. Be warned that the author himself may not respect the prerequisites.
 '''
 import os
-from typing import Callable, Any, Self, Literal, _LiteralGenericAlias # pyright: ignore[reportAttributeAccessIssue]
+from typing import (Callable, Any, Self, Literal,
+                    _LiteralGenericAlias # pyright: ignore[reportAttributeAccessIssue]
+                    )
 import re
 from urllib.request import urlretrieve
 from pathlib import Path
@@ -46,28 +48,30 @@ class RegexEqual (str) :
     def __eq__(self:Self, pattern:str) -> bool :
         return bool (re.search(pattern, self))
 
-def GetFile (url:str, File=None, Debug=False) :
+def get_file (url:str, pfile=None, Debug=False) :
     '''
     Get a file from a web server
     '''
-    if File : File = Path (File)
-    else    : File = Path (os.path.basename(url))
-    if not File.exists () :
+    if pfile :
+        pfile = Path (pfile)
+    else    :
+        pfile = Path (os.path.basename(url))
+    if not pfile.exists () :
         if OPTIONS['Debug'] or Debug :
             print ( f'Retrieving url={url}' )
-        urlretrieve (url, File)
-    return File
+        urlretrieve (url, pfile)
+    return pfile
 
-def build_feat (file, Debug=False, facecolor='none', edgecolor='k') :
+def build_feat (pfile, Debug=False, facecolor='none', edgecolor='k') :
     '''
     From a geojson file, build a cartopy feature
     '''
-    if 'http' in file :
-        zf = open (GetFile (file), 'r', encoding='utf-8')
+    if 'http' in pfile :
+        zf = open (GetFile (pfile), 'r', encoding='utf-8')
     else              :
-        zf = open (file, 'r', encoding='utf-8')
+        zf = open (pfile, 'r', encoding='utf-8')
     if OPTIONS['Debug'] or Debug :
-        print ( f'Reading shapefile in {file=}' )
+        print ( f'Reading shapefile in {pfile=}' )
     file_shp  = shp.from_geojson (zf.read())
     file_poly = cartopy.feature.ShapelyFeature (
         file_shp, crs=ccrs.PlateCarree(),# pyright: ignore[reportAttributeAccessIssue]
@@ -86,7 +90,8 @@ def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
 
     #print (Y1, Y2, Y3, Y4)
 
-    print ( f'Start of simu1: {Y1=} | End of simu 1: {Y2=} | End of simu 1 {Y3=} | End of simus 2 : {Y4=}' )
+    print ( f'Start of simu1: {Y1=} | End of simu 1: {Y2=} |', \
+            f'End of simu 1 {Y3=} | End of simus 2 : {Y4=}' )
 
     T1 = f"{Y1:04d}-01-01"
     T2 = f"{Y2:04d}-12-31"
@@ -94,9 +99,11 @@ def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
     T4 = f"{Y4:04d}-12-31"
 
     if OPTIONS['Debug'] or Debug :
-        print ( f'Start of simu1: {T1=} | End of simu 1: {T2=} | End of simu 1 {T3=} | End of simus 2 : {T4=}' )
+        print ( f'Start of simu1: {T1=} | End of simu 1: {T2=} | ', \
+                f'End of simu 1 {T3=} | End of simus 2 : {T4=}' )
 
-    ptab3 =  xr.concat ( [ ptab1.sel( {dim:slice(T1,T2)} ), ptab2.sel ( {dim:slice(T3,T4)} ) ], dim=dim )
+    ptab3 =  xr.concat ( [ ptab1.sel( {dim:slice(T1,T2)} ),
+                           ptab2.sel ( {dim:slice(T3,T4)} ) ], dim=dim )
     return ptab3
 
 def add_year (ptime:xr.DataArray, year_shift:int=0, Debug=False) -> xr.DataArray :
@@ -133,7 +140,8 @@ def validate_types (func: Callable) -> Callable :
             for (name, param_type), value in zip (func.__annotations__.items (), args) :
                 if param_type not in [Any, Self, Literal, _LiteralGenericAlias] :
                     if not param_type in [Any,] and not isinstance (value, param_type) :
-                        raise TypeError (f"Argument {name} should be of type {param_type}, got {type(value)}")
+                        raise TypeError (
+                            f"Argument {name} should be of type {param_type}, got {type(value)}")
                 if OPTIONS['Debug'] :
                     print ( '==')
 
@@ -144,7 +152,8 @@ def validate_types (func: Callable) -> Callable :
                         print ( f"kwarg non testable : {param_type = }")
                 else :
                     if not param_type in  [Any,] and not isinstance (value, param_type) :
-                        raise TypeError (f"k-Argument '{key}' should be of type {param_type}, got {type(value)}")
+                        raise TypeError (
+                            f"k-Argument '{key}' should be of type {param_type}, got {type(value)}")
 
         ## Validate return type
         result = func (*args, **kwargs)
@@ -157,20 +166,25 @@ def copy_attrs (ptab:xr.DataArray, pref:xr.DataArray, Debug:bool=False) -> xr.Da
     Convert from numpy to xarray if needed
     '''
     push_stack ( 'copy_attrs' )
-    if OPTIONS['Debug'] or Debug : print ( f'ptab:{type(ptab)} pref:{type(pref)} {ptab.shape=} {pref.shape=}')
+    if OPTIONS['Debug'] or Debug :
+        print ( f'ptab:{type(ptab)} pref:{type(pref)} {ptab.shape=} {pref.shape=}')
 
     if isinstance(pref, xr.DataArray) :
         if isinstance (ptab, xr.DataArray) :
-            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is xr' )
+            if OPTIONS['Debug'] or Debug :
+                print ( 'copy_attrs : ptab is xr' )
             ztab = ptab
         elif isinstance (ptab, np.ndarray) :
-            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab is np or np.ma' )
+            if OPTIONS['Debug'] or Debug :
+                print ( 'copy_attrs : ptab is np or np.ma' )
             if ptab.shape == pref.shape :
-                if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : convert ptab to xarray' )
+                if OPTIONS['Debug'] or Debug :
+                    print ( 'copy_attrs : convert ptab to xarray' )
                 ztab = xr.DataArray (ptab, coords=pref.coords, dims=pref.dims)
                 ztab.name = pref.name
         else :
-            if OPTIONS['Debug'] or Debug : print ( 'copy_attrs : ptab copied' )
+            if OPTIONS['Debug'] or Debug :
+                print ( 'copy_attrs : ptab copied' )
             ztab = ptab
 
     pop_stack ( 'copy_attrs')
@@ -238,8 +252,10 @@ def unit2math (unit:str, Debug:bool=False) -> str :
     zu = zu.replace ( 'm2'         , 'm$^2$' )
     zu = zu.replace ( 'm3'         , 'm$^3$' )
 
-    # for zz in ['s', 'cm', 'mm', 'm', 'kgC', 'kg', 'N', 'ngN', 'Sv', 'gC', 'g', 'days', 'day', 'd',
-    #            'yr', 'years', 'year', 'C', '°C', 'K', 'Pa', 'J', 'pft', 'PSU', 'PSS', 'psu', 'pss', 'W', 'PW' ] :
+    # for zz in ['s', 'cm', 'mm', 'm', 'kgC', 'kg', 'N', 'ngN', 'Sv',
+    #            'gC', 'g', 'days', 'day', 'd',
+    #            'yr', 'years', 'year', 'C', '°C', 'K', 'Pa', 'J', 'pft',
+    #            'PSU', 'PSS', 'psu', 'pss', 'W', 'PW' ] :
 
     #     if zz in zu :
 
@@ -305,55 +321,96 @@ def unit2math (unit:str, Debug:bool=False) -> str :
 
     return zu
 
-def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False, short:bool=False) -> str :
+def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
+                   short:bool=False) -> str :
     '''
     Return a full long_name of a Monitoring variable
     '''
     match RegexEqual (varName) :
-        case 'icevol_north_MAR'         : zname = 'Sea ice volume, northern hemisphere, March'
-        case 'icevol_north_SEP'         : zname = 'Sea ice volume, northern hemisphere, September'
-        case 'icevol_south_MAR'         : zname = 'Sea ice volume, southern hemisphere, March'
-        case 'icevol_south_SEP'         : zname = 'Sea ice volume, southern hemisphere, September'
-        case 'icevol_north_MAR'         : zname = 'Sea ice volume, northern hemisphere, March'
-        case 'icevol_north_SEP'         : zname = 'Sea ice volume, northern hemisphere, September'
-        case 'icevol_north'             : zname = 'Sea ice volume, northern hemisphere'
-        case 'icevol_south'             : zname = 'Sea Ice volume, southern hemisphere'
-        case 'siconc_north_MAR'         : zname = 'Sea ice fraction, northern hemisphere, March'
-        case 'siconc_north_SEP'         : zname = 'Sea ice fraction, northern hemisphere, September'
+        case 'icevol_north_MAR'         :
+            zname = 'Sea ice volume, northern hemisphere, March'
+        case 'icevol_north_SEP'         :
+            zname = 'Sea ice volume, northern hemisphere, September'
+        case 'icevol_south_MAR'         :
+            zname = 'Sea ice volume, southern hemisphere, March'
+        case 'icevol_south_SEP'         :
+            zname = 'Sea ice volume, southern hemisphere, September'
+        case 'icevol_north_MAR'         :
+            zname = 'Sea ice volume, northern hemisphere, March'
+        case 'icevol_north_SEP'         :
+            zname = 'Sea ice volume, northern hemisphere, September'
+        case 'icevol_north'             :
+            zname = 'Sea ice volume, northern hemisphere'
+        case 'icevol_south'             :
+            zname = 'Sea Ice volume, southern hemisphere'
+        case 'siconc_north_MAR'         :
+            zname = 'Sea ice fraction, northern hemisphere, March'
+        case 'siconc_north_SEP'         :
+            zname = 'Sea ice fraction, northern hemisphere, September'
         case 'siconc_south_MAR'         : zname = 'Sea ice fraction, southern hemisphere, March'
-        case 'siconc_south_SEP'         : zname = 'Sea ice fraction, southern hemisphere, September'
-        case 'siconc_north'             : zname = 'Sea ice fraction, northern hemisphere'
-        case 'siconc_south'             : zname = 'Sea ice fraction, southern hemisphere'
-        case 'iicethic_north_MAR'       : zname = 'Sea ice thickness, northern hemisphere, March'
-        case 'iicethic_north_SEP'       : zname = 'Sea ice thickness, northern hemisphere, September'
-        case 'iicethic_south_MAR'       : zname = 'Sea ice thickness, southern hemisphere, March'
-        case 'iicethic_south_SEP'       : zname = 'Sea ice thickness, southern hemisphere, September'
-        case 'iicethic_north'           : zname = 'Sea ice thickness, northern hemisphere'
-        case 'iicethic_south'           : zname = 'Sea ice thickness, southern hemisphere'
-        case 'isnowthi_north'           : zname = 'Sea ice volume, northern hemisphere'
-        case 'isnowthi_south'           : zname = 'Sea ice volume, southern hemisphere'
-        case 'snowvol_north'            : zname = 'Snow volume on sea ice, northern hemisphere'
-        case 'snowvol_south'            : zname = 'Snow volume on sea ice, southern hemisphere'
+        case 'siconc_south_SEP'         :
+            zname = 'Sea ice fraction, southern hemisphere, September'
+        case 'siconc_north'             :
+            zname = 'Sea ice fraction, northern hemisphere'
+        case 'siconc_south'             :
+            zname = 'Sea ice fraction, southern hemisphere'
+        case 'iicethic_north_MAR'       :
+            zname = 'Sea ice thickness, northern hemisphere, March'
+        case 'iicethic_north_SEP'       :
+            zname = 'Sea ice thickness, northern hemisphere, September'
+        case 'iicethic_south_MAR'       :
+            zname = 'Sea ice thickness, southern hemisphere, March'
+        case 'iicethic_south_SEP'       :
+            zname = 'Sea ice thickness, southern hemisphere, September'
+        case 'iicethic_north'           :
+            zname = 'Sea ice thickness, northern hemisphere'
+        case 'iicethic_south'           :
+            zname = 'Sea ice thickness, southern hemisphere'
+        case 'isnowthi_north'           :
+            zname = 'Sea ice volume, northern hemisphere'
+        case 'isnowthi_south'           :
+            zname = 'Sea ice volume, southern hemisphere'
+        case 'snowvol_north'            :
+            zname = 'Snow volume on sea ice, northern hemisphere'
+        case 'snowvol_south'            :
+            zname = 'Snow volume on sea ice, southern hemisphere'
 
-        case 'area_neg_scritd_Barents'          : zname = 'Area with Salinity < Scrit, Barents Sea'
-        case 'area_neg_scritd_Irminger'         : zname = 'Area with Salinity < Scrit, Irminger Sea'
-        case 'area_neg_scritd_Labrador'         : zname = 'Area with Salinity < Scrit, Labrador Sea'
-        case 'area_neg_scritd_NordicSeas'       : zname = 'Area with Salinity < Scrit, Nordic Seas'
-        case 'area_neg_scritd_NorthAtlantic'    : zname = 'Area with Salinity < Scrit, North Atlantic'
-        case 'area_neg_scritd_SubpolarNorthAtl' : zname = 'Area with Salinity < Scrit, Subpolar North Atl.'
+        case 'area_neg_scritd_Barents'          :
+            zname = 'Area with Salinity < Scrit, Barents Sea'
+        case 'area_neg_scritd_Irminger'         :
+            zname = 'Area with Salinity < Scrit, Irminger Sea'
+        case 'area_neg_scritd_Labrador'         :
+            zname = 'Area with Salinity < Scrit, Labrador Sea'
+        case 'area_neg_scritd_NordicSeas'       :
+            zname = 'Area with Salinity < Scrit, Nordic Seas'
+        case 'area_neg_scritd_NorthAtlantic'    :
+            zname = 'Area with Salinity < Scrit, North Atlantic'
+        case 'area_neg_scritd_SubpolarNorthAtl' :
+            zname = 'Area with Salinity < Scrit, Subpolar North Atl.'
 
-        case 'precip_global'            : zname = 'Global precipitation'
-        case 'sosaline_north'           : zname = 'Salinity, northern hemisphere'
-        case 't2m_global.*'             : zname = 'Global air surface temperature'
+        case 'precip_global'            :
+            zname = 'Global precipitation'
+        case 'sosaline_north'           :
+            zname = 'Salinity, northern hemisphere'
+        case 't2m_global.*'             :
+            zname = 'Global air surface temperature'
 
-        case 'nadw_ocean.*'             : zname = 'AMOC index'
-        case 'somxl010_Irminger'        : zname = 'Mixed layer depth, Irminger Sea'
-        case 'somxl010_NordicSeas'      : zname = 'Mixed layer depth, Nordic Seas'
-        case 'somxl010_Labrador'        : zname = 'Mixed layer depth, Labrador Sea'
-        case 'sosaline_30N_50N'         : zname = 'Salinity, 30N-50N'
-        case 'sosaline_50N_70N'         : zname = 'Salinity, 50N-70N'
-        case 'sosaline_atl_30N_50N'     : zname = 'Salinity, Atlantic, 30N-50N'
-        case 'sosaline_atl_50N_70N'     : zname = 'Salinity, Atlantic, 50N-70N'
+        case 'nadw_ocean.*'             :
+            zname = 'AMOC index'
+        case 'somxl010_Irminger'        :
+            zname = 'Mixed layer depth, Irminger Sea'
+        case 'somxl010_NordicSeas'      :
+            zname = 'Mixed layer depth, Nordic Seas'
+        case 'somxl010_Labrador'        :
+            zname = 'Mixed layer depth, Labrador Sea'
+        case 'sosaline_30N_50N'         :
+            zname = 'Salinity, 30N-50N'
+        case 'sosaline_50N_70N'         :
+            zname = 'Salinity, 50N-70N'
+        case 'sosaline_atl_30N_50N'     :
+            zname = 'Salinity, Atlantic, 30N-50N'
+        case 'sosaline_atl_50N_70N'     :
+            zname = 'Salinity, Atlantic, 50N-70N'
 
         case _ :
             if long_name is not None :

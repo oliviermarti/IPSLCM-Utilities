@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 """
-Couleurs pour les messages d'erreur, d'avertissement, 
+Couleurs pour les messages d'erreur, d'avertissement,
 de succès, etc.
 """
 from colorama import Fore, Back, Style
@@ -25,7 +27,7 @@ Sky_and_Sun     = ['#56B4E9', '#FFA500', '#CC79A7', '#009900', '#0072B2']
 Tol_bright = ['#EE6677', '#228833', '#4477AA',
               '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB']
 Tol_muted  = ['#88CCEE', '#44AA99', '#117733',
-              '#332288', '#DDCC77', '#999933', 
+              '#332288', '#DDCC77', '#999933',
               '#CC6677', '#882255', '#AA4499', '#DDDDDD']
 Tol_light  = ['#BBCC33', '#AAAA00', '#77AADD',
               '#EE8866', '#EEDD88', '#FFAABB',
@@ -40,7 +42,7 @@ Okabe_Ito = ["#E69F00", "#56B4E9", "#009E73", "#F0E442",
 # 'vert eclatant', 'violet', 'bleu azure', 'mauve',
 # 'rose', 'rouge brun', 'orange brun', 'jaune'
 couleurs_aaa = [ '#000000', '#252525', '#676767',
-                 '#FFFFFF', '#171723', '#004949', 
-                 '#009999', '#22CF22', '#490092', 
-                 '#006DDB', '#B66DFF', '#FF6DB6', 
+                 '#FFFFFF', '#171723', '#004949',
+                 '#009999', '#22CF22', '#490092',
+                 '#006DDB', '#B66DFF', '#FF6DB6',
                  '#920000', '#DB6D00', '#FFDF4D' ]

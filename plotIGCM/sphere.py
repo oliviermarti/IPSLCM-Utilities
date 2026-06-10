@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments
+# pylint: disable=too-many-arguments, too-many-locals, too-many-positional-arguments, invalid-name
 '''
 plotIGCM : a few utilities for post processing
 
@@ -29,15 +29,70 @@ import xarray as xr
 from plotIGCM.options import OPTIONS
 from plotIGCM.options import push_stack
 from plotIGCM.options import pop_stack
+from plotIGCM.utils import validate_types
 
-rad = np.deg2rad(1.0)
+
+RAD = np.deg2rad(1.0)
 
 full_name = {'tos':{'standard_name':'sea_surface_temperature', 'Title':'Sea surface temperature'},
      'sos':{'standard_name':'sea_surface_salinity'   , 'Title':'Sea surface salinity'   }
      }
 
+@validate_types
+def clo_lon (lon:xr.DataArray, lon0:float|xr.DataArray=0., rad:bool=False,
+             deg:bool=True) -> xr.DataArray :
+    '''
+    Choose closest to lon0 longitude, adding/substacting 360.
+    if needed
+    '''
+    push_stack ( f'clo_lon (lon, {lon0=}, {rad=}, {deg=} )' )
+    if rad and deg :
+        raise RuntimeError ('Error in nemo.en2geo: rad and deg can not be both True')
+    if rad :
+        lon_range = 2.*np.pi
+    else :
+        lon_range = 360.
+    c_lon = lon
+    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    if c_lon.shape == () :
+        c_lon = c_lon.item ()
+    if 'attrs' in dir(lon) and 'attrs' in dir(c_lon) :
+        c_lon.attrs.update (lon.attrs)
+
+    pop_stack ( 'clo_lon' )
+    return c_lon
+
+@validate_types
+def geo2en (pxx:xr.DataArray, pyy:xr.DataArray, pzz:xr.DataArray,
+    glam:xr.DataArray, gphi:xr.DataArray) -> tuple[xr.DataArray, xr.DataArray] :
+    '''
+    Change vector from geocentric to east/north
+
+    Inputs :
+        pxx, pyy, pzz : components on the geocentric system
+        glam, gphi : longitude and latitude of the points
+    '''
+    push_stack ( 'geo2en (pxx, pyy, pzz, glam, gphi)' )
+    gsinlon = np.sin (RAD*glam)
+    gcoslon = np.cos (RAD*glam)
+    gsinlat = np.sin (RAD*gphi)
+    gcoslat = np.cos (RAD*gphi)
+
+    pte = - pxx * gsinlon            + pyy * gcoslon
+    ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
+
+    pop_stack ( 'geo2en' )
+    return pte, ptn
+
+@validate_types
 def latlon2cart (lat_deg:np.ndarray|xr.DataArray|float, lon_deg:np.ndarray|xr.DataArray|float,
-              r:float=1.0) -> np.ndarray|xr.DataArray|float:
+              r:float=1.0
+              ) -> tuple[np.ndarray,np.ndarray,np.ndarray]|\
+                   tuple[xr.DataArray, xr.DataArray, xr.DataArray]|\
+                   tuple[float, float, float] :
     '''
     Convert lon/lat to cartesain coordinates
     '''
@@ -48,6 +103,7 @@ def latlon2cart (lat_deg:np.ndarray|xr.DataArray|float, lon_deg:np.ndarray|xr.Da
     z = r * np.sin(lat)
     return x, y, z
 
+@validate_types
 def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
               lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray,
               radius:float|xr.DataArray=1.0, Debug:bool=False) -> float|np.ndarray|xr.DataArray :
@@ -80,6 +136,7 @@ def distance (lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataA
     pop_stack ('distance')
     return zdistance
 
+@validate_types
 def aire_triangle (lat0: float|np.ndarray|xr.DataArray, lon0: float|np.ndarray|xr.DataArray,
                    lat1: float|np.ndarray|xr.DataArray, lon1: float|np.ndarray|xr.DataArray,
                    lat2: float|np.ndarray|xr.DataArray, lon2: float|np.ndarray|xr.DataArray,
@@ -127,6 +184,7 @@ def aire_triangle (lat0: float|np.ndarray|xr.DataArray, lon0: float|np.ndarray|x
     pop_stack ('aire_triangle')
     return Saire
 
+@validate_types
 def aire_quadri (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.DataArray,
                  lat1:float|np.ndarray|xr.DataArray, lon1:float|np.ndarray|xr.DataArray,
                  lat2:float|np.ndarray|xr.DataArray, lon2:float|np.ndarray|xr.DataArray,
@@ -143,6 +201,7 @@ def aire_quadri (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.Da
     pop_stack ( 'aire_quadri')
     return Saire
 
+@validate_types
 def angle (latA:float|np.ndarray|xr.DataArray, lonA:float|np.ndarray|xr.DataArray,
            latB:float|np.ndarray|xr.DataArray, lonB:float|np.ndarray|xr.DataArray,
            latC:float|np.ndarray|xr.DataArray, lonC:float|np.ndarray|xr.DataArray,
@@ -176,14 +235,18 @@ def angle (latA:float|np.ndarray|xr.DataArray, lonA:float|np.ndarray|xr.DataArra
     pop_stack ('angle')
     return zA
 
+@validate_types
 def somme_4angles (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.DataArray,
                    latA:float|np.ndarray|xr.DataArray, lonA:float|np.ndarray|xr.DataArray,
                    latB:float|np.ndarray|xr.DataArray, lonB:float|np.ndarray|xr.DataArray,
                    latC:float|np.ndarray|xr.DataArray, lonC:float|np.ndarray|xr.DataArray,
-                   latD:float|np.ndarray|xr.DataArray, lonD:float|np.ndarray|xr.DataArray ) -> float|np.ndarray|xr.DataArray :
+                   latD:float|np.ndarray|xr.DataArray, lonD:float|np.ndarray|xr.DataArray
+                   ) -> float|np.ndarray|xr.DataArray :
     '''
-    Sum of angles from point 0 to all others in order : angle(0A,0B)+angle(0B,0C)+angle(0C,0D)+angle(0D,0A)
-    Note : if 0 is inside the polygon (A,B,C,D), angle is close to 2*pi (slightly less on the sphere)
+    Sum of angles from point 0 to all others in order :
+          angle(0A,0B)+angle(0B,0C)+angle(0C,0D)+angle(0D,0A)
+    Note : if 0 is inside the polygon (A,B,C,D), angle is close to 2*pi
+           (slightly less on the sphere)
            if 0 is outside, it is close to 0.
     '''
     push_stack ( 'somme_4angles')
@@ -197,11 +260,37 @@ def somme_4angles (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.
     pop_stack ('somme_4angles')
     return zz
 
+@validate_types
+def en2geo (pte:xr.DataArray, ptn:xr.DataArray, glam:xr.DataArray, gphi:xr.DataArray
+            ) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
+    '''
+    Change vector from east/north to geocentric
+
+    Inputs :
+        pte, ptn   : eastward/northward components
+        glam, gphi : longitude and latitude of the points
+    '''
+    push_stack ( 'en2geo ( pte, ptn, glam, gphi )' )
+
+    gsinlon = np.sin (RAD*glam)
+    gcoslon = np.cos (RAD*glam)
+    gsinlat = np.sin (RAD*gphi)
+    gcoslat = np.cos (RAD*gphi)
+
+    pxx = - pte * gsinlon - ptn * gcoslon * gsinlat
+    pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
+    pzz =   ptn * gcoslat
+
+    pop_stack ( 'en2geo' )
+    return pxx, pyy, pzz
+
+@validate_types
 def somme_angles (lat0:float|xr.DataArray, lon0:float|xr.DataArray,
                   lat:xr.DataArray, lon:xr.DataArray, dim:str|None=None) -> xr.DataArray :
     '''
     Sum of angles from point 0 to all others in order : angle(0A,0B)+angle(0B,0C)+ ...
-    Note : if 0 is inside the polygon (A,B,C,...), angle is close to 2*pi (slightly less on the sphere)
+    Note : if 0 is inside the polygon (A,B,C,...), angle is close to 2*pi
+           (slightly less on the sphere)
                if 0 is outside, it is close to 0.
     '''
     if dim is not None :
@@ -217,7 +306,8 @@ def somme_angles (lat0:float|xr.DataArray, lon0:float|xr.DataArray,
 
     for nn in range (nd) :
         zz[{edim:nn}] = angle (lat0, lon0, lat.isel({edim:nn}),
-                               lon.isel({edim:nn}), lat.isel({edim:(nn+1)%nd}), lon.isel({edim:(nn+1)%nd}))
+                               lon.isel({edim:nn}), lat.isel({edim:(nn+1)%nd}),
+                               lon.isel({edim:(nn+1)%nd}))
 
     zn = zz.sum(dim=edim) # type: ignore
 

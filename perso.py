@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+# pylint:disable=too-many-arguments, too-many-positional-arguments, too-many-locals, invalid-name
 '''
 Utilitaires
 
 author: olivier.marti@lsce.ipsl.fr
 
 This software is governed by the CeCILL  license under French law and
-abiding by the rules of distribution of free software.  You can  use,
+abiding by the rules of distribution of free software. You can  use,
 modify and/ or redistribute the software under the terms of the CeCILL
 license as circulated by CEA, CNRS and INRIA at the following URL
 "http://www.cecill.info".
@@ -40,11 +41,13 @@ RAD   = np.deg2rad (1.0)
 DAR   = np.rad2deg (1.0)
 REPSI = np.finfo(np.float64).resolution.item()
 
-def pval (r:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
+def pval (r:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray
+          ) -> float|np.ndarray|xr.DataArray :
     '''p-value for a correlation r and a sample size n'''
     return 1 - r * np.sqrt(n-2) / np.sqrt(1.0-r*r)
 
-def rcor (p:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray) -> float|np.ndarray|xr.DataArray :
+def rcor (p:float|np.ndarray|xr.DataArray, n:float|np.ndarray|xr.DataArray
+          ) -> float|np.ndarray|xr.DataArray :
     '''correlation r critical for a p-value p and and a sample size n'''
     return np.sqrt ((1-p)/(n-1))
 
@@ -82,9 +85,9 @@ def aire_triangle (lat0:float|np.ndarray|xr.DataArray, lon0:float|np.ndarray|xr.
     beta  = np.arccos ( arg_beta  )
     gamma = np.arccos ( arg_gamma )
 
-    S = alpha + beta + gamma - np.pi
+    zs = alpha + beta + gamma - np.pi
 
-    return S
+    return zs
 
 def aire_maille (bounds_lat:xr.DataArray, bounds_lon:xr.DataArray,
                  vertex:str|None=None ) :
@@ -95,14 +98,14 @@ def aire_maille (bounds_lat:xr.DataArray, bounds_lon:xr.DataArray,
     if not vertex :
         vertex = bounds_lat.dims[-1] # pyright: ignore[reportAssignmentType]
 
-    S1 = aire_triangle ( bounds_lat[{vertex:0}], bounds_lon[{vertex:0}],
-                         bounds_lat[{vertex:1}], bounds_lon[{vertex:1}],
-                         bounds_lat[{vertex:2}], bounds_lon[{vertex:2}] )
-    S2 = aire_triangle ( bounds_lat[{vertex:2}], bounds_lon[{vertex:2}],
-                         bounds_lat[{vertex:3}], bounds_lon[{vertex:3}],
-                         bounds_lat[{vertex:0}], bounds_lon[{vertex:0}] )
+    zs1 = aire_triangle ( bounds_lat[{vertex:0}], bounds_lon[{vertex:0}],
+                          bounds_lat[{vertex:1}], bounds_lon[{vertex:1}],
+                          bounds_lat[{vertex:2}], bounds_lon[{vertex:2}] )
+    zs2 = aire_triangle ( bounds_lat[{vertex:2}], bounds_lon[{vertex:2}],
+                          bounds_lat[{vertex:3}], bounds_lon[{vertex:3}],
+                          bounds_lat[{vertex:0}], bounds_lon[{vertex:0}] )
     pop_stack ('aire_maille')
-    return S1 + S2
+    return zs1 + zs2
 
 def cmap_long (cmap, ncolors:int) :
     '''
@@ -117,7 +120,8 @@ def cmap_long (cmap, ncolors:int) :
     colors = cmap.resampled (ncolors) (np.linspace (0, 1, ncolors))
 
     # Remplacement des couleurs
-    for nn in range (ncolors) : colors[nn,:]= cmap (nn%nc)
+    for nn in range (ncolors) :
+        colors[nn,:]= cmap (nn%nc)
 
     # Creation d'un objet colormap
     zcmap_long =  matplotlib.colors.ListedColormap (colors)
@@ -179,9 +183,10 @@ def total_seconds (timedelta):
     return seconds
 
 
-def zebra_frame(self, lw:int=3, crs=None, zorder:int|None=None, iFlag_outer_frame_in:bool|None=None) -> None :
+def zebra_frame(self, lw:int=3, crs=None, zorder:int|None=None,
+                iFlag_outer_frame_in:bool|None=None) -> None :
     """Draw alternating black and white frame segments around the map extent.
-    
+
     Parameters
     ----------
     lw : int, optional
@@ -390,13 +395,14 @@ class TaylorDiagram (object) :
         # Taylor diagram
         dia = TaylorDiagram (refstd, fig=fig, rect=122, label="Reference",
                             srange=(0.5, 1.5))
-
-        colors = matplotlib.cm.jet (np.linspace(0, 1, len(samples))) # pyright: ignore[reportAttributeAccessIssue]
+        # pylint:disable=no-member
+        colors = matplotlib.cm.jet ( # pyright: ignore[reportAttributeAccessIssue]
+            np.linspace(0, 1, len(samples)))
 
         ax1.plot(x, data, 'ko', label='Data')
         for i, m in enumerate ([m1, m2, m3]):
             ax1.plot (x, m, c=colors[i], label=f'Model {i+1}' )
-            ax1.legend (numpoints=1, prop=dict(size='small'), loc='best')
+            ax1.legend (numpoints=1, prop={'size':'small'}, loc='best')
 
         # Add the models to Taylor diagram
         for i, (stddev, corrcoef) in enumerate (samples):
@@ -415,10 +421,9 @@ class TaylorDiagram (object) :
         # Add a figure legend
         fig.legend (dia.samplePoints,
                 [ p.get_label() for p in dia.samplePoints ],
-                numpoints=1, prop=dict(size='small'), loc='upper right')
+                numpoints=1, prop={'size':'small'}, loc='upper right')
 
         pop_stack  ('test1')
-        return
 
     def test2 (self) :
         """
@@ -462,7 +467,7 @@ class TaylorDiagram (object) :
         # Add a figure legend and title
         fig.legend (dia.samplePoints,
                 [ p.get_label() for p in dia.samplePoints ],
-                numpoints=1, prop=dict(size='small'), loc='upper right')
+                numpoints=1, prop={'size':'small'}, loc='upper right')
         fig.suptitle ("Taylor diagram", size='x-large')  # Figure title
 
         pop_stack  ('test2')

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-branches, too-many-statements, invalid-name
 '''
 Utilitaires
 
@@ -32,7 +33,8 @@ RAD:float   = np.deg2rad (1.0)
 DAR:float   = np.rad2deg (1.0)
 REPSI:float = np.finfo(np.float64).resolution.item()
 
-def detrend (ztab:xr.DataArray, dim:str, detrend_type:str='linear') -> tuple[xr.DataArray, xr.DataArray] :
+def detrend (ztab:xr.DataArray, dim:str, detrend_type:str='linear'
+             ) -> tuple[xr.DataArray, xr.DataArray] :
     '''
     Detrend a signal
 
@@ -79,8 +81,9 @@ def mirror ( ztab:xr.DataArray, dim:str, use_coord=False) -> xr.DataArray :
     ztab2  = ztab2.assign_coords ( {dim:xx2} )
     return ztab2
 
-def fft_fft (tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=False, return_aux=True,
-             Debug=False, chunks_to_segments=False) -> tuple[xr.DataArray,xr.DataArray]|xr.DataArray :
+def fft_fft (tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=False,
+             return_aux=True, Debug=False, chunks_to_segments=False
+             ) -> tuple[xr.DataArray,xr.DataArray]|xr.DataArray :
     '''
     Run a fft transform on a xarray DataArray
     Data are mirrored to force the periodicity of the signal
@@ -104,31 +107,39 @@ def fft_fft (tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=Fals
     ztab  = tab
     xxt   = ztab.coords[dim]
     if fill_gap :
-        if Debug : print (' fft_filter: Fill gaps')
+        if Debug :
+            print (' fft_filter: Fill gaps')
         ztab = ztab.interpolate_na (dim=dim, method='linear', limit=None, use_coordinate=False,
                                     max_gap=None, keep_attrs=None)
         ztab = ztab.fillna (0.)
-    if Debug : print (' fft_fft: Remove and store mean 1')
+    if Debug :
+        print (' fft_fft: Remove and store mean 1')
     ztab_mean = ztab.mean (dim=dim)
-    if Debug : print (' fft_fft: Remove and store mean 2')
+    if Debug :
+        print (' fft_fft: Remove and store mean 2')
     ztab     -= ztab_mean
-    if Debug : print ('  fft_fft: Detrend, and store trend' )
+    if Debug :
+        print ('  fft_fft: Detrend, and store trend' )
     ztab_d     = xrft.detrend (ztab, dim=dim, detrend_type='linear'  )
     ztab_trend = ztab - ztab_d
     ztab       = ztab_d
-    if Debug : print (' fft_fft: Mirror data')
+    if Debug :
+        print (' fft_fft: Mirror data')
     ztab2  = xr.concat ( ( ztab.isel({dim:slice(None,None,-1)}), ztab, ), dim=dim)
     del ztab_d, ztab_trend
-    if Debug : print ('  fft_fft: Create axis for the mirrored data')
+    if Debug :
+        print ('  fft_fft: Create axis for the mirrored data')
     if use_coord :
         xx2 = xr.concat ( ( (xxt-(xxt[-1]-xxt[0])), xxt), dim=dim)
     else :
         xx2 = np.arange ( -len(xxt), len(xxt) )
     ztab2  = ztab2.assign_coords ( {dim:xx2} )
-    if Debug : print (' fft_fft: Detrend')
+    if Debug :
+        print (' fft_fft: Detrend')
     ztab2  = xrft.detrend (ztab2, dim=dim, detrend_type='linear'  )
 
-    if Debug : print ('  fft_fft: Direct transform')
+    if Debug :
+        print ('  fft_fft: Direct transform')
     power = xrft.fft (ztab2, dim=dim, true_phase=True, true_amplitude=True, prefix='freq_',
                       chunks_to_segments=chunks_to_segments)
     freqs = power.coords[f'freq_{dim}']
@@ -136,8 +147,8 @@ def fft_fft (tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=Fals
 
     if return_aux :
         return power, freqs
-    else :
-        return power
+
+    return power
 
 ## ============================================================================
 def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=False,
@@ -146,7 +157,8 @@ def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=
                      min_period:Union[float,None]=None, max_period:Union[float,None]=None,
                      keep_trend:bool=True, return_aux:bool=False, Debug:bool=False,
                      chunks_to_segments:bool=False
-                     ) -> Union[xr.DataArray, tuple[xr.DataArray,xr.DataArray,xr.DataArray,xr.DataArray]] :
+                     ) -> Union[xr.DataArray,
+                                tuple[xr.DataArray,xr.DataArray,xr.DataArray,xr.DataArray]] :
     '''
     Run a fft filter on a xarray DataArray
     Data are mirrored to force the periodicity of the signal
@@ -188,22 +200,27 @@ def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=
     ztab  = tab
     xxt   = ztab.coords[dim]
     if fill_gap :
-        if Debug : print (' fft_filter: Fill gaps')
+        if Debug :
+            print (' fft_filter: Fill gaps')
         ztab = ztab.interpolate_na (dim=dim, method='linear', limit=None, use_coordinate=False,
                                     max_gap=None, keep_attrs=None)
         ztab = ztab.fillna (0.)
-    if  Debug: print (' fft_filter: Remove and store mean')
+    if  Debug:
+        print (' fft_filter: Remove and store mean')
     ztab_mean  = ztab.mean (dim=dim)
     ztab = ztab - ztab_mean
 
     ztab_d     = xrft.detrend (ztab, dim=dim, detrend_type='linear' )
     ztab_trend = ztab - ztab_d
     if detrend_type :
-        if Debug : print (' fft_filter: Detrend, and store trend' )
+        if Debug :
+            print (' fft_filter: Detrend, and store trend' )
         ztab   = ztab_d
-    if Debug : print (' fft_filter: Mirror data')
+    if Debug :
+        print (' fft_filter: Mirror data')
     ztab2  = xr.concat ( ( ztab.isel({dim:slice(None,None,-1)}), ztab, ), dim=dim)
-    if Debug : print (' fft_filter: Create axis for the mirrored data')
+    if Debug :
+        print (' fft_filter: Create axis for the mirrored data')
     if use_coord :
         xx2 = xr.concat ( ( (xxt-(xxt[-1]-xxt[0])), xxt), dim=dim)
     else :
@@ -212,28 +229,38 @@ def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=
     ztab2_mean = ztab2.mean (dim=dim)
     ztab2 = ztab2 - ztab2_mean
     if detrend_type :
-        if Debug : print (' fft_filter: Detrend')
+        if Debug :
+            print (' fft_filter: Detrend')
         ztab2  = xrft.detrend (ztab2, dim=dim, detrend_type='linear'  )
 
-    if Debug : print (' fft_filter: Direct transform')
+    if Debug :
+        print (' fft_filter: Direct transform')
     power = xrft.fft (ztab2, dim=dim, true_phase=True, true_amplitude=True, prefix='freq_',
                       chunks_to_segments=chunks_to_segments)
 
     freqs = power.coords[f'freq_{dim}']
 
-    if max_period and not min_freq : min_freq = 1./max_period
+    if max_period and not min_freq :
+        min_freq = 1./max_period
     if min_period and not max_freq :
-        if min_period > 0. : max_freq = 1./min_period
-    if min_freq and not max_period : max_period = 1./min_freq
-    if max_freq and not min_period : min_period = 1./max_freq
+        if min_period > 0. :
+            max_freq = 1./min_period
+    if min_freq and not max_period :
+        max_period = 1./min_freq
+    if max_freq and not min_period :
+        min_period = 1./max_freq
 
-    if Debug : print (f' fft_filter: {min_freq=} {max_freq=} {min_period=} {max_period=}')
+    if Debug :
+        print (f' fft_filter: {min_freq=} {max_freq=} {min_period=} {max_period=}')
 
     power_filt = power.copy()
-    if min_freq : power_filt = xr.where (np.abs(freqs) < min_freq, 0., power_filt)
-    if max_freq : power_filt = xr.where (np.abs(freqs) > max_freq, 0., power_filt)
+    if min_freq :
+        power_filt = xr.where (np.abs(freqs) < min_freq, 0., power_filt)
+    if max_freq :
+        power_filt = xr.where (np.abs(freqs) > max_freq, 0., power_filt)
 
-    if Debug : print (' fft_filter: Inverse transform' )
+    if Debug :
+        print (' fft_filter: Inverse transform' )
     #nn = power_filt[f'freq_{dim}'].size
     ftab2 = xrft.ifft (power_filt, dim=f'freq_{dim}', true_phase=True, true_amplitude=True,
                            lag=0, chunks_to_segments=chunks_to_segments).compute().real
@@ -244,7 +271,8 @@ def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=
         ftab = ftab + ztab_mean
         ftab = ftab + ztab_trend
 
-    for attr in ztab.attrs : ftab.attrs[attr] = ztab.attrs[attr]
+    for attr in ztab.attrs :
+        ftab.attrs[attr] = ztab.attrs[attr]
 
     ftab.attrs.update (
          {'Comment':f'{ztab.name} filtered with fft filter and mirroring',
@@ -253,8 +281,8 @@ def fft_filter ( tab:xr.DataArray, dim:str, fill_gap:bool=False, use_coord:bool=
 
     if return_aux :
         return ftab, power, power_filt, freqs
-    else :
-        return ftab
+
+    return ftab
 
 def lowess ( endog:xr.DataArray, exog:np.ndarray|xr.DataArray|None=None,
              frac:float|None=None, length:int|None|float=None, it:int=3,
@@ -328,11 +356,13 @@ def lowess ( endog:xr.DataArray, exog:np.ndarray|xr.DataArray|None=None,
         if length is not None :
             raise ValueError ( 'Both frac and length are specified. Give only one value')
 
-    if xvals is None : xvals = exog # pyright: ignore[reportAssignmentType]
+    if xvals is None :
+        xvals = exog # pyright: ignore[reportAssignmentType]
 
-
-    zz = sm.nonparametric.lowess (endog=endog, exog=exog, frac=frac, it=it, delta=delta, xvals=xvals,
-                                  is_sorted=is_sorted, missing=missing, return_sorted=return_sorted)
+    zz = sm.nonparametric.lowess (endog=endog, exog=exog, frac=frac, it=it, delta=delta,
+                                  xvals=xvals, is_sorted=is_sorted, missing=missing,
+                                  return_sorted=return_sorted)
+    zz_r = None
 
     if bounds :
         # Perform bootstrap resamplings of the data
@@ -355,11 +385,14 @@ def lowess ( endog:xr.DataArray, exog:np.ndarray|xr.DataArray|None=None,
         zz_t = sorted_values[-bound]
 
     if isinstance (endog, xr.DataArray) :
-        if ldebug : print ( 'endog xarray' )
+        if ldebug :
+            print ( 'endog xarray' )
         if return_sorted :
-            if ldebug : print ( '  return sorted' )
+            if ldebug :
+                print ( '  return sorted' )
             if xvals is None :
-                if ldebug : print ( '    xvals is None' )
+                if ldebug :
+                    print ( '    xvals is None' )
                 zz_x = zz[:,0]
                 zz_y = xr.DataArray ( zz[:,1], dims=endog.dims, coords=[zz_x,])
                 zz_x = xr.DataArray ( zz_x   , dims=endog.dims, coords=[zz_x,])
@@ -367,59 +400,72 @@ def lowess ( endog:xr.DataArray, exog:np.ndarray|xr.DataArray|None=None,
                     zz_b = xr.DataArray ( zz_b, dims=endog.dims, coords=[zz_x,])
                     zz_t = xr.DataArray ( zz_t, dims=endog.dims, coords=[zz_x,])
             else :
-                if ldebug : print ( 'xvals is not None' )
+                if ldebug :
+                    print ( 'xvals is not None' )
                 zz_x = xvals
-                zz_y = xr.DataArray ( zz  , dims=endog.dims, coords=[zz_x,]) # pyright: ignore[reportArgumentType]
-                zz_x = xr.DataArray ( zz_x, dims=endog.dims, coords=[zz_x,]) # pyright: ignore[reportArgumentType]
+                zz_y = xr.DataArray ( zz  , dims=endog.dims, coords=[zz_x,])
+                zz_x = xr.DataArray ( zz_x, dims=endog.dims, coords=[zz_x,])
                 if bounds :
                     zz_b = xr.DataArray ( zz_b, dims=endog.dims, coords=[zz_x,])
                     zz_t = xr.DataArray ( zz_t, dims=endog.dims, coords=[zz_x,])
         else :
             if xvals is None :
                 zz_x = exog
-                zz_y = xr.DataArray ( zz  , dims=endog.dims, coords=[zz_x,]) # pyright: ignore[reportArgumentType]
-                zz_x = xr.DataArray ( zz_x, dims=endog.dims, coords=[zz_x,]) # pyright: ignore[reportArgumentType]
+                zz_y = xr.DataArray ( zz  , dims=endog.dims, coords=[zz_x,])
+                zz_x = xr.DataArray ( zz_x, dims=endog.dims, coords=[zz_x,])
                 if bounds :
                     zz_b = xr.DataArray ( zz_b, dims=endog.dims, coords=[zz_x,])
                     zz_t = xr.DataArray ( zz_t, dims=endog.dims, coords=[zz_x,])
             else :
                 zz_x = xvals
-                zz_y = xr.DataArray ( zz  , dims=endog.dims, coords=[zz_x,]) # pyright: ignore[reportArgumentType]
-                zz_x = xr.DataArray ( zz_x, dims=endog.dims, coords=[zz_x,]) # pyright: ignore[reportArgumentType]
+                zz_y = xr.DataArray ( zz  , dims=endog.dims, coords=[zz_x,])
+                zz_x = xr.DataArray ( zz_x, dims=endog.dims, coords=[zz_x,])
                 if bounds :
                     zz_b = xr.DataArray ( zz_b, dims=endog.dims, coords=[zz_x,])
                     zz_t = xr.DataArray ( zz_t, dims=endog.dims, coords=[zz_x,])
         if isinstance (endog, xr.DataArray) :
             zz_y.attrs.update ( endog.attrs )
-            zt = f"{len(xvals)} values>" if xvals is not None else "None" # pyright: ignore[reportArgumentType]
+            zt = f"{len(xvals)} values>" if xvals is not None else "None"
             zz_y.attrs.update (
-             {'LOWLESS':f'{frac=}, {it=}, {delta=}, xvals={zt}, {is_sorted=}, {missing=}, {return_sorted=}'} )
+             {'LOWLESS':f'{frac=}, {it=}, {delta=}, xvals={zt}, {is_sorted=},'\
+              f'{missing=}, {return_sorted=}'} )
 
             name = zz_y.coords[zz_y.dims[0]].name
             if 'attrs' in dir(exog) :
-                zz_y[name].attrs.update (exog.attrs)
+                zz_y[name].attrs.update (
+                    exog.attrs
+                ) # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+                zz_y[name].attrs.update ( \
+                    {'LOWLESS':f'{frac=}, {it=}, {delta=}, xvals={zt}, {is_sorted=}, \
+                    {missing=}, {return_sorted=}'}
+                    ) # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
             zz_r = zz_y
 
     else :
-        if ldebug : print ( 'endog numpy' )
+        if ldebug :
+            print ( 'endog numpy' )
         if return_sorted :
-            if ldebug : print ( 'return sorted' )
+            if ldebug :
+                print ( 'return sorted' )
             if xvals is not None :
-                if ldebug : print ( 'endog numpy' )
+                if ldebug :
+                    print ( 'endog numpy' )
                 zz_r = [ xvals, zz]
             else :
-                if ldebug : print ( 'not return_sorted' )
+                if ldebug :
+                    print ( 'not return_sorted' )
                 zz_r = [ exog, zz ]
         else :
             if xvals is not None :
-                if ldebug : print ( 'xvals not None' )
+                if ldebug :
+                    print ( 'xvals not None' )
                 zz_r = [ xvals, zz ]
             else :
-                if ldebug : print ( 'xvals None' )
+                if ldebug :
+                    print ( 'xvals None' )
                 zz_r = zz
-
 
     if bounds :
         return zz_r, zz_t, zz_b
-    else :
-        return zz_r
+
+    return zz_r

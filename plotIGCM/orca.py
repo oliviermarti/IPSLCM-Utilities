@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# pylint: disable=line-too-long
 '''
 ORCA namelists
 
@@ -51,7 +53,8 @@ nam_config:Dict = {
             'ppacr'       :       3.0,             #
             'ppdzmin'     :   np.nan, #  Minimum vertical spacing
             'pphmax'      :   np.nan, #  Maximum depth
-            'ldbletanh'   :  False,   #  Use/do not use double tanf function for vertical coordinates
+            'ldbletanh'   :  False,   #  Use/do not use double tanf function
+                                      #  for vertical coordinates
             'ppa2'        :   np.nan, #  Double tanh function parameters
             'ppkth2'      :   np.nan, #
             'ppacr2'      :   np.nan, #

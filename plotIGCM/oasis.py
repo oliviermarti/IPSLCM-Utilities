@@ -81,14 +81,14 @@ for avar, ovar in a2o :
     a2o_d[avar] = ovar
     a2o_r[ovar] = avar
 
-o2a_d = dict ()
-o2a_r = dict ()
+o2a_d:Dict = {}
+o2a_r:Dict = {}
 for ovar, avar in o2a :
     o2a_d[ovar] = avar
     o2a_r[avar] = ovar
 
 ## ============================================================================
-def compute_links (remap_matrix:np.ndarray|xr.DataArray,
+def compute_links (remap_matrix:np.ndarray|xr.DataArray, # pylint: disable=too-many-arguments,too-many-positional-arguments
                    src_address:np.ndarray|xr.DataArray, dst_address:np.ndarray|xr.DataArray,
                    src_grid_size:int, dst_grid_size:int, num_links:int) \
                     -> Tuple[np.ndarray|xr.DataArray,np.ndarray|xr.DataArray,
@@ -115,7 +115,7 @@ def compute_links (remap_matrix:np.ndarray|xr.DataArray,
     pop_stack ( 'compute_links')
     return src_grid_target, src_grid_weight, dst_grid_target, dst_grid_weight
 
-def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False
+def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False # pylint: disable=too-many-locals,too-many-statements
                ) -> Tuple[xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     Remap a field using OASIS rmpfile
@@ -152,7 +152,8 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False
         print ('ptab dimensions : ', ptab.shape[-2:])
         print ('expected source dimensions in rmp file : ', src_ny, src_nx)
         print ('Dimensions do not match')
-        raise RuntimeError (f"Error in module: {__name__}, file: {__file__}, function: {rmp_remap.__name__}")
+        raise RuntimeError (
+            f"Error in module: {__name__}, file: {__file__}, function: {rmp_remap.__name__}")
 
     if OPTIONS['Debug'] or Debug :
         print ('grid sizes      : ', src_grid_size, dst_grid_size)
@@ -212,10 +213,12 @@ def rmp_remap (ptab:xr.DataArray, d_rmp:xr.Dataset, Debug:bool=False
     dst_lon_2D = np.reshape   (dst_lon.values, dst_shape_2D[-2:])
     dst_lat_2D = np.reshape   (dst_lat.values, dst_shape_2D[-2:])
 
-    dst_lon_2D = xr.DataArray (dst_lon_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:], name='longitude',
-                               attrs={'unit':'degree_east' , 'long_name':'Longitude', 'axis':'X'} )
-    dst_lat_2D = xr.DataArray (dst_lat_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:], name='latitude',
-                               attrs={'unit':'degree_north', 'long_name':'Latitude' , 'axis':'Y'} )
+    dst_lon_2D = xr.DataArray (
+        dst_lon_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:], name='longitude',
+        attrs={'unit':'degree_east' , 'long_name':'Longitude', 'axis':'X'} )
+    dst_lat_2D = xr.DataArray (
+        dst_lat_2D, dims=dst_dims_2D[-2:], coords=dst_coords_2D[-2:], name='latitude',
+        attrs={'unit':'degree_north', 'long_name':'Latitude' , 'axis':'Y'} )
 
     # Copy attributes from source field to destination
     for attr in ptab.attrs :
@@ -231,7 +234,7 @@ def progress (percent=0, width=30) :
     print ( '\r[', '#' * left, ' ' * right, f'] {percent:4d}%',
             sep='', end='', flush=True)
 
-def remap (src_field, src_grid_size, dst_grid_size,
+def remap (src_field, src_grid_size, dst_grid_size, # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
            num_links, src_address, dst_address,
            remap_matrix, sval=np.nan, Debug=False) :
     '''
@@ -273,10 +276,12 @@ def remap (src_field, src_grid_size, dst_grid_size,
             if link%(num_links//100) == 0 :
                 t_1 = time.time ()
                 if t_1 > t_0 + 0.6 :
-                    progress ( percent = np.minimum ( 100, int(link/num_links*100) ), width=width)
+                    progress (
+                        percent = np.minimum ( 100, int(link/num_links*100) ), width=width)
                     t_0 = t_1
         dst_mask  [..., dst_address [link]] = 1.0
-        dst_field [..., dst_address [link]] += remap_matrix[link] * src_field[..., src_address[link]]
+        dst_field [..., dst_address [link]] += \
+            remap_matrix[link] * src_field[..., src_address[link]]
     t_end = time.time ()
     if OPTIONS['Debug'] or Debug :
         progress (percent=100, width=width)
@@ -289,48 +294,6 @@ def remap (src_field, src_grid_size, dst_grid_size,
 
     pop_stack ( 'remap' )
     return dst_field
-
-def geo2en (pxx, pyy, pzz, glam, gphi) :
-    '''
-    Change vector from geocentric to east/north
-
-    Inputs :
-        pxx, pyy, pzz : components on the geocentric system
-        glam, gphi : longitude and latitude of the points
-    '''
-    push_stack ( 'geo2en (pxx, pyy, pzz, glam, gphi)' )
-
-    gsinlon = np.sin (np.deg2rad(glam))
-    gcoslon = np.cos (np.deg2rad(glam))
-    gsinlat = np.sin (np.deg2rad(gphi))
-    gcoslat = np.cos (np.deg2rad(gphi))
-
-    pte = - pxx * gsinlon            + pyy * gcoslon
-    ptn = - pxx * gcoslon * gsinlat  - pyy * gsinlon * gsinlat + pzz * gcoslat
-
-    pop_stack ( 'geo2en' )
-    return pte, ptn
-
-def en2geo (pte, ptn, glam, gphi) :
-    '''
-    Change vector from east/north to geocentric
-
-    Inputs :
-        pte, ptn : eastward/northward components
-        glam, gphi : longitude and latitude of the points
-    '''
-    push_stack ( 'en2geo (pte, ptn, glam, gphi)' )
-    gsinlon = np.sin (np.deg2rad(glam))
-    gcoslon = np.cos (np.deg2rad(glam))
-    gsinlat = np.sin (np.deg2rad(gphi))
-    gcoslat = np.cos (np.deg2rad(gphi))
-
-    pxx = - pte * gsinlon - ptn * gcoslon * gsinlat
-    pyy =   pte * gcoslon - ptn * gsinlon * gsinlat
-    pzz =   ptn * gcoslat
-
-    pop_stack ( 'en2geo' )
-    return pxx, pyy, pzz
 
 ## Sum of weights on source and destination points
 def sum_matrix (rmp) :

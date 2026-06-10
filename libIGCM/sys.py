@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 '''
 libIGCM.sys
 
@@ -55,12 +56,14 @@ def pretty (value, htchar:str='\t', lfchar:str='\n', indent:int=3) -> str:
     '''
     nlch = lfchar + htchar * (indent + 1)
     if isinstance (value, dict) :
-        items = [ nlch + repr(key) + ': ' + pretty(value[key], htchar, lfchar, indent+1) for key in value.keys() ]
+        items = [ nlch + repr(key) + ': ' + pretty(value[key],
+                          htchar, lfchar, indent+1) for key in value.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
 
     if '__dict__' in dir (value) :
         items = [ nlch + repr(key) + ': ' \
-                 + pretty(value.__dict__[key], htchar, lfchar, indent+1) for key in value.__dict__.keys() ]
+                 + pretty(value.__dict__[key], htchar, lfchar, indent+1
+                          ) for key in value.__dict__.keys() ]
         return f"{','.join(items)}{lfchar}{htchar*indent}"
 
     if isinstance (value, (list, tuple)) :
@@ -174,13 +177,15 @@ class Config : # pylint: disable=too-many-instance-attributes
                 if attr in self.keys () or not fatal :
                     super().__setattr__ (attr, value)
                 else :
-                    raise KeyError (f"{attr} attribute is not valid. Valid attributes are {list(self.keys())}")
+                    raise KeyError (f"{attr} attribute is not valid.', \
+                    ' Valid attributes are {list(self.keys())}")
 
         for attr, value in kwargs.items () :
             if attr in self.keys () or not fatal :
                 super().__setattr__ (attr, value)
             else :
-                raise KeyError (f"{attr} attribute is not valid. Valid attributes are {list(self.keys())}")
+                raise KeyError (f"{attr} attribute is not valid.', \
+                ' Valid attributes are {list(self.keys())}")
 
     def keys(self: Self) -> KeysView[str]: # pylint: disable=missing-function-docstring
         return self.__dict__.keys()
@@ -245,8 +250,10 @@ class Config : # pylint: disable=too-many-instance-attributes
                   DB:str|None=None,
                   IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None,
                   rebuild:str|None=None, TmpDir:str|None=None,
-                  TGCC_ThreddsPrefix:str|None=None , TGCC_DapPrefix:str|None=None , TGCC_SshPrefix:str|None=None,
-                  IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None, IDRIS_SshPrefix:str|None=None,
+                  TGCC_ThreddsPrefix:str|None=None , TGCC_DapPrefix:str|None=None ,
+                  TGCC_SshPrefix:str|None=None,
+                  IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None,
+                  IDRIS_SshPrefix:str|None=None,
                   DateBegin:str|None=None, DateEnd:str|None=None, YearBegin:str|None=None,
                   YearEnd:str|None=None, PeriodLength:str|None=None,
                   SeasonalFrequency:str|None=None, CalendarType:str|None=None,
@@ -255,7 +262,8 @@ class Config : # pylint: disable=too-many-instance-attributes
                   FullPeriod:str|None=None,
                   DatePattern:str|None=None,
                   Period:str|None=None,
-                  PeriodSE:str|None=None, CumulPeriod:str|None=None, PeriodState:str|None=None,
+                  PeriodSE:str|None=None, CumulPeriod:str|None=None,
+                  PeriodState:str|None=None,
                   PeriodDateBegin:str|None=None,
                   PeriodDateEnd:str|None=None,
                   Shading:str|np.ndarray|list|None=None,
@@ -333,9 +341,10 @@ class Config : # pylint: disable=too-many-instance-attributes
                 raise FileNotFoundError ( f"libIGCM.sys.Config : File not found : {ConfigCard = }" )
 
             ## Creates parser for reading .ini input file
-            MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
+            MyReader = configparser.ConfigParser (
+                interpolation=configparser.ExtendedInterpolation() )
             # To keep capitals
-            MyReader.optionxform = str # pyright: ignore[reportGeneralTypeIssues, reportAttributeAccessIssue]
+            MyReader.optionxform = str # pyright: ignore[reportAttributeAccessIssue]
             MyReader.read (ConfigCard)
 
             if not JobName        :
@@ -361,8 +370,9 @@ class Config : # pylint: disable=too-many-instance-attributes
                 raise FileNotFoundError ( f"libIGCM.sys.Config : File not found : {RunCard = }" )
 
             ## Creates parser for reading .ini input file
-            MyReader = configparser.ConfigParser (interpolation=configparser.ExtendedInterpolation() )
-            MyReader.optionxform = str # pyright: ignore[reportGeneralTypeIssues] # To keep capitals
+            MyReader = configparser.ConfigParser (
+                interpolation=configparser.ExtendedInterpolation() )
+            MyReader.optionxform = str # pyright: ignore[reportAttributeAccessIssue]
 
             MyReader.read (RunCard)
 
@@ -375,7 +385,7 @@ class Config : # pylint: disable=too-many-instance-attributes
             if not PeriodState     :
                 PeriodState     = MyReader['Configuration']['PeriodState']
 
-        ## ===================================================================
+        ## ================================================
         if YearBegin and not DateBegin          :
             DateBegin = f'{YearBegin}-01-01'
         if YearEnd   and not DateEnd            :
@@ -387,10 +397,10 @@ class Config : # pylint: disable=too-many-instance-attributes
         if not FullPeriod and DateBeginGregorian and DateEndGregorian :
             FullPeriod = f'{DateBeginGregorian}_{DateEndGregorian}'
 
-        ### =================================================================
+        ### ================================================
         ## Part specific to access by OpenDAP/Thredds server
 
-        # ===================================================================
+        # ==================================================
         if Source == 'TGCC_thredds' :
             if not User  and TGCC_User  :
                 User  = TGCC_User
@@ -413,7 +423,7 @@ class Config : # pylint: disable=too-many-instance-attributes
             if not R_GRAF  :
                 R_GRAF  = f'{DapPrefix}/work/p86mart/GRAF/DATA'
 
-        # ===========================================================================================
+        # =============================================
         if Source == 'IDRIS_thredds' :
             if not User  and IDRIS_User  :
                 User  = IDRIS_User
@@ -432,7 +442,9 @@ class Config : # pylint: disable=too-many-instance-attributes
             if not R_IN    :
                 R_IN    = f'{DapPrefix}/work/igcmg/IGCM'
             if not R_GRAF  :
-                R_GRAF  = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds/work/p86mart/GRAF/DATA'
+                R_GRAF  = \
+                    'https://thredds-su.ipsl.fr/thredds/dodsC' + \
+                    '/tgcc_thredds/work/p86mart/GRAF/DATA'
 
         ### =================================================================
         ## Part specific to access by SSH FS
@@ -452,17 +464,22 @@ class Config : # pylint: disable=too-many-instance-attributes
                 SshPrefix = OPTIONS['TGCC_SshPrefix']
             if SshPrefix is not None and TGCC_Group is not None and TGCC_User is not None :
                 if not ARCHIVE :
-                    ARCHIVE = os.path.join ( SshPrefix, 'ccc', 'store'  , 'cont003', TGCC_Group, TGCC_User )
+                    ARCHIVE = os.path.join ( SshPrefix, 'ccc', 'store'  ,
+                                             'cont003', TGCC_Group, TGCC_User )
                 if not STORAGE :
-                    STORAGE = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
+                    STORAGE = os.path.join ( SshPrefix, 'ccc', 'work'   ,
+                                             'cont003', TGCC_Group, TGCC_User )
                 if not R_FIG   :
-                    R_FIG   = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', TGCC_Group, TGCC_User )
+                    R_FIG   = os.path.join ( SshPrefix, 'ccc', 'work'   ,
+                                             'cont003', TGCC_Group, TGCC_User )
                 if not R_BUF   :
-                    R_BUF   = os.path.join ( SshPrefix, 'ccc', 'scratch', 'cont003', TGCC_Group, TGCC_User )
+                    R_BUF   = os.path.join ( SshPrefix, 'ccc', 'scratch',
+                                             'cont003', TGCC_Group, TGCC_User )
                 if not R_IN    :
-                    R_IN    = os.path.join ( SshPrefix, 'ccc', 'work'   , 'cont003', 'igcmg', 'IGCM' )
+                    R_IN    = os.path.join ( SshPrefix, 'ccc', 'work'   ,
+                                             'cont003', 'igcmg', 'IGCM' )
 
-        # ===========================================================================================
+        # ==================================================================
 
         if Source == 'IDRIS_ssh' :
             if ldebug :
@@ -479,20 +496,25 @@ class Config : # pylint: disable=too-many-instance-attributes
 
             if SshPrefix is not None and IDRIS_Group is not None and IDRIS_User is not None :
                 if not ARCHIVE :
-                    ARCHIVE = os.path.join ( SshPrefix, 'gpfsstore'    , 'rech', IDRIS_Group, IDRIS_User )
+                    ARCHIVE = os.path.join ( SshPrefix, 'gpfsstore'    , 'rech',
+                                             IDRIS_Group, IDRIS_User )
                 if not STORAGE :
-                    STORAGE = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
+                    STORAGE = os.path.join ( SshPrefix, 'gpfswork'     , 'rech',
+                                             IDRIS_Group, IDRIS_User )
                 if not R_FIG   :
-                    R_FIG   = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', IDRIS_Group, IDRIS_User )
+                    R_FIG   = os.path.join ( SshPrefix, 'gpfswork'     , 'rech',
+                                             IDRIS_Group, IDRIS_User )
                 if not R_BUF   :
-                    R_BUF   = os.path.join ( SshPrefix, 'gpfsscfratch' , 'rech', IDRIS_Group, IDRIS_User )
+                    R_BUF   = os.path.join ( SshPrefix, 'gpfsscfratch' , 'rech',
+                                             IDRIS_Group, IDRIS_User )
                 if not R_IN    :
-                    R_IN    = os.path.join ( SshPrefix, 'gpfswork'     , 'rech', 'igcmg' ,'IGCM' )
+                    R_IN    = os.path.join ( SshPrefix, 'gpfswork'     , 'rech',
+                                             'igcmg' ,'IGCM' )
 
-        ### ===========================================================================================
+        ### ===================================================================
         ## Machine dependant part
 
-        # ===========================================================================================
+        # =====================================================================
         if Master == 'Obelix' :
             if not User   :
                 User = LocalUser
@@ -522,7 +544,7 @@ class Config : # pylint: disable=too-many-instance-attributes
             if not TmpDir     :
                 TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
 
-        # ===========================================================================================
+        # =======================================================================
         if Master == 'Spip' :
             if not User   :
                 User = LocalUser
@@ -531,26 +553,34 @@ class Config : # pylint: disable=too-many-instance-attributes
             else      :
                 IGCM_OUT_name = 'IGCM_OUT'
             if not ARCHIVE    :
-                ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
+                ARCHIVE     = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch' )
             if not SCRATCHDIR :
-                SCRATCHDIR  = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
+                SCRATCHDIR  = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch' )
             if not R_BUF      :
-                R_BUF       = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
+                R_BUF       = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch' )
             if not R_FIG      :
-                R_FIG       = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
+                R_FIG       = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch' )
 
             if not STORAGE    :
                 STORAGE     = ARCHIVE
             if not R_IN       :
-                R_IN        = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch', 'IGCM' )
+                R_IN        = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch', 'IGCM' )
             if not R_GRAF or 'http' in str(R_GRAF) :
-                R_GRAF      = os.path.join ( os.path.expanduser (f'~{User}'), 'GRAF', 'DATA' )
+                R_GRAF      = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'GRAF', 'DATA' )
             if not DB         :
-                DB          = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch', 'database' )
+                DB          = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch', 'database' )
             if not TmpDir     :
-                TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'), 'Scratch' )
+                TmpDir      = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch' )
 
-        # ===========================================================================================
+        # =========================================================================
         if ( 'Irene' in Master ) or ( 'Rome' in Master ) :
             ccc_home = os.path.isfile ( subprocess.getoutput ( 'which ccc_home'))
 
@@ -583,42 +613,48 @@ class Config : # pylint: disable=too-many-instance-attributes
 
             if not R_IN        :
                 if ccc_home :
-                    R_IN       = os.path.join ( subprocess.getoutput ('ccc_home --cccwork -d igcmg -u igcmg' ), 'IGCM')
+                    R_IN       = os.path.join ( subprocess.getoutput (
+                        'ccc_home --cccwork -d igcmg -u igcmg' ), 'IGCM')
                 else        :
                     R_IN       = '/ccc/work/cont003/igcmg/igcmg/IGCM'
             if ldebug :
                 print ( f'{R_IN}' )
             if not ARCHIVE  :
                 if ccc_home :
-                    ARCHIVE    = subprocess.getoutput ( f'ccc_home --cccstore   -u {User} -d {Group}')
+                    ARCHIVE    = subprocess.getoutput (
+                        f'ccc_home --cccstore   -u {User} -d {Group}')
                 else        :
                     ARCHIVE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
             if ldebug :
                 print ( f'{ARCHIVE}' )
             if not STORAGE  :
                 if ccc_home :
-                    STORAGE    = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
+                    STORAGE    = subprocess.getoutput (
+                        f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
                     STORAGE    = f'/ccc/store/cont003/{TGCC_Group}/{TGCC_User}'
             if ldebug :
                 print ( f'{STORAGE}' )
             if not SCRATCHDIR  :
                 if ccc_home :
-                    SCRATCHDIR = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
+                    SCRATCHDIR = subprocess.getoutput (
+                        f'ccc_home --cccscratch -u {User} -d {Group}')
                 else        :
                     SCRATCHDIR = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
             if ldebug :
                 print ( f'{SCRATCHDIR}' )
             if not R_BUF       :
                 if ccc_home :
-                    R_BUF      = subprocess.getoutput ( f'ccc_home --cccscratch -u {User} -d {Group}')
+                    R_BUF      = subprocess.getoutput (
+                        f'ccc_home --cccscratch -u {User} -d {Group}')
                 else        :
                     R_BUF      = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
             if ldebug :
                 print ( f'{R_BUF}' )
             if not R_FIG       :
                 if ccc_home :
-                    R_FIG      = subprocess.getoutput ( f'ccc_home --cccwork    -u {User} -d {Group}')
+                    R_FIG      = subprocess.getoutput (
+                        f'ccc_home --cccwork    -u {User} -d {Group}')
                 else        :
                     R_FIG      = f'/ccc/work/cont003/{TGCC_Group}/{TGCC_User}'
             if ldebug :
@@ -641,7 +677,8 @@ class Config : # pylint: disable=too-many-instance-attributes
                 print ( f'{DB}' )
 
             if not rebuild :
-                rebuild = os.path.join ( subprocess.getoutput ('ccc_home --ccchome -d igcmg -u igcmg' ),
+                rebuild = os.path.join ( subprocess.getoutput (
+                    'ccc_home --ccchome -d igcmg -u igcmg' ),
                     'Tools', 'irene', 'rebuild_nemo', 'bin', 'rebuild_nemo' )
 
             if not TmpDir :
@@ -650,7 +687,7 @@ class Config : # pylint: disable=too-many-instance-attributes
                 else        :
                     TmpDir = f'/ccc/scratch/cont003/{TGCC_Group}/{TGCC_User}'
 
-        # ===========================================================================================
+        # ===========================================================================
         if Master in ['SpiritJ', 'SpiritX', 'Spirit'] :
             if not IGCM_OUT_name :
                 IGCM_OUT_name = ''
@@ -668,7 +705,8 @@ class Config : # pylint: disable=too-many-instance-attributes
                 R_IN       = os.path.join ( '/', 'projsu', 'igcmg', 'IGCM' )
             #if not R_GRAF     : R_GRAF     = os.path.join ('/', 'data', 'omamce', 'GRAF', 'DATA' )
             if not R_GRAF or 'http' in str(R_GRAF) :
-                #R_GRAF     = os.path.join  ( '/', 'thredds', 'tgcc', 'work', 'p86mart', 'GRAF', 'DATA' )
+                #R_GRAF     = os.path.join  ( '/', 'thredds', 'tgcc', 'work',
+                # 'p86mart', 'GRAF', 'DATA' )
                 R_GRAF     = os.path.join  ( '/', 'data', 'omamce', 'GRAF', 'DATA' )
             if not DB         :
                 DB         = os.path.join  ( '/', 'data', 'igcmg', 'database' )
@@ -678,7 +716,7 @@ class Config : # pylint: disable=too-many-instance-attributes
                 if Master in ['SpiritX',] :
                     TmpDir = os.path.join ( '/', 'scratchx', LocalUser )
 
-        # ===========================================================================================
+        # =============================================================================
         if Master == 'Jean-Zay' :
             if not User  :
                 User  = os.environ ['USER']
@@ -705,19 +743,23 @@ class Config : # pylint: disable=too-many-instance-attributes
             if not R_IN       :
                 R_IN       = os.path.join ( '/', 'gpfswork'   , 'rech', 'psl', 'commun', 'IGCM' )
             if not R_GRAF     :
-                R_GRAF     = os.path.join ( '/', 'gpfswork'   , 'rech', Group, User, 'GRAF', 'DATA' )
+                R_GRAF     = os.path.join ( '/', 'gpfswork'   , 'rech', Group, User,
+                                            'GRAF', 'DATA' )
             if not DB         :
-                DB         = os.path.join ( '/', 'gpfswork'   , 'rech', 'psl', 'commun', 'database' )
+                DB         = os.path.join ( '/', 'gpfswork'   , 'rech', 'psl',
+                                            'commun', 'database' )
             if not rebuild :
                 rebuild = os.path.join ( '/', 'gpfswork', 'rech', 'psl', 'commun', 'Tools',
-                                            'rebuild', 'modipsl_IOIPSL_PLUS_v2_2_4', 'bin', 'rebuild' )
+                                            'rebuild', 'modipsl_IOIPSL_PLUS_v2_2_4',
+                                            'bin', 'rebuild' )
             if not TmpDir :
                 TmpDir = os.path.join ( '/', 'gpfsscratch', 'rech',
-                                os.path.basename ( os.path.dirname ( os.path.expanduser ('~') )), LocalUser )
+                           os.path.basename (
+                              os.path.dirname ( os.path.expanduser ('~') )), LocalUser )
 
-        ### ===========================================================================================
+        ### ===========================================================================
         ### The construction of the following variables is not machine dependant
-        ### ===========================================================================================
+        ### ===========================================================================
         if ldebug :
             print ( 'General construction' )
         if SpaceName == 'TEST' :

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-few-public-methods
 '''
 libIGCM_utils : a few utilities
 
@@ -26,33 +27,34 @@ import copy
 from typing import Self, Any
 
 ## ============================================================================
-DEFAULT_OPTIONS = dict ( Debug                = False,
-                         Trace                = False,
-                         Timing               = None,
-                         t0                   = None,
-                         Depth                = 0,
-                         Stack                = [],
-                         Check                = False,
-                         DefaultCalendar      = 'Gregorian',
-                         User                 = None,
-                         Group                = None,
-                         TGCC_User            = 'p86mart',
-                         TGCC_Group           = 'gen12006',
-                         IDRIS_User           = 'rces009',
-                         IDRIS_Group          = 'ces',
-                         TGCC_DapPrefix       = 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
-                         TGCC_ThreddsPrefix   = 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
-                         IDRIS_DapPrefix      = 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
-                         IDRIS_ThreddsPrefix  = 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
-                         DapPrefix            = None,
-                         ThreddsPrefix        = None,
-                         IGCM_Catalog         = None,
-                         IGCM_Catalog_list    = [ 'IGCM_catalog.json', ],
-                         )
+DEFAULT_OPTIONS = {
+    'Debug'                : False,
+    'Trace'                : False,
+    'Timing'               : None,
+    't0'                   : None,
+    'Depth'                : 0,
+    'Stack'                : [],
+    'Check'                : False,
+    'DefaultCalendar'      : 'Gregorian',
+    'User'                 : None,
+    'Group'                : None,
+    'TGCC_User'            : 'p86mart',
+    'TGCC_Group'           : 'gen12006',
+    'IDRIS_User'           : 'rces009',
+    'IDRIS_Group'          : 'ces',
+    'TGCC_DapPrefix'       : 'https://thredds-su.ipsl.fr/thredds/dodsC/tgcc_thredds',
+    'TGCC_ThreddsPrefix'   : 'https://thredds-su.ipsl.fr/thredds/fileServer/tgcc_thredds',
+    'IDRIS_DapPrefix'      : 'https://thredds-su.ipsl.fr/thredds/dodsC/idris_thredds',
+    'IDRIS_ThreddsPrefix'  : 'https://thredds-su.ipsl.fr/thredds/fileServer/idris_thredds',
+    'DapPrefix'            : None,
+    'ThreddsPrefix'        : None,
+    'IGCM_Catalog'         : None,
+    'IGCM_Catalog_list'    : [ 'IGCM_catalog.json', ],
+}
 
 OPTIONS: dict[str, Any] = copy.deepcopy(DEFAULT_OPTIONS)
 
-class set_options :
+class set_options : # pylint: disable=invalid-name
     '''
     Set OPTIONS for libIGCM
 
@@ -62,10 +64,11 @@ class set_options :
 
     '''
     def __init__ (self:Self, **kwargs) -> None :
-        self.old = dict ()
+        self.old = {}
         for k in kwargs :
             if k not in OPTIONS :
-                raise ValueError ( f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
+                raise ValueError (
+                    f"argument name {k!r} is not in the set of valid OPTIONS {set(OPTIONS)!r}" )
             self.old[k] = OPTIONS[k]
         self._apply_update (kwargs)
 
@@ -161,11 +164,15 @@ def pop_stack (string:str) -> None :
     if OPTIONS['Trace'] or dt :
         if dt :
             if dt < 1e-3 :
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
-            if dt >= 1e-3 and dt < 1 :
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
-            if dt >= 1 :
-                print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
+                print ( '  '*(OPTIONS['Depth']-1),
+                        f'<--{__name__}.{string} : time: {dt*1e6:5.1f} micro s')
+            else :
+                if dt < 1 :
+                    print ( '  '*(OPTIONS['Depth']-1),
+                            f'<--{__name__}.{string} : time: {dt*1e3:5.1f} milli s')
+                else :
+                    print ( '  '*(OPTIONS['Depth']-1),
+                            f'<--{__name__}.{string} : time: {dt*1:5.1f} second')
         else :
             #print ( '  '*(OPTIONS['Depth']-1), f'<--{__name__}.{string}')
             print ( f"<--{OPTIONS['Stack']}")

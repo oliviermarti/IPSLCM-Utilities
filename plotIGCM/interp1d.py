@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals
+# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, invalid-name
 
 '''
 Utilities 1D vertical interpolation
@@ -42,10 +42,10 @@ def interp1d (x:np.ndarray|xr.DataArray, xp:xr.DataArray,
     One-dimensionnal interpolation of a multi-dimensionnal field
 
     Intended to interpolate on standard pressure level
-    
+
     All inputs shoud be xarray data arrays
 
-    Input : 
+    Input :
        x    : levels at wich we want to interpolat
        xp   : position of the input points (i.e. pressure)
        yp   : fields values at these points (temperature, humidity, etc ..)
@@ -88,7 +88,7 @@ def interp1d (x:np.ndarray|xr.DataArray, xp:xr.DataArray,
         raise ValueError ( 'interp1d : Coordinate not monotonic')
 
     if or_up :
-        x  = -x ; xp = -xp
+        x, xp  = -x, -xp
 
     # Define the result array
     new_coords = []
@@ -119,7 +119,8 @@ def interp1d (x:np.ndarray|xr.DataArray, xp:xr.DataArray,
 
         ou_tab [{pdim:k}] = (dx1*y2 + dx2*y1) / (dx1 + dx2)
 
-    if name : ou_tab = ou_tab.rename ( {pdim:name} )
+    if name :
+        ou_tab = ou_tab.rename ( {pdim:name} )
 
     pop_stack ( 'interp1d' )
 
@@ -152,14 +153,14 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
                 dim:str|None=None, direction:str='forward', Debug=False) -> xr.DataArray :
     '''
     Find the x-coordinate where a tabulated function crosses a given y-value.
-    
+
     This function identifies the point where ytab(x) = y0 by finding a sign change
     in (ytab - y0) along a specified dimension and performs linear interpolation
     between the bracketing points.
 
     Parameters
     ----------
-    xc        : The x-coordinates corresponding to the tabulated function 
+    xc        : The x-coordinates corresponding to the tabulated function
     ytab      : The tabulated function values y = f(x)
     y0        : The y-value for which to find the root. Default is 0.
                 If xr.DataArray, must be broadcastable with ytab.
@@ -193,25 +194,29 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
     - The function uses linear interpolation between adjacent points.
     - If y0_bef == y0_aft (flat region), x0_bef is returned without interpolation.
     - Results are set to NaN if no sign change is detected along the dimension.
-       
+
     '''
 
     # Validate and set the dimension if not provided
     if dim is None :
         dim = xc.dims[0] # pyright: ignore[reportAssignmentType]
         if dim not in ytab.dims :
-            raise ValueError ( f'{dim=} (first dim of xc) not found in ytab dimensions = {ytab.dims}' )
+            raise ValueError (
+                f'{dim=} (first dim of xc) not found in ytab dimensions = {ytab.dims}' )
     else :
         if dim not in xc.dims :
-            raise ValueError ( f'{dim=} not found in xc dimensions = {xc.dims}' )
+            raise ValueError (
+                f'{dim=} not found in xc dimensions = {xc.dims}' )
 
         if dim not in ytab.dims :
-            raise ValueError ( f'{dim=} not found in ytab dimensions = {ytab.dims}' )
+            raise ValueError (
+                f'{dim=} not found in ytab dimensions = {ytab.dims}' )
 
 
     # Detect sign changes in (ytab - y0) along the specified dimension.
     # sc will be 1 where a sign change occurs, 0 elsewhere.
-    sc = np.abs ( (np.sign(ytab-y0)).diff(dim=dim)).astype(int)
+    sc = np.abs ( (np.sign(ytab-y0)).diff(dim=dim) # pyright: ignore[reportAttributeAccessIssue]
+                 ).astype(int)
 
     if   'back' in  direction :
         # Search backward: find the LAST sign change
@@ -225,7 +230,8 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
         sb = sc.where (sc, sc[dim].min()-10) # filling
         first_pos = sb.argmax(dim=dim)
     else :
-        raise ValueError ( f'direction parameter should be "forward|backward". You give {direction=}' )
+        raise ValueError (
+            f'direction parameter should be "forward|backward". You give {direction=}' )
 
     # Extract the bracketing points (before and after the sign change)
     x0_bef = xc.isel   ({dim:first_pos})   # x-coordinate before the root
@@ -235,7 +241,8 @@ def find_root (xc:xr.DataArray, ytab:xr.DataArray, y0:float|xr.DataArray=0.,
 
     # Linear interpolation: x0 = x0_bef + (x0_aft - x0_bef) * (y0_bef - y0) / (y0_bef - y0_aft)
     # If the function is flat (y0_bef == y0_aft), use x0_bef directly
-    x0 = xr.where (y0_bef==y0_aft, x0_bef, x0_bef + (x0_aft-x0_bef)*np.abs ( (y0_bef-y0)/(y0_bef-y0_aft) ) )
+    x0 = xr.where (y0_bef==y0_aft, x0_bef, x0_bef + \
+                   (x0_aft-x0_bef)*np.abs ( (y0_bef-y0)/(y0_bef-y0_aft) ) )
 
     # Set result to NaN where no sign change was detected
     x0 = x0.where ( sb.any(dim=dim), np.nan ) # Set to nan if no root is found

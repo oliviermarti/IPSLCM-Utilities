@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# pylint: disable=too-many-branches, too-many-statements, invalid-name
 '''
 Compute some climatologies
 
@@ -167,7 +169,9 @@ def yseamean (dd: xr.Dataset, varname:str, season:str='JJAS', drop_incomplete_dj
        due to xcdat limitations, 4 months seasons that cross the year limits
     drop_incomplete_djf : only for 3 months means
     '''
-    use_custom = False
+    use_custom     = False
+    custom_seasons = None
+    nseason        = 4
     if season == 'JJAS' :
         use_custom=True
         if xc.__version__ >= '0.8' :
@@ -187,14 +191,16 @@ def yseamean (dd: xr.Dataset, varname:str, season:str='JJAS', drop_incomplete_dj
                                ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] ]
     if season == 'DJFM' :
         use_custom=True
-        custom_seasons = [ ["Dec", "Jan", "Feb", "Mar"], ["Apr", "May", "Jun"], ["Jul", "Aug", "Sep", "Oct", "Nov"] ]
+        custom_seasons = [ ["Dec", "Jan", "Feb", "Mar"], ["Apr", "May", "Jun"],
+                           ["Jul", "Aug", "Sep", "Oct", "Nov"] ]
         if xc.__version__ >= '0.8' :
             custom_seasons = [ ["Dec", "Jan", "Feb", "Mar"], ]
         else :
             raise ValueError ( 'xcdat can not compute 4 months seasons that cross the year limits' )
     if season == 'NDJF' :
         use_custom=True
-        custom_seasons = [ ["Nov", "Dec", "Jan", "Feb"], ["Mar", "Apr", "May", "Jun"], ["Jul", "Aug", "Sep", "Oct"] ]
+        custom_seasons = [ ["Nov", "Dec", "Jan", "Feb"], ["Mar", "Apr", "May", "Jun"],
+                           ["Jul", "Aug", "Sep", "Oct"] ]
         if xc.__version__ >= '0.8' :
             custom_seasons = [["Nov", "Dec", "Jan", "Feb"], ]
         else :
@@ -205,7 +211,8 @@ def yseamean (dd: xr.Dataset, varname:str, season:str='JJAS', drop_incomplete_dj
             custom_seasons = [ ["Sep", "Oct", "Nov", "Dec"], ]
         else :
             nseason = 1
-        custom_seasons = [ ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"], ["Sep", "Oct", "Nov", "Dec"] ]
+        custom_seasons = [ ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
+                           ["Sep", "Oct", "Nov", "Dec"] ]
 
     if season == 'DJF'  :
         use_custom = False
@@ -225,7 +232,8 @@ def yseamean (dd: xr.Dataset, varname:str, season:str='JJAS', drop_incomplete_dj
                 season_config={"custom_seasons":custom_seasons} )[varname]
     else :
         zz = dd.temporal.group_average ( varname, "season",
-                season_config={"drop_incomplete_djf":drop_incomplete_djf, 'dec_mode':dec_mode} )[varname][nseason::4]
+                season_config={"drop_incomplete_djf":drop_incomplete_djf,
+                               'dec_mode':dec_mode} )[varname][nseason::4]
 
     return zz
 

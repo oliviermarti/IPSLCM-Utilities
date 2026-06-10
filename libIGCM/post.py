@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=invalid-name
 '''
 This library provides some utilities for post processing
 
@@ -37,34 +38,40 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
     Overload libIGCM.sys.Config to add knowldege about some simulations
     described in a catalog (at json format)
     '''
-    def __init__ (self:Self,# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-statements, too-many-branches
-                  JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None, ExperimentName:str|None=None,
-                  LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None, Comment:str|None=None,
-                  Source:str|None=None, MASTER:str|None=None,
-                  ConfigCard:str|None=None, RunCard:str|None=None,
-                  User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
-                  TGCC_User:str|None=None, TGCC_Group:str|None=None,
-                  IDRIS_User:str|None=None, IDRIS_Group:str|None=None,
-                  ARCHIVE:str|None=None, SCRATCHDIR:str|None=None,
-                  STORAGE:str|None=None,
-                  R_IN:str|None=None, R_OUT:str|None=None, R_FIG:str|None=None,
-                  L_EXP:str|None=None,
-                  R_SAVE:str|None=None, R_FIGR:str|None=None, R_BUF:str|None=None,
-                  R_BUFR:str|None=None, R_BUF_KSH:str|None=None,
-                  REBUILD_DIR:str|None=None, POST_DIR:str|None=None,
-                  ThreddsPrefix:str|None=None, DapPrefix:str|None=None, SshPrefix:str|None=None,
-                  R_GRAF:str|None=None,
-                  DB:str|None=None,
-                  IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None,
-                  rebuild:str|None=None, TmpDir:str|None=None,
-                  TGCC_ThreddsPrefix:str|None=None, TGCC_DapPrefix:str|None=None, TGCC_SshPrefix:str|None=None,
-                  IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None, IDRIS_SshPrefix:str|None=None,
+    def __init__ ( # pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-statements, too-many-branches
+            self:Self,
+            JobName:str|None=None, TagName:str|None=None, SpaceName:str|None=None,
+            ExperimentName:str|None=None,
+            LongName:str|None=None, ModelName:str|None=None, ShortName:str|None=None,
+            Comment:str|None=None,
+            Source:str|None=None, MASTER:str|None=None,
+            ConfigCard:str|None=None, RunCard:str|None=None,
+            User:str|None=None, Group:str|None=None, LocalGroup:str|None=None,
+            TGCC_User:str|None=None, TGCC_Group:str|None=None,
+            IDRIS_User:str|None=None, IDRIS_Group:str|None=None,
+            ARCHIVE:str|None=None, SCRATCHDIR:str|None=None,
+            STORAGE:str|None=None,
+            R_IN:str|None=None, R_OUT:str|None=None, R_FIG:str|None=None,
+            L_EXP:str|None=None,
+            R_SAVE:str|None=None, R_FIGR:str|None=None, R_BUF:str|None=None,
+            R_BUFR:str|None=None, R_BUF_KSH:str|None=None,
+            REBUILD_DIR:str|None=None, POST_DIR:str|None=None,
+            ThreddsPrefix:str|None=None, DapPrefix:str|None=None, SshPrefix:str|None=None,
+            R_GRAF:str|None=None,
+            DB:str|None=None,
+            IGCM_OUT:str|None=None, IGCM_OUT_name:str|None=None,
+            rebuild:str|None=None, TmpDir:str|None=None,
+            TGCC_ThreddsPrefix:str|None=None, TGCC_DapPrefix:str|None=None,
+            TGCC_SshPrefix:str|None=None,
+            IDRIS_ThreddsPrefix:str|None=None, IDRIS_DapPrefix:str|None=None,
+                  IDRIS_SshPrefix:str|None=None,
                   DateBegin:str|None=None, DateEnd:str|None=None, YearBegin:str|None=None,
                   YearEnd:str|None=None, PeriodLength:str|None=None,
                   SeasonalFrequency:str|None=None, CalendarType:str|None=None,
                   DateBeginGregorian:str|None=None, DateEndGregorian:str|None=None,
                   FullPeriod:str|None=None, DatePattern:str|None=None,
-                  Period:str|None=None, PeriodSE:str|None=None, CumulPeriod:str|None=None,
+                  Period:str|None=None, PeriodSE:str|None=None,
+                  CumulPeriod:str|None=None,
                   PeriodState:str|None=None,
                   PeriodDateBegin:str|None=None,
                   PeriodDateEnd:str|None=None,
@@ -90,18 +97,21 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
             push_stack ( f'search_catalog ( {pCatalog=} {pJobName=} {pShortName=} )' )
             ldebug = OPTIONS['Debug'] or Debug
             if ldebug :
-                print ( f'libIGCM.post.Config.search_catalog : Catalog file : {pCatalog=} {pJobName=} {pShortName=}' )
+                print ( 'libIGCM.post.Config.search_catalog : Catalog file :',\
+                        f' {pCatalog=} {pJobName=} {pShortName=}' )
 
             with open (pCatalog, encoding="utf-8", mode='r') as zExp_file :
                 zExperiments = json.load (zExp_file)
             exp_out=None
             if ldebug :
-                print ( f'libIGCM.post.Config.search_catalog : zExperiments : {zExperiments.keys()=}' )
+                print ( 'libIGCM.post.Config.search_catalog : ', \
+                        f'zExperiments : {zExperiments.keys()=}' )
 
             if pJobName is None : # pylint: disable=too-many-nested-blocks
                 if pShortName is not None :
                     if ldebug :
-                        print ( f'libIGCM.post.Config.search_catalog : searching {pShortName=} in Catalog {pCatalog}')
+                        print ( 'libIGCM.post.Config.search_catalog : ',\
+                                f'searching {pShortName=} in Catalog {pCatalog}')
                     for exp in zExperiments.values() :
                         if ldebug :
                             print ( f'searching {exp=}')
@@ -116,8 +126,9 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
                                         print ( f'Found {pShortName=} in {pJobName=}')
                                     break
                     if not pJobName :
-                        raise KeyError ( f'libIGCM.post.Config.search_catalog'
-                                        f': ShortName={pShortName} not found in Catalog {pCatalog}' )
+                        raise KeyError (
+                            f'libIGCM.post.Config.search_catalog'
+                            f': ShortName={pShortName} not found in Catalog {pCatalog}' )
             else :
                 if ldebug :
                     print ( f'searching {pJobName=} in Catalog {pCatalog}')
@@ -130,7 +141,7 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
             pop_stack ( 'libIGCM.post.search_catalog' )
             return exp_out
 
-        ### ===========================================================================================
+        ### ================================
         ## Read catalog of known simulations
         push_stack ('libIGCM.post.__init__')
 
@@ -244,7 +255,8 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
                                       pJobName=self.JobName,
                                       pShortName=self.ShortName, Debug=Debug)
             else :
-                raise ValueError ( f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
+                raise ValueError (
+                    f'libIGCM.post.Config : Catalog file not found : {self.IGCM_Catalog}' )
 
         else :
             if self.IGCM_Catalog_list is not None :
@@ -352,22 +364,29 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
                 print ( f'exp after analyzing : {exp=}' )
             add_values = exp
 
-        libIGCM.sys.Config.__init__ (self, JobName=self.JobName, TagName=self.TagName, SpaceName=self.SpaceName,
+        libIGCM.sys.Config.__init__ (self, JobName=self.JobName, TagName=self.TagName,
+                                     SpaceName=self.SpaceName,
                                      ExperimentName=self.ExperimentName, LongName=self.LongName,
-                                     ModelName=self.ModelName, ShortName=self.ShortName, Comment=self.Comment,
-                                     Source=self.Source, MASTER=self.MASTER, ConfigCard=self.ConfigCard,
+                                     ModelName=self.ModelName, ShortName=self.ShortName,
+                                     Comment=self.Comment,
+                                     Source=self.Source, MASTER=self.MASTER,
+                                     ConfigCard=self.ConfigCard,
                                      RunCard=self.RunCard, User=self.User, Group=self.Group,
                                      TGCC_User=self.TGCC_User, TGCC_Group=self.TGCC_Group,
                                      IDRIS_User=self.IDRIS_User, IDRIS_Group=self.IDRIS_Group,
                                      ARCHIVE=self.ARCHIVE, SCRATCHDIR=self.SCRATCHDIR,
-                                     STORAGE=self.STORAGE, R_IN=self.R_IN, R_OUT=self.R_OUT, R_FIG=self.R_FIG,
-                                     L_EXP=self.L_EXP, R_SAVE=self.R_SAVE, R_FIGR=self.R_FIGR, R_BUF=self.R_BUF,
+                                     STORAGE=self.STORAGE, R_IN=self.R_IN,
+                                     R_OUT=self.R_OUT, R_FIG=self.R_FIG,
+                                     L_EXP=self.L_EXP, R_SAVE=self.R_SAVE,
+                                     R_FIGR=self.R_FIGR, R_BUF=self.R_BUF,
                                      R_BUFR=self.R_BUFR, R_BUF_KSH=self.R_BUF_KSH,
                                      REBUILD_DIR=self.REBUILD_DIR, POST_DIR=self.POST_DIR,
-                                     ThreddsPrefix=self.ThreddsPrefix, DapPrefix=self.DapPrefix,
+                                     ThreddsPrefix=self.ThreddsPrefix,
+                                     DapPrefix=self.DapPrefix,
                                      SshPrefix=self.SshPrefix,
                                      R_GRAF=self.R_GRAF, DB=self.DB,
-                                     IGCM_OUT=self.IGCM_OUT, IGCM_OUT_name=self.IGCM_OUT_name, rebuild=self.rebuild,
+                                     IGCM_OUT=self.IGCM_OUT, IGCM_OUT_name=self.IGCM_OUT_name,
+                                     rebuild=self.rebuild,
                                      TmpDir=self.TmpDir,
                                      TGCC_ThreddsPrefix  = self.TGCC_ThreddsPrefix,
                                      TGCC_DapPrefix      = self.TGCC_DapPrefix,
@@ -375,12 +394,17 @@ class Config (libIGCM.sys.Config) : # pylint: disable=too-many-instance-attribut
                                      IDRIS_DapPrefix     = self.IDRIS_DapPrefix,
                                      IDRIS_SshPrefix     = self.IDRIS_SshPrefix,
                                      DateBegin=self.DateBegin, DateEnd=self.DateEnd,
-                                     YearBegin=self.YearBegin, YearEnd=self.YearEnd, PeriodLength=self.PeriodLength,
-                                     SeasonalFrequency=self.SeasonalFrequency, CalendarType=self.CalendarType,
-                                     DateBeginGregorian=self.DateBeginGregorian, DateEndGregorian=self.DateEndGregorian,
+                                     YearBegin=self.YearBegin, YearEnd=self.YearEnd,
+                                     PeriodLength=self.PeriodLength,
+                                     SeasonalFrequency=self.SeasonalFrequency,
+                                     CalendarType=self.CalendarType,
+                                     DateBeginGregorian=self.DateBeginGregorian,
+                                     DateEndGregorian=self.DateEndGregorian,
                                      FullPeriod=self.FullPeriod, DatePattern=self.DatePattern,
-                                     Period=self.Period, PeriodSE=self.PeriodSE, Shading=self.Shading,
-                                     Marker=self.Marker, Line=self.Line, OCE=self.OCE, ATM=self.ATM,
+                                     Period=self.Period, PeriodSE=self.PeriodSE,
+                                     Shading=self.Shading,
+                                     Marker=self.Marker, Line=self.Line,
+                                     OCE=self.OCE, ATM=self.ATM,
                                      CMIP6_BUF=self.R_BUF,
                                      Debug=self.Debug, **add_values)
 
@@ -406,7 +430,8 @@ def catalog (keep_all:bool=False, Debug:bool=False) -> Dict|None : # pylint: dis
             with open (cata_log, mode='r', encoding="utf-8") as exp_file :
                 lcatalog = json.load (exp_file)
         else :
-            raise FileNotFoundError ( f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
+            raise FileNotFoundError (
+                f'libIGCM.post.catalog : Catalog file not found : {cata_log}' )
 
     else :
         if cata_list is not None :

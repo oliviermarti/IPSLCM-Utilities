@@ -1,4 +1,4 @@
-#
+# pylint: disable=invalid-name
 '''
 This library handles date computations and convertions in different calendars.
 
@@ -93,19 +93,25 @@ def GetMonthsLengths (year:int, Calendar:CALENDAR_TYPE|None=None,
     '''
     push_stack ( f'GetMonthsLengths ( {year=}, {Calendar=} )' )
 
-    if Calendar is not None : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if Calendar is not None :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     if OPTIONS['Debug'] or Debug :
         print ( f'{IsLeapYear (year, Calendar)=}')
-    if   Calendar in Calendar_360d    : zlengths = mth_length360
-    elif Calendar in Calendar_noleap  : zlengths = mth_length365
-    elif Calendar in Calendar_allleap : zlengths = mth_length366
+    if   Calendar in Calendar_360d    :
+        zlengths = mth_length360
+    elif Calendar in Calendar_noleap  :
+        zlengths = mth_length365
+    elif Calendar in Calendar_allleap :
+        zlengths = mth_length366
     elif Calendar in Calendar_gregorian :
         if IsLeapYear (year, Calendar) :
-            if OPTIONS['Debug'] or Debug : print ('Leap year')
+            if OPTIONS['Debug'] or Debug :
+                print ('Leap year')
             zlengths = mth_length366
         else :
-            if OPTIONS['Debug'] or Debug : print ('Leap year')
+            if OPTIONS['Debug'] or Debug :
+                print ('Leap year')
             zlengths = mth_length365
     else :
         raise ValueError (f"Unknown Calendar = {Calendar}")
@@ -121,10 +127,13 @@ def DaysInMonth (yy:int, mm:int|None=None, Calendar:CALENDAR_TYPE|None=None) -> 
          '''
     push_stack ( f'DaysInMonth ( {yy=}, {mm=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
-    if mm : year = int(yy) ; month = int(mm)
-    else  : year, month = GetYearMonth (f'{yy:04d}0101')
+    if mm :
+        year, month = int(yy), int(mm)
+    else  :
+        year, month = GetYearMonth (f'{yy:04d}0101')
 
     length = GetMonthsLengths ( year, Calendar=Calendar)[ np.mod(month-1, 12) ].item()
 
@@ -138,7 +147,8 @@ def DaysSinceJC (date:str, Calendar:CALENDAR_TYPE|None=None) -> int : # pylint: 
     '''
     push_stack ( f'DaysSinceJC ( {date=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     yy, _, _ = GetYearMonthDay (date)
 
@@ -146,26 +156,38 @@ def DaysSinceJC (date:str, Calendar:CALENDAR_TYPE|None=None) -> int : # pylint: 
     if yy :
         if yy < 500 :
             date0 = '0101-01-01'
-            if   Calendar in Calendar_360d      : aux = -360
-            elif Calendar in Calendar_noleap    : aux = -365
-            elif Calendar in Calendar_allleap   : aux = -366
-            elif Calendar in Calendar_gregorian : aux = -366
+            if   Calendar in Calendar_360d      :
+                aux = -360
+            elif Calendar in Calendar_noleap    :
+                aux = -365
+            elif Calendar in Calendar_allleap   :
+                aux = -366
+            elif Calendar in Calendar_gregorian :
+                aux = -366
             else :
                 raise ValueError ( f"Unknown value for {Calendar=}")
         elif yy < 1500 :
             date0 = '1001-01-01'
-            if   Calendar in Calendar_360d      : aux = 359640
-            elif Calendar in Calendar_noleap    : aux = 364635
-            elif Calendar in Calendar_allleap   : aux = 365634
-            elif Calendar in Calendar_gregorian : aux = 364877
+            if   Calendar in Calendar_360d      :
+                aux = 359640
+            elif Calendar in Calendar_noleap    :
+                aux = 364635
+            elif Calendar in Calendar_allleap   :
+                aux = 365634
+            elif Calendar in Calendar_gregorian :
+                aux = 364877
             else :
                 raise ValueError ( f"Unknown value for {Calendar=}")
         else :
             date0 = '1901-01-01'
-            if   Calendar in Calendar_360d      : aux = 683640
-            elif Calendar in Calendar_noleap    : aux = 693135
-            elif Calendar in Calendar_allleap   : aux = 695034
-            elif Calendar in Calendar_gregorian : aux = 693595
+            if   Calendar in Calendar_360d      :
+                aux = 683640
+            elif Calendar in Calendar_noleap    :
+                aux = 693135
+            elif Calendar in Calendar_allleap   :
+                aux = 695034
+            elif Calendar in Calendar_gregorian :
+                aux = 693595
             else :
                 raise ValueError ( f"Unknown value for {Calendar=}")
 
@@ -175,7 +197,8 @@ def DaysSinceJC (date:str, Calendar:CALENDAR_TYPE|None=None) -> int : # pylint: 
     pop_stack ( f'DaysSinceJC : {ndays}' )
     return ndays
 
-def IsLeapYear (year:int, Calendar:CALENDAR_TYPE|None=None, Debug:bool=False) -> bool :  # pylint: disable=too-many-branches
+def IsLeapYear (year:int, Calendar:CALENDAR_TYPE|None=None, # pylint: disable=too-many-branches
+                Debug:bool=False) -> bool :
     '''
     True if year is a leap year
     '''
@@ -183,9 +206,11 @@ def IsLeapYear (year:int, Calendar:CALENDAR_TYPE|None=None, Debug:bool=False) ->
 
     yy = int ( year )
     zis_leap_year = False
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
-    if OPTIONS['Debug'] or Debug : print ( f'{year=} {Calendar=}' )
+    if OPTIONS['Debug'] or Debug :
+        print ( f'{year=} {Calendar=}' )
 
     # What is the Calendar :
     if Calendar in Calendar_360d      :
@@ -238,8 +263,10 @@ def DateFormat (date:str, Debug:bool=False) -> str :
         print ( f'{type(date)=}' )
     zdate_format = ''
     if isinstance (date, str) :
-        if '-' in date : zdate_format = 'Human'
-        else           : zdate_format = 'Gregorian'
+        if '-' in date :
+            zdate_format = 'Human'
+        else           :
+            zdate_format = 'Gregorian'
     #if isinstance (date, int) : zdate_format = 'Gregorian'
 
     pop_stack ( f'DateFormat : {zdate_format}' )
@@ -302,7 +329,7 @@ def GetYearMonthDay (date:str|int, Debug:bool=False) -> Tuple[int, int, int] :  
                 print ( f'{ye=} {type(ye)=} {mo=} {type(mo)=} {da=} {type(da)}')
         elif len(zz) == 1 :
             ye = int(zz[0])
-            da = 0 ; mo = 0
+            da, mo = 0, 0
             if OPTIONS['Debug'] or Debug :
                 print ( f'{ye=} {type(ye)=} {mo=} {type(mo)=} {da=} {type(da)}')
         if OPTIONS['Debug'] or Debug :
@@ -365,13 +392,15 @@ def CorrectYearMonth (ye:int, mo:int) -> tuple[int, int] :
     pop_stack ( 'CorrectYearMonth : {ye_new}, {mo_new}' )
     return ye_new, mo_new
 
-def CorrectYearMonthDay (ye:int, mo:int, da:int, Calendar:CALENDAR_TYPE|None=None) -> Tuple[int, int, int] :
+def CorrectYearMonthDay (ye:int, mo:int, da:int,
+                         Calendar:CALENDAR_TYPE|None=None) -> Tuple[int, int, int] :
     '''
     Correct month values outside [1,12] and day outside month length
     '''
     push_stack ( f'CorrectYearMonthDay ( {ye=}, {mo=}, {da=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     ye_new, mo_new = CorrectYearMonth (ye, mo)
     da_new = da
@@ -393,14 +422,16 @@ def CorrectYearMonthDay (ye:int, mo:int, da:int, Calendar:CALENDAR_TYPE|None=Non
     pop_stack ( f'CorrectYearMonthDay : {ye_new}, {mo_new}, {da_new}' )
     return ye_new, mo_new, da_new
 
-def DateAddMonth (date:str, month_inc:int=1, Calendar:CALENDAR_TYPE|None=None, # pylint: disable=too-many-locals
+def DateAddMonth (date:str, month_inc:int=1,  # pylint: disable=too-many-locals
+                  Calendar:CALENDAR_TYPE|None=None,
                   Debug:bool=False) -> str :
     '''
     Add on year(s) to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
     push_stack ( f'DateAddMonth ( {date=}, {month_inc=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     zformat = DateFormat (date)
     ye, mo, da = GetYearMonthDay (date)
@@ -412,8 +443,10 @@ def DateAddMonth (date:str, month_inc:int=1, Calendar:CALENDAR_TYPE|None=None, #
         else :
             raise AttributeError ( f'Parameter {month_inc=} is not a month period' )
 
-    if month_inc < 0 : ye_inc = -( -month_inc // 12)
-    else             : ye_inc = month_inc // 12
+    if month_inc < 0 :
+        ye_inc = -( -month_inc // 12)
+    else             :
+        ye_inc = month_inc // 12
 
     ye_new = ye + ye_inc
     mo_new = mo + month_inc # - ye_inc*12
@@ -423,7 +456,8 @@ def DateAddMonth (date:str, month_inc:int=1, Calendar:CALENDAR_TYPE|None=None, #
     if OPTIONS['Debug'] or Debug :
         print ( f'{ye=} {mo=} {da=} {ye_inc=} {month_inc=} {ye_new=} {mo_new=} {lday1=} {lday2=}' )
     da_new = da
-    if da == lday1 : da_new = lday2
+    if da == lday1 :
+        da_new = lday2
     da_new = np.minimum ( da_new, lday2)
 
     if OPTIONS['Debug'] or Debug :
@@ -437,7 +471,8 @@ def DateAddPeriod (date:str, period:str='1YE', Calendar:CALENDAR_TYPE|None=None 
     Add a period to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
     push_stack ( f'DateAddPeriod ( {date=}, {period=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     zformat = DateFormat (date)
 
@@ -464,13 +499,14 @@ def SubOneDayToDate (date:str, Calendar:CALENDAR_TYPE|None=None) -> str :
     '''
     push_stack ( f'SubOneDayToDate ( {date=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     zformat = DateFormat (date)
     ye, mo, da = GetYearMonthDay ( date )
     zlength = GetMonthsLengths ( ye, Calendar )
 
-    ye = int(ye) ; mo = int(mo) ; da=int(da)
+    ye, mo, da = int(ye), int(mo), int(da)
     if da ==  1 :
         if mo == 1 :
             da_new, mo_new, ye_new = zlength[-1  ], 12    , ye - 1
@@ -488,7 +524,8 @@ def AddOneDayToDate (date:str, Calendar:CALENDAR_TYPE|None=None, Debug:bool=Fals
     Add one day to date in format [yy]yymmdd or [yy]yy-mm-dd
     '''
     push_stack ( f'AddOneDayToDate ( {date=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     if OPTIONS['Debug'] or Debug :
         print ( f'AddOneDayToDate : {date=}' )
@@ -514,7 +551,8 @@ def AddDaysToDate (date, day_inc:int=1, Calendar:CALENDAR_TYPE|None=None ) -> st
     Number of days migth be negative
     '''
     push_stack ( f'AddDaysToDate ( {date=}, {day_inc=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     zformat = DateFormat (date)
 
@@ -544,13 +582,15 @@ def AddPeriodToDate (date:str, period:str, Calendar:CALENDAR_TYPE|None=None ) ->
     '''
     push_stack ( f'AddPeriodToDate ( {date=}, {period=}, {Calendar=} )' )
 
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     ndays = DaysInCurrentPeriod (date, period, Calendar=Calendar)
     if ndays is not None :
         new_date = AddDaysToDate ( date, day_inc=ndays, Calendar=Calendar )
     else :
-        raise RuntimeError ( f'libIGCM.date.AddPeriodToDate : can not process {date=} {period=} {Calendar=}' )
+        raise RuntimeError (
+            f'libIGCM.date.AddPeriodToDate : can not process {date=} {period=} {Calendar=}' )
 
     pop_stack ( f'AddPeriodToDate : {new_date}' )
     return new_date
@@ -560,11 +600,15 @@ def DaysInYear (year:int, Calendar:CALENDAR_TYPE|None=None) -> int :
     Return the number of days in a year
     '''
     push_stack ( f'DaysInYear ( {year=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
-    if   Calendar in Calendar_360d    : ndays = 360
-    elif Calendar in Calendar_noleap  : ndays = 365
-    elif Calendar in Calendar_allleap : ndays = 366
+    if   Calendar in Calendar_360d    :
+        ndays = 360
+    elif Calendar in Calendar_noleap  :
+        ndays = 365
+    elif Calendar in Calendar_allleap :
+        ndays = 366
     elif Calendar in Calendar_gregorian :
         ndays = 366 if IsLeapYear (year, Calendar) else 365
     else :
@@ -581,7 +625,8 @@ def DaysBetweenDate (pdate1, pdate2, Calendar:CALENDAR_TYPE|None=None) -> int :
     and then the sign is reversed.
     '''
     push_stack ( f'DaysBetweenDate ( {pdate1=}, {pdate2=}, {Calendar=} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     if   int(ConvertFormatToGregorian(pdate1)) < int(ConvertFormatToGregorian(pdate2)) :
         zdate1, zdate2 = pdate2, pdate1
@@ -611,10 +656,12 @@ def ConvertGregorianDateToJulian (date:str, Calendar:CALENDAR_TYPE|None=None) ->
     Convert yyyymmdd to yyyyddd
     '''
     push_stack ( f'ConvertGregorianDateToJulian ( {date=}, {Calendar} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     ye, mo, da = GetYearMonthDay (date)
-    ndays = DaysBetweenDate (PrintDate (ye,mo,da, 'Human'), PrintDate (ye,1,1, 'Human'), Calendar=Calendar )
+    ndays = DaysBetweenDate (PrintDate (ye,mo,da, 'Human'),
+                             PrintDate (ye, 1, 1, 'Human'), Calendar=Calendar )
     zz = f'{ye}{ndays+1:03d}'
     pop_stack ( '--> ConvertGregorianDateToJulian' )
     return zz
@@ -624,7 +671,8 @@ def ConvertJulianDateToGregorian (date:str, Calendar:CALENDAR_TYPE|None=None) ->
     Convert yyyyddd to yyyymmdd
     '''
     push_stack ( f'ConvertJulianDateToGregorian ( {date=}, {Calendar} )' )
-    if not Calendar : Calendar=OPTIONS['DefaultCalendar'] # type: ignore
+    if not Calendar :
+        Calendar=OPTIONS['DefaultCalendar'] # type: ignore
 
     # Break apart the year and the days
     zdate = int (date)
@@ -683,7 +731,9 @@ def DaysInCurrentPeriod (startdate:str, period:str, Calendar:CALENDAR_TYPE|None=
         Length             = PeriodLengthInDays
 
     else :
-        raise RuntimeError ( f'libIGCM.dateDaysInCurrentPeriod : can not analyze : {startdate=} {period=} {Calendar=}' )
+        raise RuntimeError (
+             'libIGCM.dateDaysInCurrentPeriod : can not analyze :',\
+            f'{startdate=} {period=} {Calendar=}' )
 
     pop_stack ( 'DaysInCurrentPeriod : {Length}' )
     return Length
@@ -703,11 +753,11 @@ def AnaPeriod (period:str) -> tuple[str, int] :
     periodName = periodName.replace ( '-', '')
 
     if periodName in YE_name :
-        PeriodType = YE_name[0]
+        PeriodType   = YE_name[0]
         PeriodLength = 1 if periodLength == '' else int ( periodLength )
 
     elif periodName in MO_name :
-        PeriodType = MO_name[0]
+        PeriodType   = MO_name[0]
         PeriodLength = 1 if periodLength == '' else int ( periodLength )
 
     elif periodName in DA_name :
@@ -717,7 +767,8 @@ def AnaPeriod (period:str) -> tuple[str, int] :
     else :
         raise RuntimeError ( f'libIGCM.date.AnaPeriod : can not analyse {period=}')
 
-    if Neg : PeriodLength = -PeriodLength
+    if Neg :
+        PeriodLength = -PeriodLength
 
     pop_stack ( 'AnaPeriod' )
     return PeriodType, PeriodLength

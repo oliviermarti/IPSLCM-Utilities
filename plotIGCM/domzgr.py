@@ -75,8 +75,9 @@ def zgr_z (config:str='orca2') -> tuple[xr.DataArray,xr.DataArray,xr.DataArray,x
     if ppa1  == pp_to_be_computed and ppa0  == pp_to_be_computed and ppsur == pp_to_be_computed:
         # Madec & Imbard 1996 function
         za1  = (  ppdzmin - pphmax / (jpk-1)  )               \
-            / ( np.tanh((1-ppkth)/ppacr) - ppacr/(jpk   -1) * (  np.log( np.cosh( (jpk - ppkth) / ppacr) )    \
-                                                               - np.log( np.cosh( ( 1  - ppkth) / ppacr) ) ) )
+            / ( np.tanh((1-ppkth)/ppacr) - ppacr/(jpk   -1) * (
+                np.log( np.cosh( (jpk - ppkth) / ppacr) )    \
+              - np.log( np.cosh( ( 1  - ppkth) / ppacr) ) ) )
 
         za0  = ppdzmin - za1 *                 np.tanh ( (1-ppkth) / ppacr )
         zsur =   - za0 - za1 * ppacr * np.log( np.cosh ( (1-ppkth) / ppacr ))
