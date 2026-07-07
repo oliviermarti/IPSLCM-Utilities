@@ -27,13 +27,17 @@ from typing import (Callable, Any, Self, Literal,
                     _LiteralGenericAlias # pyright: ignore[reportAttributeAccessIssue]
                     )
 import re
+import urllib.error
 from urllib.request import urlretrieve
 from pathlib import Path
+import requests
 
 import numpy as np
 import xarray as xr
 import shapely as shp
 
+import matplotlib as mpl
+import matplotlib.image
 import cftime
 import cartopy
 import cartopy.feature
@@ -42,6 +46,27 @@ import cartopy.crs as ccrs
 from plotIGCM.options import OPTIONS
 from plotIGCM.options import push_stack
 from plotIGCM.options import pop_stack
+
+month_names = ['january', 'february', 'march', 'april', 'may', 'june',
+               'july', 'august', 'september', 'october', 'november', 'december']
+month_Names = list (map (lambda x: x.capitalize(), month_names))
+month_NAMES = list (map (lambda x: x.upper     (), month_names))
+
+mth_names   = list (map (lambda x: x[0:3], month_names))
+mth_Names   = list (map (lambda x: x.capitalize(), mth_names))
+mth_NAMES   = list (map (lambda x: x.upper     (), mth_names))
+
+month_noms  = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+               'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+month_Noms  = list (map (lambda x: x.capitalize(), month_noms ))
+month_NOMS  = list (map (lambda x: x.upper     (), month_noms ))
+
+mth_noms  = list (map (lambda x: x[0:3], month_noms))
+mth_Noms  = list (map (lambda x: x.capitalize(), mth_noms ))
+mth_NOMS  = list (map (lambda x: x.upper     (), mth_noms ))
+
+month_Ini = list (map (lambda x: x[0], month_NOMS )) # Juste les initiales
+month_ini = list (map (lambda x: x[0], month_noms ))
 
 class RegexEqual (str) :
     '''String subclass that supports regex pattern matching in equality checks.'''
@@ -56,22 +81,90 @@ def get_file (url:str, pfile=None, Debug=False) :
         pfile = Path (pfile)
     else    :
         pfile = Path (os.path.basename(url))
-    if not pfile.exists () :
+
+    if pfile.exists () :
         if OPTIONS['Debug'] or Debug :
-            print ( f'Retrieving url={url}' )
-        urlretrieve (url, pfile)
+            print ( f'Found file {pfile=}' )
+    else :
+        if OPTIONS['Debug'] or Debug :
+            print ( f'Retrieving {url=}' )
+        try :
+            urlretrieve (url=url, filename=pfile)
+        except urllib.error.ContentTooShortError as e:
+            raise ConnectionError (f"Content too short error retrieving {url}: {e}") from e
+        except urllib.error.HTTPError as e:
+            raise ConnectionError( f"HTTP error retrieving {url}: {e.code} - {e.reason}") from e
+        except urllib.error.URLError as e:
+            raise ConnectionError (f"Error retrieving {url}: {e}") from e
+        except Exception as e:
+            raise ConnectionError (f"Unexpected error retrieving {url}: {e}") from e
     return pfile
 
-def build_feat (pfile, Debug=False, facecolor='none', edgecolor='k') :
+def get_logo (url, filename='logo.png', Debug=False) :
+    '''Get a file on the web or locally and load it as a Matplotlib image'''
+    logo = None
+    if filename :
+        filename = Path (filename)
+    else :
+        filename = Path (os.path.basename(url))
+
+    if "http" in url :
+        suffix = filename.suffix
+        if suffix == '' :
+            suffix = '.png'
+            filename = filename.with_suffix(suffix)
+
+        if not filename.exists () :
+            if OPTIONS['Debug'] or Debug :
+                print ( f'Found {filename=}')
+        else :
+            try :
+                if Debug :
+                    print (f'request {url=}')
+                data = requests.get(url, timeout=10).content
+                #response = requests.get(url, timeout=10)
+                #response.raise_for_status()
+                #data = response.content
+            except requests.exceptions.Timeout as e:
+                raise FileNotFoundError (
+                    f"Timeout while trying to access {url}, error: {e}") from e
+            except requests.exceptions.ConnectionError as e:
+                raise FileNotFoundError (
+                    f"Connection error while trying to access {url}, error: {e}") from e
+            except requests.exceptions.HTTPError as e:
+                raise FileNotFoundError (
+                    f"HTTP error while trying to access {url}, error: {e}") from e
+            except requests.exceptions.TooManyRedirects as e:
+                raise FileNotFoundError (
+                    f"Too many redirects while trying to access {url}") from e
+            except requests.exceptions.RequestException as e:
+                raise FileNotFoundError (
+                    f"Error while trying to access {url}, error: {e}") from e
+
+            if OPTIONS['Debug'] or Debug :
+                print ( f'open {filename=}')
+            with open ( f'{filename}', 'wb') as zfile :
+                zfile.write (data)
+                zfile.close ()
+            logo = mpl.image.imread ( f'{filename}')
+
+    else :
+        if OPTIONS['Debug'] or Debug :
+            print ( f'found logo file {filename=}')
+        logo = matplotlib.image.imread (url)
+
+    return logo
+
+def build_feat (filename, Debug=False, facecolor='none', edgecolor='k') :
     '''
     From a geojson file, build a cartopy feature
     '''
-    if 'http' in pfile :
-        zf = open (GetFile (pfile), 'r', encoding='utf-8')
+    if 'http' in filename :
+        zf = open (get_file (filename), 'r', encoding='utf-8')
     else              :
-        zf = open (pfile, 'r', encoding='utf-8')
+        zf = open (filename, 'r', encoding='utf-8') # pylint: disable=R1732
     if OPTIONS['Debug'] or Debug :
-        print ( f'Reading shapefile in {pfile=}' )
+        print ( f'Reading shapefile in {filename=}' )
     file_shp  = shp.from_geojson (zf.read())
     file_poly = cartopy.feature.ShapelyFeature (
         file_shp, crs=ccrs.PlateCarree(),# pyright: ignore[reportAttributeAccessIssue]
@@ -159,6 +252,62 @@ def validate_types (func: Callable) -> Callable :
         result = func (*args, **kwargs)
         return result
     return wrapper
+
+def model_year (var, tvar='time_counter', start_at_zero=False) :
+    """Convert time coordinate to model year, with mid-year and mid-month convention"""
+    zyear0  = var[tvar][0].item().year
+    zyears  = np.array ([ tt.year  for tt in var[tvar].values])
+    if start_at_zero :
+        zyears  = zyears-zyear0
+    zmonths = np.array ([ tt.month for tt in var[tvar].values])
+    ztime  = zyears + (zmonths-5.5)/12.
+    ztime  = xr.DataArray (ztime, dims=('Year'), coords=(ztime,), attrs={'units':'Model Year'})
+    return ztime
+
+def model_month (var, tvar='time_counter', start_at_zero=True) :
+    """Convert time coordinate to model month"""
+    zyear0  = var[tvar][0].item().year
+    zyears  = np.array ([ tt.year  for tt in var[tvar].values])
+    if start_at_zero :
+        zyears  = zyears-zyear0
+    zmonths = np.array ([ tt.month for tt in var[tvar].values])
+    ztime  = zyears*12 + zmonths
+    ztime  = xr.DataArray (ztime, dims=('Month'), coords=(ztime,), attrs={'units':'Model Month'})
+    return ztime
+
+def model_year_num (var, tvar='time_counter', start_at_zero=False) :
+    """Return the month number of the time coordinate"""
+    zyear0  = var[tvar][0].item().year
+    zyears  = np.array ([ tt.year  for tt in var[tvar].values])
+    if start_at_zero :
+        zyears  = zyears-zyear0
+    zmonths = np.array ([ tt.month for tt in var[tvar].values])
+    ztime   = zyears*12 + zmonths
+    zz      = xr.DataArray (zyears, dims=('Year'), coords=(ztime,), attrs={'units':'Model month'})
+    return zz
+
+def model_month_num (var, tvar='time_counter', start_at_zero=False) :
+    """Return the month number of the time coordinate"""
+    zyear0  = var[tvar][0].item().year
+    zyears  = np.array ([ tt.year  for tt in var[tvar].values])
+    if start_at_zero :
+        zyears  = zyears-zyear0
+    zmonths = np.array ([ tt.month for tt in var[tvar].values])
+    ztime   = zyears*12 + zmonths
+    zz      = xr.DataArray (zmonths, dims=('Year'), coords=(ztime,), attrs={'units':'Model month'})
+    return zz
+
+def model_month_name (var, tvar='time_counter', start_at_zero=False) :
+    """Return the month number of the time coordinate"""
+    zyear0  = var[tvar][0].item().year
+    zyears  = np.array ([ tt.year  for tt in var[tvar].values])
+    if start_at_zero :
+        zyears  = zyears-zyear0
+    zmths   = np.array ([ tt.month for tt in var[tvar].values])
+    zmonths = np.array ([ mth_names[int(tt.month-1)] for tt in var[tvar].values])
+    ztime   = zyears*12 + zmths
+    zz      = xr.DataArray (zmonths, dims=('Year'), coords=(ztime,), attrs={'units':'Model month'})
+    return zz
 
 def copy_attrs (ptab:xr.DataArray, pref:xr.DataArray, Debug:bool=False) -> xr.DataArray :
     '''
@@ -387,6 +536,19 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
             zname = 'Area with Salinity < Scrit, North Atlantic'
         case 'area_neg_scritd_SubpolarNorthAtl' :
             zname = 'Area with Salinity < Scrit, Subpolar North Atl.'
+
+        case 'icevol_Barents'          :
+            zname = 'Ice volume, Barents Sea'
+        case 'icevol_Irminger'         :
+            zname = 'Ice volume, Irminger Sea'
+        case 'icevol_Labrador'         :
+            zname = 'Ice volume, Labrador Sea'
+        case 'icevol_NordicSeas'       :
+            zname = 'Ice volume, Nordic Seas'
+        case 'icevol_NorthAtlantic'    :
+            zname = 'Ice volume, North Atlantic'
+        case 'icevol_SubpolarNorthAtl' :
+            zname = 'Ice volume, Subpolar North Atl.'
 
         case 'precip_global'            :
             zname = 'Global precipitation'

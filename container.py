@@ -125,14 +125,14 @@ class Container :
         '''Backward-compatible alias to update the container content.'''
         return self.update(dico=dico, **kwargs)
 
-    def __str__     (self:Self) :
+    def __str__  (self:Self) -> str :
         '''Return the string representation of the underlying dictionary.'''
         return str  (self.__dict__)
-    def __repr__ (self:Self):
+    def __repr__ (self:Self) -> str :
         '''Return the representation of the underlying dictionary.'''
         return str  (self.__dict__)
 
-    def __name__    (self:Self) :
+    def __name__    (self:Self) -> str :
         '''Return the class name.'''
         return self.__class__.__name__
 

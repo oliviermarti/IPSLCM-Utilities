@@ -471,6 +471,7 @@ class Domain :
     # pylint: disable=missing-function-docstring
     def copy(self: Self) -> 'Domain':
         return Domain (domain=self)
+    
     # Convenience aliases for update
     @validate_types
     # pylint: disable=missing-function-docstring
@@ -1001,7 +1002,7 @@ class GridMask :
     Reads and builds all grids caracteristics
     '''
     @validate_types
-    def area (self:Self, cd_type:str='T', Debug:bool=False) :
+    def area (self:Self, cd_type:str='T', Debug:bool=False) -> xr.DataArray :
         '''
         Compute area(s) of grid box(es)
         '''
@@ -1044,7 +1045,8 @@ class GridMask :
                     zarea = self.e1w*self.e2w
         return zarea
 
-    def vol (self:Self, cd_type:str='T' ) :
+    @validate_types
+    def vol (self:Self, cd_type:str='T' ) -> xr.DataArray:
         '''
         Compute volume(s) of grid box(es)
 
@@ -1061,9 +1063,10 @@ class GridMask :
                     zvol = self.e1t*self.e2t*self.e3t
         return zvol
 
+    @validate_types
     def bounds2d ( self:Self, cd_type:str='T',
                      close:bool=False, first:bool=True, positive:bool=True,
-                     vertex2d:bool=False, Debug:bool=False ) :
+                     vertex2d:bool=False, Debug:bool=False ) -> [xr.DataArray, xr.DataArray]:
         '''
         Builds arrays of corners for each point (T, U, V or F)
         If close is True, return 5 corners to close each polygon (useful if you use shapely).
@@ -1120,6 +1123,58 @@ class GridMask :
 
         return bounds_lon, bounds_lat
 
+    ## Public functions
+    def keys(self: Self) -> KeysView[str]:
+        '''Return a view over the container attribute names.'''
+        return self.__dict__.keys()
+
+    def values(self: Self) -> ValuesView[Any]:
+        '''Return a view over the container attribute values.'''
+        return self.__dict__.values()
+
+    def items(self: Self) -> ItemsView[str, Any]:
+        '''Return a view over the container attribute/value pairs.'''
+        return self.__dict__.items()
+
+    def dict(self: Self) -> Dict[str, Any]:
+        '''Expose the underlying attribute dictionary.'''
+        return self.__dict__
+
+    def pop(self: Self, attr: str) -> Any:
+        '''Remove an attribute and return its value.'''
+        value = self[attr]
+        delattr(self, attr)
+        return value
+    
+    ## Hidden functions
+    def __str__  (self:Self) -> str :
+        '''Return the string representation of the underlying dictionary.'''
+        return str  (self.__dict__)
+    def __repr__ (self:Self) -> str :
+        '''Return the representation of the underlying dictionary.'''
+        return str  (self.__dict__)
+
+    def __name__    (self:Self) -> str :
+        '''Return the class name.'''
+        return self.__class__.__name__
+
+    def __getitem__ (self:Self, attr) -> Any :
+        '''Access an attribute with dictionary-like syntax.'''
+        return getattr (self, attr)
+
+    def __iter__    (self:Self) -> Dict :
+        '''Iterate over attribute names.'''
+        return self.__dict__.__iter__()
+
+    def __contains__ (self:Self, item) -> bool :
+        '''Return whether an attribute name exists in the container.'''
+        return item in self.__dict__.keys()
+    
+    def __len__     (self:Self) -> int :
+        '''Return the number of stored attributes.'''
+        return len (self.__dict__)
+
+    ## Initialisation
     def __init__ ( # pylint: disable=dangerous-default-value
             self:Self, mm:libIGCM.sys.Config, domain:Domain,
             kw_uni:Dict={'use_xgcm':True},
@@ -1202,6 +1257,8 @@ class GridMask :
         if d_e3 is None and d_d is not None :
             if 'e3t_1d' in d_d :
                 d_e3 = d_d
+        if OPTIONS['Debug'] or Debug :
+                    print ( f"{d_e3}" )
 
         if d_g is not None :
             d_g   = unify_dims (d_g , **kw_uni)
@@ -1300,7 +1357,9 @@ class GridMask :
             je = jeq (lat_T)
         else :
             je = None
-
+            if Debug or OPTIONS['Debug'] :
+                print ( 'lat_T is None' )
+                
         if lat_T is not None and lon_T is not None :
             if Debug or OPTIONS['Debug'] :
                 print ( f"{lat_T.shape=} {lat_T.min()=} {lat_T.max()=} ",\
@@ -1310,6 +1369,8 @@ class GridMask :
             lon_T.values = np.where ( lon_T.values==0., lon1D.values[np.newaxis,:], lon_T.values)
         else :
             lat1D, lon1D = None, None
+            if Debug or OPTIONS['Debug'] :
+                print ( 'lat_T/lon_T are None' )
 
         if lat_U is not None and lon_U is not None :
             lat1D_U, lon1D_U = latlon1d (lat_U, lon_U, dims=('y_c', 'x_f'), Debug=Debug)
@@ -1354,11 +1415,11 @@ class GridMask :
             mask_F = u2f (mask_U, action='mult', domain=domain)
             mask_F = lbcu (mask_F, **kw_uni, domain=domain, cd_type='F', psgn=1, btype='lbc')
 
-        mask_T = unify_dims (mask_T, **kw_uni, xgrid='T')
-        mask_U = unify_dims (mask_U, **kw_uni, xgrid='U')
-        mask_V = unify_dims (mask_V, **kw_uni, xgrid='V')
-        mask_F = unify_dims (mask_F, **kw_uni, xgrid='F')
-        mask_W = unify_dims (mask_W, **kw_uni, xgrid='T')
+        mask_T     = unify_dims (mask_T, **kw_uni, xgrid='T')
+        mask_U     = unify_dims (mask_U, **kw_uni, xgrid='U')
+        mask_V     = unify_dims (mask_V, **kw_uni, xgrid='V')
+        mask_F     = unify_dims (mask_F, **kw_uni, xgrid='F')
+        mask_W     = unify_dims (mask_W, **kw_uni, xgrid='T')
 
         maskdraw_T = lbc_plot (mask_T, cd_type='T', domain=domain)
         maskdraw_U = lbc_plot (mask_U, cd_type='U', domain=domain)
@@ -1607,48 +1668,48 @@ class GridMask :
         self.Halo     = domain.Halo
         self.Cyclic   = domain.Cyclic
 
-        self.d_g = d_g
-        self.d_e = d_e
-        self.d_d = d_d
-        self.d_b = d_b
+        self.d_g      = d_g
+        self.d_e      = d_e
+        self.d_d      = d_d
+        self.d_b      = d_b
 
-        self.lon    = lon_T
-        self.lat    = lat_T
-        self.lon_T  = lon_T
-        self.lat_T  = lat_T
-        self.lon_U  = lon_U
-        self.lat_U  = lat_U
-        self.lon_V  = lon_V
-        self.lat_V  = lat_V
-        self.lon_F  = lon_F
-        self.lat_F  = lat_F
-        self.lon_W  = lon_W
-        self.lat_W  = lat_W
+        self.lon      = lon_T
+        self.lat      = lat_T
+        self.lon_T    = lon_T
+        self.lat_T    = lat_T
+        self.lon_U    = lon_U
+        self.lat_U    = lat_U
+        self.lon_V    = lon_V
+        self.lat_V    = lat_V
+        self.lon_F    = lon_F
+        self.lat_F    = lat_F
+        self.lon_W    = lon_W
+        self.lat_W    = lat_W
 
-        self.je      = je
-        self.lon1D   = lon1D
-        self.lat1D   = lat1D
+        self.je       = je
+        self.lon1D    = lon1D
+        self.lat1D    = lat1D
 
-        self.mask    = mask_T
-        self.mask_T  = mask_T
-        self.mask_U  = mask_U
-        self.mask_V  = mask_V
-        self.mask_F  = mask_F
-        self.mask_W  = mask_W
-        self.mask_3T = mask_3T
-        self.mask_3U = mask_3U
-        self.mask_3V = mask_3V
-        self.mask_3F = mask_3F
-        self.mask_3W = mask_3W
+        self.mask     = mask_T
+        self.mask_T   = mask_T
+        self.mask_U   = mask_U
+        self.mask_V   = mask_V
+        self.mask_F   = mask_F
+        self.mask_W   = mask_W
+        self.mask_3T  = mask_3T
+        self.mask_3U  = mask_3U
+        self.mask_3V  = mask_3V
+        self.mask_3F  = mask_3F
+        self.mask_3W  = mask_3W
 
-        self.gcosT   = gcosT
-        self.gsinT   = gsinT
-        self.gcosU   = gcosU
-        self.gsinU   = gsinU
-        self.gcosV   = gcosV
-        self.gsinV   = gsinV
-        self.gcosF   = gcosF
-        self.gsinF   = gsinF
+        self.gcosT    = gcosT
+        self.gsinT    = gsinT
+        self.gcosU    = gcosU
+        self.gsinU    = gsinU
+        self.gcosV    = gcosV
+        self.gsinV    = gsinV
+        self.gcosF    = gcosF
+        self.gsinF    = gsinF
 
         self.atlmsk       = atlmsk
         self.atlmsk_nomed = atlmsk
@@ -1656,28 +1717,28 @@ class GridMask :
         self.indmsk       = indmsk
         self.ipcmsk       = ipcmsk
 
-        self.z_c     = z_c
-        self.z_f     = z_f
+        self.z_c      = z_c
+        self.z_f      = z_f
         self.z_c_bnds1d = z_c_bnds1d
 
-        self.e1t     = e1t
-        self.e1u     = e1u
-        self.e1v     = e1v
-        self.e1f     = e1f
-        self.e2t     = e2t
-        self.e2u     = e2u
-        self.e2v     = e2v
-        self.e2f     = e2f
-        self.e1w     = e1w
-        self.e2w     = e2w
+        self.e1t      = e1t
+        self.e1u      = e1u
+        self.e1v      = e1v
+        self.e1f      = e1f
+        self.e2t      = e2t
+        self.e2u      = e2u
+        self.e2v      = e2v
+        self.e2f      = e2f
+        self.e1w      = e1w
+        self.e2w      = e2w
 
-        self.e3t     = e3t
-        self.e3u     = e3u
-        self.e3v     = e3v
-        self.e3f     = e3f
-        self.e3w     = e3w
-        self.e3t_ps  = e3t_ps
-        self.e3w_ps  = e3w_ps
+        self.e3t      = e3t
+        self.e3u      = e3u
+        self.e3v      = e3v
+        self.e3f      = e3f
+        self.e3w      = e3w
+        self.e3t_ps   = e3t_ps
+        self.e3w_ps   = e3w_ps
 
         self.coast_poly = coast_poly
         self.land_poly  = land_poly
@@ -1702,13 +1763,6 @@ class GridMask :
         self.maskutil_V = maskutil_V
         self.maskutil_F = maskutil_F
         self.maskutil_W = maskutil_W
-
-@validate_types
-def essai ( a:int|float, b:Domain) :
-    '''
-    Essai de Halo
-    '''
-    return a, b.Halo
 
 @validate_types
 def add_halo (domain:Domain, Debug:bool=False, stop_on_check:bool=False) -> Domain :
@@ -3767,6 +3821,8 @@ def lbc_del (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str='T', psgn:int|fl
             ztab  = ptab.copy ()
 
         if zdom.NFold and zdom.Halo and not zdom.Cyclic:
+            if zdebug :
+                print ( f'Removing Halo : NFold={zdom.NFold}, Halo={zdom.Halo}, Cyclic={zdom.Cyclic} ')
             tdom = zdom.copy()
             tdom.del_halo ()
 
@@ -3845,7 +3901,8 @@ def lbc_del_cyclic (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str='T', psgn
 @validate_types
 def lbc_todom (ptab:xr.DataArray, dst_dom:Domain, src_dom:Domain|None=None,
                cd_type:CDTYPE_LITERAL|str='T',
-    psgn:int|float=1.0) -> xr.DataArray :
+               psgn:int|float=1.0,
+               Debug=False) -> xr.DataArray :
     '''
     Change the domain of a NEMO field from src_dom to dst_dom
     ptab      : Input array (works rank 2 at least : ptab[...., lat, lon]
@@ -3859,18 +3916,29 @@ def lbc_todom (ptab:xr.DataArray, dst_dom:Domain, src_dom:Domain|None=None,
 
     push_stack ( f'lbc_todom (ptab, {dst_dom=}, {src_dom=}, {cd_type=}, {psgn=}' )
 
+    zdebug = OPTIONS['Debug'] or Debug
     z_src_dom = Domain (ptab=ptab, domain=src_dom)
     ztab = ptab
     if       z_src_dom.Halo   and not dst_dom.Halo :
-        ztab = lbc_del (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn)
+        if zdebug :
+            print ( 'lbc_todom calling lbc_del')
+        ztab = lbc_del (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn, Debug=zdebug)
     elif not z_src_dom.Halo   and     dst_dom.Halo :
-        ztab = lbc_add (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn)
+        if zdebug :
+            print ( 'lbc_todom cCalling lbc_add')
+        ztab = lbc_add (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn, Debug=zdebug)
     elif     z_src_dom.Cyclic and not dst_dom.Cyclic :
-        ztab = lbc_del_cyclic (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn)
+        if zdebug :
+            print ( 'lbc_todom calling lbc_del_cyclic')
+        ztab = lbc_del_cyclic (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn, Debug=zdebug)
     elif not z_src_dom.Cyclic and     dst_dom.Cyclic :
-        ztab = lbc_add_cyclic (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn)
+        if zdebug :
+            print ( 'lbc_todom calling lbc_add_cyclic')
+        ztab = lbc_add_cyclic (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn, Debug=zdebug)
     elif     z_src_dom.Halo == dst_dom.Halo and z_src_dom.Cyclic == dst_dom.Cyclic :
-        ztab = lbc (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn)
+        if zdebug :
+            print ( 'lbc_todom calling lbc')
+        ztab = lbc (ptab, domain=z_src_dom, cd_type=cd_type, psgn=psgn, Debug=zdebug)
 
     pop_stack ( 'lbc_todom' )
     return ztab
@@ -5290,7 +5358,7 @@ def f2v (ftab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='av
 
 @validate_types
 def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
-         sval:float=np.nan) -> xr.DataArray :
+         sval:float=np.nan, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array on W grid to T grid (k-mean)
     sval is the bottom value
@@ -5300,19 +5368,25 @@ def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
 
     az, kz = find_axis (wtab_0, 'z')
 
+    if OPTIONS['Debug'] or Debug :
+        print ( f"{az=} {kz=}" )
+
     if kz :
         ttab = 0.5 * (wtab_0 + wtab_0.roll ({az:-1}))
     else :
         ttab = wtab_0
-
+        
     ttab[{az:kz}] = sval
+    
     if zdim and az :
         if az != zdim :
             ttab = ttab.rename ( {az:zdim} )
-    if zcoord is not None :
-        ttab = ttab.assign_coords ( {zdim:zcoord} )
-    if 'z_f' in wtab.dims :
+        az = zdim    
+    if 'z_f' in ttab.dims :
         ttab = ttab.rename ({'z_f':'z_c'})
+        az = 'z_c'
+    if zcoord is not None :
+        ttab = ttab.assign_coords ( {az:zcoord} )
 
     pop_stack ( 'w2t' )
     return ttab
@@ -5336,15 +5410,18 @@ def t2w (ttab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
             wtab[{az:0}] = ttab[{az:0}]
         if zdim and az and az != zdim :
             wtab = wtab.rename ( {az:zdim})
+            az=zdim
+        if 'z_c' in wtab.dims :
+            wtab = wtab.rename ({'z_c':'z_f'})
+            az='z_f'
         if zcoord is not None :
-            wtab = wtab.assign_coords ( {zdim:zcoord})
+            wtab = wtab.assign_coords ( {az:zcoord})
         else :
             wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz])+1.} )
     else :
         wtab = ttab_0
-
-    if 'z_c' in wtab.dims :
-        wtab = wtab.rename ({'z_c':'z_f'})
+        if 'z_c' in wtab.dims :
+            wtab = wtab.rename ({'z_c':'z_f'})
 
     pop_stack ( 't2w' )
     return wtab
