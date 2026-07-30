@@ -471,7 +471,7 @@ class Domain :
     # pylint: disable=missing-function-docstring
     def copy(self: Self) -> 'Domain':
         return Domain (domain=self)
-    
+
     # Convenience aliases for update
     @validate_types
     # pylint: disable=missing-function-docstring
@@ -1145,7 +1145,7 @@ class GridMask :
         value = self[attr]
         delattr(self, attr)
         return value
-    
+
     ## Hidden functions
     def __str__  (self:Self) -> str :
         '''Return the string representation of the underlying dictionary.'''
@@ -1169,7 +1169,7 @@ class GridMask :
     def __contains__ (self:Self, item) -> bool :
         '''Return whether an attribute name exists in the container.'''
         return item in self.__dict__.keys()
-    
+
     def __len__     (self:Self) -> int :
         '''Return the number of stored attributes.'''
         return len (self.__dict__)
@@ -1225,25 +1225,40 @@ class GridMask :
 
         kw_read = {'decode_times':False}
 
-        d_g = xr.open_dataset (f_g , **kw_read  # type: ignore
-                               ).squeeze () \
-            if os.path.isfile (f_g)  else None # type: ignore
-        d_e = xr.open_dataset (f_e , **kw_read  # type: ignore
-                               ).squeeze () \
-            if os.path.isfile (f_e)  else None # type: ignore
-        d_b = xr.open_dataset (f_b , **kw_read  # type: ignore
-                               ).squeeze () \
-            if os.path.isfile (f_b)  else None # type: ignore
+        try :
+            d_g = xr.open_dataset (f_g , **kw_read  # type: ignore
+                                   ).squeeze ()
+        except :
+            d_g = None
+
+        try :
+            d_e = xr.open_dataset (f_e , **kw_read  # type: ignore
+                               ).squeeze ()
+        except :
+            d_e = None
+        try :
+            d_b = xr.open_dataset (f_b , **kw_read  # type: ignore
+                               ).squeeze ()
+        except :
+            d_b = None
 
         d_d = None
-        if os.path.isfile (f_d1) :
+        if OPTIONS['Debug'] or Debug :
+            print ( f"Reading {f_d1=}" )
+        try :
             d_d = xr.open_dataset (f_d1, **kw_read).squeeze () # type: ignore
-        else :
-            if os.path.isfile (f_d2) :
+        except :
+            if OPTIONS['Debug'] or Debug :
+                print ( f"Not readable {f_d1=}" )
+                print ( f"Reading {f_d2=}" )
+            try :
                 d_d = xr.open_dataset (f_d2, **kw_read).squeeze () # type: ignore
+            except :
+                if OPTIONS['Debug'] or Debug :
+                    print ( f"Not readable {f_d2=}" )
 
         if OPTIONS['Debug'] or Debug :
-            print ( f"{d_d=}" )
+            print ( f"{d_d=} {f_d1=} {f_d2=}" )
 
         d_e3 = None
         if e3dataset is not None :
@@ -1275,67 +1290,67 @@ class GridMask :
         lon_T, lon_U, lon_V, lon_F, lon_W = None, None, None, None, None
         lat_T, lat_U, lat_V, lat_F, lat_W = None, None, None, None, None
 
-        if 'glamt' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
-            lon_T   = lbcu (d_g.glamt, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='T', domain=domain, btype='lbc',
-                            **kw_uni)
-            lat_T   = lbcu (d_g.gphit, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='T', domain=domain, btype='lbc',
-                            **kw_uni)
-            lon_U   = lbcu (d_g.glamu, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='U', domain=domain, btype='lbc',
-                            **kw_uni)
-            lat_U   = lbcu (d_g.gphiu, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='U', domain=domain, btype='lbc',
-                            **kw_uni)
-            lon_V   = lbcu (d_g.glamv, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='V', domain=domain, btype='lbc',
-                            **kw_uni)
-            lat_V   = lbcu (d_g.gphiv, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='V', domain=domain, btype='lbc',
-                            **kw_uni)
-            lon_F   = lbcu (d_g.glamf, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='F', domain=domain, btype='lbc',
-                            **kw_uni)
-            lat_F   = lbcu (d_g.gphif, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='F', domain=domain, btype='lbc',
-                            **kw_uni)
-        elif 'nav_lon_grid_T' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
-            lon_T   = lbcu (d_g.nav_lon_grid_T, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='T', domain=domain,
-                            btype='lbc', **kw_uni)
-            lat_T   = lbcu (d_g.nav_lat_grid_T, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='T', domain=domain,
-                            btype='lbc', **kw_uni)
-            lon_U   = lbcu (d_g.nav_lon_grid_U, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='U', domain=domain,
-                            btype='lbc', **kw_uni)
-            lat_U   = lbcu (d_g.nav_lat_grid_V, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='U', domain=domain,
-                            btype='lbc', **kw_uni) # pyright: ignore
-            lon_V   = lbcu (d_g.nav_lon_grid_V, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='V', domain=domain,
-                            btype='lbc', **kw_uni)
-            lat_V   = lbcu (d_g.nav_lat_grid_V, # pyright: ignore[reportOptionalMemberAccess]
-                            cd_type='V', domain=domain,
-                            btype='lbc', **kw_uni)
+        if d_g is not None :
+            if 'glamt' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
+                lon_T   = lbcu (d_g.glamt, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='T', domain=domain, btype='lbc',
+                                **kw_uni)
+                lat_T   = lbcu (d_g.gphit, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='T', domain=domain, btype='lbc',
+                                **kw_uni)
+                lon_U   = lbcu (d_g.glamu, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='U', domain=domain, btype='lbc',
+                                **kw_uni)
+                lat_U   = lbcu (d_g.gphiu, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='U', domain=domain, btype='lbc',
+                                **kw_uni)
+                lon_V   = lbcu (d_g.glamv, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='V', domain=domain, btype='lbc',
+                                **kw_uni)
+                lat_V   = lbcu (d_g.gphiv, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='V', domain=domain, btype='lbc',
+                                **kw_uni)
+                lon_F   = lbcu (d_g.glamf, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='F', domain=domain, btype='lbc',
+                                **kw_uni)
+                lat_F   = lbcu (d_g.gphif, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='F', domain=domain, btype='lbc',
+                                **kw_uni)
+            elif 'nav_lon_grid_T' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
+                lon_T   = lbcu (d_g.nav_lon_grid_T, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='T', domain=domain,
+                                btype='lbc', **kw_uni)
+                lat_T   = lbcu (d_g.nav_lat_grid_T, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='T', domain=domain,
+                                btype='lbc', **kw_uni)
+                lon_U   = lbcu (d_g.nav_lon_grid_U, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='U', domain=domain,
+                                btype='lbc', **kw_uni)
+                lat_U   = lbcu (d_g.nav_lat_grid_V, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='U', domain=domain,
+                                btype='lbc', **kw_uni) # pyright: ignore
+                lon_V   = lbcu (d_g.nav_lon_grid_V, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='V', domain=domain,
+                                btype='lbc', **kw_uni)
+                lat_V   = lbcu (d_g.nav_lat_grid_V, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='V', domain=domain,
+                                btype='lbc', **kw_uni)
+
             if 'nav_lon_grid_F' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
                 lon_F   = lbcu (d_g.nav_lon_grid_F, # pyright: ignore[reportOptionalMemberAccess]
                                 cd_type='F', domain=domain, btype='lbc',
                                 **kw_uni)
-                lat_F   = lbcu (
-                    d_g.nav_lat_grid_F, # pyright: ignore[reportOptionalMemberAccess]
-                    cd_type='F', domain=domain, btype='lbc', **kw_uni)
+                lat_F   = lbcu (d_g.nav_lat_grid_F, # pyright: ignore[reportOptionalMemberAccess]
+                                cd_type='F', domain=domain, btype='lbc', **kw_uni)
+
             elif 'bounds_lon_grid_T' in \
-                d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
+                 d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
                 lon_F   = lbcu (
                     d_g.bounds_lon_grid_T.isel( # pyright: ignore[reportOptionalMemberAccess]
-                        {'nvertex_grid_T':2}),
-                    cd_type='F', domain=domain, btype='lbc', **kw_uni)
+                        {'nvertex_grid_T':2}), cd_type='F', domain=domain, btype='lbc', **kw_uni)
                 lat_F   = lbcu (
                     d_g.bounds_lat_grid_T.isel( # pyright: ignore[reportOptionalMemberAccess]
-                        {'nvertex_grid_T':2}),
-                                cd_type='F', domain=domain, btype='lbc', **kw_uni)
+                        {'nvertex_grid_T':2}), cd_type='F', domain=domain, btype='lbc', **kw_uni)
 
         lon_T = unify_dims (lon_T, **kw_uni, xgrid='T')
         lon_U = unify_dims (lon_U, **kw_uni, xgrid='U')
@@ -1359,7 +1374,7 @@ class GridMask :
             je = None
             if Debug or OPTIONS['Debug'] :
                 print ( 'lat_T is None' )
-                
+
         if lat_T is not None and lon_T is not None :
             if Debug or OPTIONS['Debug'] :
                 print ( f"{lat_T.shape=} {lat_T.min()=} {lat_T.max()=} ",\
@@ -2396,54 +2411,113 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
 
         if use_xgcm :
             if 'x_grid_T' in dd.dims :
-                dd = dd.rename ({'x_grid_T':'x_c'})
+                if OPTIONS['Debug'] or Debug :
+                    print ( 'rename x_grid_T -> x_c' )
+                if 'x_c' in dd.dims :
+                    dd = dd.rename ({'x_grid_T':'x_c'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'x_grid_T':'x_c'})
+                    else :
+                        dd = dd.rename ({'x_grid_T':'x_c'})
                 if 'x_c' not in dd.coords :
                     dd['x_c'] = np.arange (len(dd['x_c'])) + 1
                     x = None
             if 'x_grid_U' in dd.dims :
-                dd = dd.rename ({'x_grid_U':'x_f'})
-                if 'x_c' not in dd.coords :
-                    dd['x_c']  = np.arange (len(dd['x_f'])) + 0.5
+                if 'x_f' in dd.dims :
+                    dd = dd.rename ({'x_grid_U':'x_f'})
+                else:
+                    dd = dd.rename_dims ({'x_grid_U':'x_f'})
+                if 'x_f' not in dd.coords :
+                    dd['x_f']  = np.arange (len(dd['x_f'])) + 0.5
                     dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
                     x = None
             if 'x_grid_V' in dd.dims :
-                dd = dd.rename ({'x_grid_V':'x_c'})
+                if 'x_c' in dd.dims :
+                    dd = dd.rename ({'x_grid_V':'x_c'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'x_grid_V':'x_c'})
+                    else :
+                        dd = dd.rename ({'x_grid_V':'x_c'})
                 if 'x_c' not in dd.coords :
                     dd['x_c'] = np.arange (len(dd['x_c'])) + 1
                     x = None
             if 'x_grid_F' in dd.dims :
-                dd = dd.rename ({'x_grid_F':'x_f'})
-                if 'x_c' not in dd.coords :
-                    dd['x_c'] = np.arange (len(dd['x_f'])) + 0.5
+                if 'x_f' in dd.dims :
+                    dd = dd.rename ({'x_grid_F':'x_f'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'x_grid_F':'x_f'})
+                    else :
+                        dd = dd.rename ({'x_grid_F':'x_f'})
+                if 'x_f' not in dd.coords :
+                    dd['x_f'] = np.arange (len(dd['x_f'])) + 0.5
                     x = None
             if 'x_grid_W' in dd.dims :
-                dd = dd.rename ({'x_grid_W':'x_c'})
+                if 'x_c' in dd.dims :
+                    dd = dd.rename ({'x_grid_W':'x_c'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'x_grid_W':'x_c'})
+                    else :
+                        dd = dd.rename ({'x_grid_W':'x_c'})
                 if 'x_c' not in dd.coords :
                     dd['x_c'] = np.arange (len(dd['x_c'])) + 1
                     x = None
             if 'y_grid_T' in dd.dims :
-                dd = dd.rename ({'y_grid_T':'y_c'})
+                if 'y_c' in dd.dims :
+                    dd = dd.rename ({'y_grid_T':'y_c'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'y_grid_T':'y_c'})
+                    else :
+                        dd = dd.rename ({'y_grid_T':'y_c'})
                 if 'y_c' not in dd.coords :
                     dd['y_c'] = np.arange (len(dd['y_c'])) + 1
                     y = None
             if 'y_grid_U' in dd.dims :
-                dd = dd.rename ({'y_grid_U':'y_f'})
-                if 'y_c' not in dd.coords :
-                    dd['y_c'] = np.arange (len(dd['y_f'])) + 0.5
+                if  'y_f' in dd.dims :
+                    dd = dd.rename ({'y_grid_U':'y_f'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'y_grid_U':'y_f'})
+                    else :
+                        dd = dd.rename ({'y_grid_U':'y_f'})
+                if 'y_f' not in dd.coords :
+                    dd['y_f'] = np.arange (len(dd['y_f'])) + 0.5
                     dd.y_f.attrs.update({'c_grid_axis_shift':0.5})
                     y = None
             if 'y_grid_V' in dd.dims :
-                dd = dd.rename ({'y_grid_V':'y_c'})
+                if 'y_c' in dd.dims :
+                    dd = dd.rename ({'y_grid_V':'y_c'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'y_grid_V':'y_c'})
+                    else :
+                        dd = dd.rename ({'y_grid_V':'y_c'})
                 if 'y_c' not in dd.coords :
                     dd['y_c'] = np.arange (len(dd['y_c'])) + 1
                     y = None
             if 'y_grid_F' in dd.dims :
-                dd = dd.rename ({'y_grid_F':'y_f'})
-                if 'y_c' not in dd.coords :
-                    dd['y_c'] = np.arange (len(dd['y_f'])) + 0.5
+                if 'y_f' in dd.dims :
+                    dd = dd.rename ({'y_grid_F':'y_f'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'y_grid_F':'y_f'})
+                    else :
+                        dd = dd.rename ({'y_grid_F':'y_f'})
+                if 'y_f' not in dd.coords :
+                    dd['y_f'] = np.arange (len(dd['y_f'])) + 0.5
                     y = None
             if 'y_grid_W' in dd.dims :
-                dd = dd.rename ({'y_grid_W':'y_c'})
+                if 'y_c' in dd.dims :
+                    dd = dd.rename ({'y_grid_W':'y_c'})
+                else :
+                    if isinstance (dd, xr.Dataset) :
+                        dd = dd.rename_dims ({'y_grid_W':'y_c'})
+                    else :
+                        dd = dd.rename ({'y_grid_W':'y_c'})
                 if 'y_c' not in dd.coords :
                     dd['y_c'] = np.arange (len(dd['y_c'])) + 1
                     y = None
@@ -2473,7 +2547,7 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
             if yy and yy != y  :
                 if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {yy} renamed to {y}" )
-                dd = dd.rename ( {yy:y} )
+                dd = dd.rename ({yy:y})
                 dd[y].attrs.update ({'axis':'Y', 'name':y})
                 if y == 'y_f' :
                     dd.y_f.attrs.update ({'c_grid_axis_shift':0.5})
@@ -2490,7 +2564,7 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
             if zz and zz != z :
                 if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {zz} renamed to {z}" )
-                dd = dd.rename ({zz:z  })
+                dd = dd.rename_dims ({zz:z  })
                 dd[z].attrs.update ({'axis':'Z', 'name':z})
                 if z == 'z_f' :
                     dd.z_f.attrs.update ({'c_grid_axis_shift':0.5})
@@ -2509,14 +2583,14 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
             if tt and tt != t :
                 if OPTIONS['Debug'] or Debug :
                     print ( f"unify_dims : {tt} renamed to {t}" )
-                dd = dd.rename ({tt:t})
+                dd = dd.rename_dims ({tt:t})
                 dd[t].attrs.update ({'axis':'T', 'name':t})
             if isinstance (dd, xr.Dataset) and t in dd.variables and 'bounds' in dd[t].attrs :
                 bound_var =  dd[t].attrs['bounds']
                 if bound_var in dd.variables :
                     new_bv = bound_var.replace (tt, t)
                     if new_bv != bound_var :
-                        dd = dd.rename ({bound_var:new_bv})
+                        dd = dd.rename_dims ({bound_var:new_bv})
                         dd[t].attrs['bounds'] = new_bv
 
         if use_xgcm :
@@ -3645,7 +3719,7 @@ def lbc_add (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str|None=None, psgn:
                          aperio=aperio, nperio=nperio, domain=domain)
         ax, ix = find_axis (ptab, 'x')
         ay, jy = find_axis (ptab, 'y')
-        ayx, _ =  find_axis (ptab, 'yx')
+        ayx, _ = find_axis (ptab, 'yx')
 
         stacked = ayx is not None
         if stacked :
@@ -3664,7 +3738,7 @@ def lbc_add (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str|None=None, psgn:
                 cd_type = 'F'
 
         psgn   = ztab.dtype.type (psgn)
-        ztab_ext = ztab
+        ztab_ext = ztab.copy()
 
         t_shape = np.array (ztab.shape)
 
@@ -3816,7 +3890,7 @@ def lbc_del (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str='T', psgn:int|fl
         if stacked :
             if zdebug :
                 print ( 'unstack')
-            ztab  = unstack_yx (ptab, domain=zdom)
+            ztab  = unstack_yx (ptab.copy(), domain=zdom)
         else :
             ztab  = ptab.copy ()
 
@@ -3877,7 +3951,7 @@ def lbc_del_cyclic (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str='T', psgn
 
         stacked = ayx is not None
         if stacked :
-            ztab = unstack_yx (ptab, domain=zdom)
+            ztab = unstack_yx (ptab.copy(), domain=zdom)
         else :
             ztab = ptab.copy ()
 
@@ -3886,7 +3960,7 @@ def lbc_del_cyclic (ptab:xr.DataArray|None, cd_type:CDTYPE_LITERAL|str='T', psgn
             tdom.del_cyclic ()
 
             if ax :
-                ztab = lbc (ptab.isel ({ax:slice(1,-1)}   ),
+                ztab = lbc (ptab.copy().isel ({ax:slice(1,-1)}   ),
                             cd_type=cd_type, psgn=psgn, domain=tdom)
 
         if stacked :
@@ -3919,6 +3993,7 @@ def lbc_todom (ptab:xr.DataArray, dst_dom:Domain, src_dom:Domain|None=None,
     zdebug = OPTIONS['Debug'] or Debug
     z_src_dom = Domain (ptab=ptab, domain=src_dom)
     ztab = ptab
+
     if       z_src_dom.Halo   and not dst_dom.Halo :
         if zdebug :
             print ( 'lbc_todom calling lbc_del')
@@ -5375,13 +5450,13 @@ def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
         ttab = 0.5 * (wtab_0 + wtab_0.roll ({az:-1}))
     else :
         ttab = wtab_0
-        
+
     ttab[{az:kz}] = sval
-    
+
     if zdim and az :
         if az != zdim :
             ttab = ttab.rename ( {az:zdim} )
-        az = zdim    
+        az = zdim
     if 'z_f' in ttab.dims :
         ttab = ttab.rename ({'z_f':'z_c'})
         az = 'z_c'

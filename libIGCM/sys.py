@@ -411,9 +411,8 @@ class Config : # pylint: disable=too-many-instance-attributes
                 ThreddsPrefix = OPTIONS['TGCC_ThreddsPrefix']
             if not DapPrefix     :
                 DapPrefix     = OPTIONS['TGCC_DapPrefix']
-
             if not ARCHIVE :
-                ARCHIVE = f'{DapPrefix}/store/{TGCC_User}'
+                ARCHIVE = f'{DapPrefix}/work/{TGCC_User}'
             if not STORAGE :
                 STORAGE = f'{DapPrefix}/work/{TGCC_User}'
             if not R_FIG   :
@@ -422,6 +421,12 @@ class Config : # pylint: disable=too-many-instance-attributes
                 R_IN    = f'{DapPrefix}/work/igcmg/IGCM'
             if not R_GRAF  :
                 R_GRAF  = f'{DapPrefix}/work/p86mart/GRAF/DATA'
+            if not DB :
+                if Master == 'Spip' :
+                    DB = os.path.join ( os.path.expanduser (f'~{User}'),
+                                             'Scratch', 'database' )
+                if Master in ['SpiritJ', 'SpiritX'] :
+                    DB = os.path.join  ( '/', 'data', 'igcmg', 'database' )
 
         # =============================================
         if Source == 'IDRIS_thredds' :
@@ -480,7 +485,6 @@ class Config : # pylint: disable=too-many-instance-attributes
                                              'cont003', 'igcmg', 'IGCM' )
 
         # ==================================================================
-
         if Source == 'IDRIS_ssh' :
             if ldebug :
                 print ( 'Case IDRIS_ssh' )

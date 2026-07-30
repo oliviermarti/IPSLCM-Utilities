@@ -610,8 +610,8 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
     return ztab, xx, yy
 
 @validate_types
-def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int=0, jpj:int=0,
-               share_pole:bool=False, lon_name:str|None=None, lat_name:str|None=None,
+def point2geo (p1d:xr.DataArray, lon:xr.DataArray|None=None, lat:xr.DataArray|None=None, jpi:int=0, jpj:int=0,
+               share_pole:bool=False, lon_name:str|None='longitude', lat_name:str|None='latitude',
                Debug:bool=False) -> xr.DataArray :
     '''
     From 1D [..., points_physiques] (restart type) to 2D [..., lat, lon]
@@ -623,6 +623,7 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     if lon/lat is a string, add longitude/latitude values (regular grid),
        with name lon/lat
     '''
+    ldeb = OPTIONS['Debug'] or Debug
     push_stack (f'point2geo (p1d, {lon=}, {lat=}, {jpi=}, {jpj=}, {share_pole=}'+\
                 f'{lon_name=}, {lat_name=})')
 
@@ -630,6 +631,9 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     jpn = p1d.shape[-1]
     # Get other dimension(s)
     form1 = list (p1d.shape [0:-1])
+
+    if ldeb :
+        print ( f"{jpn=} {form1=}" )
 
     # Check or compute 2D horizontal dimensions
     if jpi != 0 and jpj != 0 :
@@ -654,10 +658,16 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
     form_all   = form1 + [jpj  , jpi]
     form_shape = form1 + [jpj-2, jpi]
 
+    if ldeb :
+        print ( f"{form_all=} {form_shape=}" )
+
     p2d = np.empty (form_all)
-    p2d [..., 1:-1, :] = np.reshape (p1d [..., 1:-1], form_shape )
-    if OPTIONS['Debug'] or Debug :
-        print (f'{jpn=} {jpi=} {jpi=} {form1=} {form_all=} {form_shape=} {p2d.shape=}')
+    if ldeb :
+        print (f'{jpn=} {jpj=} {jpi=} {(jpj-2)*jpi+2=} {form1=} {form_all=} {form_shape=}')
+        print ( f'{p1d.shape=}  {p2d.shape=} {p1d[..., 1:-1].shape=}')
+        
+    p2d [..., 1:-1, :] = np.reshape (p1d [..., 1:-1].values, form_shape )
+    
 
     if share_pole :
         p2d [...,  0 , :].flat = p1d [...,  0] / float (jpi) # type: ignore
@@ -667,76 +677,30 @@ def point2geo (p1d:xr.DataArray, lon:bool|str=False, lat:bool|str=False, jpi:int
         p2d [..., -1 , :].flat = p1d [..., -1] # type: ignore
 
     # Adding metadata, coordinates, etc ...
-    p2d = xr.DataArray (p2d)
-    p2d.attrs.update ( p1d.attrs )
-    for idim in range ( len(p1d.shape [0:-1]) ):
-        dim = p1d.dims[idim]
-        p2d = p2d.rename        ({p2d.dims[idim]:p1d.dims[idim]} )
-        p2d = p2d.assign_coords ({p2d.dims[idim]:p1d.coords[dim]})
-
+    
     zlon = None
     zlat = None
-    if isinstance (lon, str) :
-        if not lon_name :
-            lon_name = lon
+
+    if lon is not None :
+        zlon = lon
+    else :
         zlon = np.linspace ( -180, 180, jpi, endpoint=False)
-    if isinstance (lat, str) :
-        if not lat_name :
-            lat_name = lat
+        zlon = xr.DataArray ( zlon, dims=(lon_name,), coords=(zlon,),
+                              attrs= { 'units':'degrees_east', 'long_name':'Longitude', 'standard_name':'longitude', 'axis':'X' })
+    if lat is not None :
+        zlat = lat
+    else :
         zlat = np.linspace ( 90, -90, jpj, endpoint=True)
-    if isinstance (lon, bool) :
-        if lon :
-            if not lon_name :
-                lon_name = 'lon'
-            zlon = np.linspace ( -180, 180, jpi, endpoint=False)
-    if isinstance (lat, bool) :
-        if lat :
-            if not lat_name :
-                lat_name = 'lat'
-            zlat = np.linspace ( 90, -90, jpj, endpoint=True)
-    if OPTIONS['Debug'] or Debug :
-        print ( f'{lon_name=} {type(zlon)=}' )
+        zlat = xr.DataArray ( zlat, dims=(lat_name,), coords=(zlat,),
+                              attrs={ 'units':'degrees_north', 'long_name':'Latitude', 'standard_name':'latitude' , 'axis':'Y' })
 
-    if isinstance(zlon, np.ndarray) == np :
-        if not lon_name :
-            lon_name = 'lon'
-        zlon = xr.DataArray ( zlon, dims=(lon_name,), coords={lon_name: zlon} )
-        for aa in { 'units':'degrees_east', 'long_name':'Longitude',
-                    'standard_name':'longitude', 'axis':'X' }.items() :
-            if aa[0] not in lon.attrs : # type: ignore
-                zlon.attrs.update ( { aa[0]:aa[1] } )
-    if isinstance (zlat, np.ndarray) :
-        if not lat_name :
-            lat_name = 'lat'
-        zlat = xr.DataArray ( zlat, dims=(lat_name,), coords={lat_name: zlat} )
-        for aa in  { 'units':'degrees_north', 'long_name':'Latitude' ,
-                     'standard_name':'latitude' , 'axis':'Y' }.items () :
-            if aa[0] not in lat.attrs : # type: ignore
-                zlat.attrs.update ( { aa[0]:aa[1] } )
-    if not isinstance (lat, xr.DataArray) :
-        if not lat_name :
-            lat_name = lat.name if isinstance (zlat, xr.DataArray) else 'lat' # type: ignore
-    if not isinstance (lon, xr.DataArray) :
-        if not lon_name :
-            lon_name = lon.name if isinstance (zlon, xr.DataArray) else 'lon' # type: ignore
-
-    if not lon_name :
-        lon_name = 'x'
-    if not lat_name :
-        lat_name = 'y'
-
-    if OPTIONS['Debug'] or Debug :
-        print ( f'{lon_name=}' )
-
-    if lon_name != p2d.dims[-1] :
-        p2d = p2d.rename ( {p2d.dims[-1]:lon_name} )
-    if lat_name != p2d.dims[-2] :
-        p2d = p2d.rename ( {p2d.dims[-2]:lat_name} )
-
-    p2d = p2d.assign_coords ( {lon_name:zlon} )
-    p2d[lon_name].attrs.update ( lon.attrs ) # type: ignore
-    p2d = p2d.assign_coords ( {lat_name:zlat} )
-    p2d[lon_name].attrs.update ( lat.attrs ) # type: ignore
+    zdims   = p1d.dims[:-2]   + (lat_name, lon_name)
+    if len ( p1d.coords ) > 2 :
+        zcoords = p1d.coords[:-2] + (zlat, zlon)
+    else :
+        zcoords = (zlat, zlon)
+     
+    p2d = xr.DataArray (p2d, dims=zdims, coords=zcoords, attrs=p1d.attrs)
 
     pop_stack ('point2geo')
     return p2d

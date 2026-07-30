@@ -32,6 +32,7 @@ personal.
 import time
 import copy
 from typing import Self, Any
+from collections.abc import Iterable
 
 import numpy as np
 import xarray as xr
@@ -272,6 +273,26 @@ def time2float (time_coord, unit:str='year',
     pop_stack ( 'time2float' )
     return result.astype(np.float64)
 
+def year2yearBP ( year:int|float|np.ndarray|xr.DataArray|None=None, year0:int=7999
+                 ) ->  int|float|np.ndarray|xr.DataArray|None :
+
+    if isinstance (year, Iterable) :
+        zbp = year.copy()
+        for nn, yy in enumerate(year) :
+            if yy is not None :
+                zbp[nn] = year0 - yy
+            else :
+                zbp[nn] = None
+            #print ( nn, yy, zbp[nn] )
+    else :
+        if year is not None :
+            zbp = year0 - year
+        else :
+            zbp = None
+
+    return zbp
+    
+
 def time2BP (time_coord, unit:str='year',
              year0:int=7999, month0:int=7, day0:int=0, hour0:int=0, Debug:bool=False) :
     '''
@@ -290,7 +311,7 @@ def time2BP (time_coord, unit:str='year',
 
     if isinstance (time_coord, xr.DataArray)  :
         if ldebug :
-            print ( f'Case : xarray {len(time_coord.dims)}')
+            print ( f'Case : xarray {len(time_coord.dims)=}')
         if len(time_coord.dims) == 0 :
             ztime = time_coord.item()
         else :

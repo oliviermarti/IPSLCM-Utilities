@@ -172,7 +172,7 @@ def build_feat (filename, Debug=False, facecolor='none', edgecolor='k') :
     zf.close()
     return file_poly, file_shp
 
-def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
+def join_series (ptab1, ptab2, master:None|int=None, dim='time_counter', Debug=False) :
     '''
     Join two time series : first take ptab1, and ptab2 when possible
     '''
@@ -197,6 +197,12 @@ def join_series (ptab1, ptab2, dim='time_counter', Debug=False) :
 
     ptab3 =  xr.concat ( [ ptab1.sel( {dim:slice(T1,T2)} ),
                            ptab2.sel ( {dim:slice(T3,T4)} ) ], dim=dim )
+
+    if master == 1 :
+        ptab3.attrs.update ( ptab1.attrs )
+    if master == 2 :
+        ptab3.attrs.update ( ptab2.attrs )
+    
     return ptab3
 
 def add_year (ptime:xr.DataArray, year_shift:int=0, Debug=False) -> xr.DataArray :
@@ -338,6 +344,49 @@ def copy_attrs (ptab:xr.DataArray, pref:xr.DataArray, Debug:bool=False) -> xr.Da
 
     pop_stack ( 'copy_attrs')
     return ztab
+def year_shift ( ptab:xr.DataArray, time_name, qua=[0.01, 0.02, 0.03, 0.05, 0.1], start=200, width=100,
+                 direction:Literal['up','down']='down', Debug=False) :
+    """Computes the year where distribution before and after differs"""
+    ztimes    = []
+    qt        = []
+    qs        = []
+    qq = qua.copy()
+    qq.extend ( [1.0-qqi for qqi in qq[::-1]] )
+
+    if OPTIONS['Debug'] or Debug :
+        print (f"{qq=}")
+    zzt0 = ptab[time_name]
+
+    for t0 in range (start, len(zzt0)-start, 1):
+        s1 = ptab.isel ( {time_name:slice (None, t0-width//2)}).values
+        s2 = ptab.isel ( {time_name:slice (t0+width//2, None)}).values
+        q1 = np.quantile (s1, qq)
+        q2 = np.quantile (s2, qq)
+        if direction == 'up' :
+            tt = [ q1[nn] > q2[-nn-1] for nn in range (len(qq)//2) ]
+        if direction == 'down' :
+            tt = [ q1[-1-nn] < q2[nn] for nn in range (len(qq)//2) ]
+        if OPTIONS['Debug'] or Debug :
+            print ( f"{t0=:4d} {len(s1):4}, {len(s2):4}, start={t0-width//2:4d} end={t0+width//2:4d} {np.array(tt).astype(int)}" )
+        ztimes.append (t0)
+        qt.append ( np.array(tt).astype(int) )
+        qs.append ( np.sum(np.array(tt).astype(int)) )
+
+    zzt  = zzt0[ztimes]   
+
+    ztimes = xr.DataArray (zzt, dims=('time',), coords=[zzt,])
+    qt = xr.DataArray (qt, dims=('time', 'threshold'), coords=(zzt, qq[:len(qq)//2]) )
+    qs = xr.DataArray (qs, dims=('time',), coords=(zzt,))
+
+    ts = [ ((np.array(qs)>=nn) ).astype(int) for nn in range (1, len(qua)+1) ]
+    ts = np.array ( ts )
+    aa = np.argmax ( ts, axis=1 )
+    tshift = np.array(zzt0[aa])
+    year   = np.array ( [ zt.year for zt in tshift ] )
+    tshift = np.where ( tshift==zzt0[0].item(), None, tshift )
+    year   = np.where ( tshift==None, np.nan, year+start )
+    
+    return year+width//2, qt, qs
 
 def unit2math (unit:str, Debug:bool=False) -> str :
     '''
@@ -352,21 +401,22 @@ def unit2math (unit:str, Debug:bool=False) -> str :
 
     zu = zu.replace ( '.', ' ')
 
-    zu = re.sub ( 'deg.*C', '°C', zu)
+    zu = re.sub ( '^deg.*C$', '°C', zu)
+    zu = re.sub ( '^C$'     , '°C', zu)
 
     # Correct Orchidee Units
     zu = zu.replace ( 'Kg', 'kg' )
 
-    zu = re.sub ( 'deg.*[E,east]' , '°E', zu)
-    zu = re.sub ( 'deg.*[N,north]', '°N', zu)
+    zu = re.sub ( '^deg.*[E,east]$' , '°E', zu)
+    zu = re.sub ( '^deg.*[N,north]$', '°N', zu)
 
     zu = zu.replace ('degree_celsius', '°C')
     zu = zu.replace ('degree_C2'     , '°C^{2}' )
     zu = zu.replace ('degree_C'      , '°C')
-    zu = zu.replace ('deg'           , '°')
+    zu = re.sub     ('^deg$'         , '°C', zu)
 
     # Multiplicator
-    for nn in [1,2,3,4,5,6,7,8,9,20] :
+    for nn in [20,1,2,3,4,5,6,7,8,9] :
         zu = zu.replace (f'10^(-{nn})', f'$10^{{-{nn}}}$')
         zu = zu.replace (f'10^-{nn}'  , f'$10^{{-{nn}}}$')
         zu = zu.replace (f'10^{nn}'   , f'$10^{{{nn}}}$' )
@@ -559,6 +609,7 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
 
         case 'nadw_ocean.*'             :
             zname = 'AMOC index'
+            
         case 'somxl010_Irminger'        :
             zname = 'Mixed layer depth, Irminger Sea'
         case 'somxl010_NordicSeas'      :
