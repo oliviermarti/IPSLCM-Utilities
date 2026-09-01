@@ -612,7 +612,7 @@ def add_cyclic (ptab:xr.DataArray, x:xr.DataArray, y:xr.DataArray, axis:int=-1,
 @validate_types
 def point2geo (p1d:xr.DataArray, lon:xr.DataArray|None=None, lat:xr.DataArray|None=None, jpi:int=0, jpj:int=0,
                share_pole:bool=False, lon_name:str|None='longitude', lat_name:str|None='latitude',
-               Debug:bool=False) -> xr.DataArray :
+               Debug:bool=False, return_lonlat:bool=False) -> xr.DataArray|[xr.DataArray, xr.DataArray, xr.DataArray] :
     '''
     From 1D [..., points_physiques] (restart type) to 2D [..., lat, lon]
 
@@ -703,7 +703,11 @@ def point2geo (p1d:xr.DataArray, lon:xr.DataArray|None=None, lat:xr.DataArray|No
     p2d = xr.DataArray (p2d, dims=zdims, coords=zcoords, attrs=p1d.attrs)
 
     pop_stack ('point2geo')
-    return p2d
+
+    if return_lonlat :
+        return p2d, zlon, zlat
+    else:
+        return p2d
 
 @validate_types
 def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=False,
@@ -711,7 +715,8 @@ def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=
                jpi:Union[int,None]=None, jpj:Union[int,None]=None, jpk:Union[int,None]=None,
                share_pole:bool=False,
                lon_name:Union[str,None]=None, lat_name:Union[str,None]=None,
-               lev_name:Union[str,None]=None, Debug:Union[bool,None]=None
+               lev_name:Union[str,None]=None, Debug:Union[bool,None]=None,
+               return_lonlat:bool=False
                ) -> xr.DataArray :
     '''
     From 2D [..., horizon_vertical] (restart type) to 3D [..., lev, lat, lon]
@@ -788,16 +793,24 @@ def point3geo (p1d:xr.DataArray, lon:Union[bool,str]=False, lat:Union[bool,str]=
         p2d = p2d.rename        ( {p2d.dims[idim]:p1d.dims[idim]}  )
         p2d = p2d.assign_coords ( {p2d.dims[idim]:p1d.coords[dim]} )
 
-    p3d = point2geo (p2d, lon=lon, lat=lat, jpi=jpi, jpj=jpj, share_pole=share_pole,
-                     lon_name=lon_name, lat_name=lat_name )
+    if return_lonlat :
+        p3d, zlon, zlat = point2geo (p2d, lon=lon, lat=lat, jpi=jpi, jpj=jpj, share_pole=share_pole,
+                         lon_name=lon_name, lat_name=lat_name )
+    else : 
+        p3d = point2geo (p2d, lon=lon, lat=lat, jpi=jpi, jpj=jpj, share_pole=share_pole,
+                         lon_name=lon_name, lat_name=lat_name )
 
     if lev_name != p3d.dims[-3] :
         p3d = p3d.rename ( {p3d.dims[-3]:lev_name} )
     p2d = p2d.assign_coords ( {lev_name:lev} )
     p2d[lon_name].attrs.update (lon.attrs) # type: ignore
 
-    push_stack ( 'point3geo')
-    return p3d
+
+    push_stack ( f'point3geo, {return_lonlat=}')
+    if return_lonlat :
+        return p3d, zlon, zlat
+    else :
+        return p3d
 
 @validate_types
 def geo2point (p2d:xr.DataArray, cumul_poles:bool=False, dim1d:str='points_physiques',

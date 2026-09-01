@@ -1060,7 +1060,7 @@ class GridMask :
         match cd_type :
             case ( 'T' | 't' ) :
                 if self.e1t is not None and self.e2t is not None and self.e3t is not None :
-                    zvol = self.e1t*self.e2t*self.e3t
+                    zvol = self.e3t*self.mask_3T * self.e1t*self.e2t
         return zvol
 
     @validate_types
@@ -1087,7 +1087,7 @@ class GridMask :
                     build_bounds2d (glonf=self.lon_F, glatf=self.lat_F, rpoint='T',
                                     domain=self.domain,
                                     close=close, first=first, positive=positive,
-                                    vertex2d=vertex2d, Debug=Debug)
+                                    vertex2d=vertex2d)
             case ( 'U' | 'u' ) :
                 if OPTIONS['Debug'] or Debug :
                     print ( "case U" )
@@ -1095,7 +1095,7 @@ class GridMask :
                     build_bounds2d (glonv=self.lon_V, glatv=self.lat_V, rpoint='U',
                                     domain=self.domain,
                                     close=close, first=first, positive=positive,
-                                    vertex2d=vertex2d, Debug=Debug)
+                                    vertex2d=vertex2d)
             case ( 'T' | 't' ) :
                 if OPTIONS['Debug'] or Debug :
                     print ( "case T" )
@@ -1103,7 +1103,7 @@ class GridMask :
                     build_bounds2d (glonf=self.lon_F, glatf=self.lat_F, rpoint='V',
                                     domain=self.domain,
                                     close=close, first=first, positive=positive,
-                                    vertex2d=vertex2d, Debug=Debug)
+                                    vertex2d=vertex2d)
             case ( 'W' | 'w' ) :
                 if OPTIONS['Debug'] or Debug :
                     print ( "case W" )
@@ -1111,7 +1111,7 @@ class GridMask :
                     build_bounds2d (glont=self.lon_T, glatt=self.lat_T, rpoint='W',
                                     domain=self.domain,
                                     close=close, first=first, positive=positive,
-                                    vertex2d=vertex2d, Debug=Debug)
+                                    vertex2d=vertex2d)
             case ( 'F' | 'f' ) :
                 if OPTIONS['Debug'] or Debug :
                     print ( "case T" )
@@ -1119,7 +1119,7 @@ class GridMask :
                     build_bounds2d (glont=self.lon_T, glatt=self.lat_T, rpoint='F',
                                     domain=self.domain,
                                     close=close, first=first, positive=positive,
-                                    vertex2d=vertex2d, Debug=Debug)
+                                    vertex2d=vertex2d)
 
         return bounds_lon, bounds_lat
 
@@ -1181,106 +1181,184 @@ class GridMask :
             e3file:str|None=None, e3dataset:xr.Dataset|None=None, e3t=None, e3w=None,
             pval=np.nan, Debug=False) -> None :
 
-        f_g  = os.path.join (  # pyright: ignore[reportCallIssue]
-            mm.R_IN, # pyright: ignore[reportArgumentType]
-            'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
-            f'{domain.CFG_name}_coordinates_mask.nc'  )
-        f_e  = os.path.join (  # pyright: ignore[reportCallIssue]
-            mm.R_IN, # pyright: ignore[reportArgumentType]
-            'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
-            f'{domain.CFG_name}_coordinates.nc'       )
-        f_d1 = os.path.join ( # pyright: ignore[reportCallIssue]
-            mm.R_IN, # pyright: ignore[reportArgumentType]
-            'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
-            f'{domain.CFG_name}_domcfg.nc'            )
-        f_d2 = os.path.join ( # pyright: ignore[reportCallIssue]
-            mm.R_IN, # pyright: ignore[reportArgumentType]
-            'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
-            f'{domain.CFG_name}_domain_cfg.nc'        )
-        f_b  = os.path.join ( # pyright: ignore[reportCallIssue]
-            mm.DB, # pyright: ignore[reportArgumentType]
-            'extras', f'{domain.CFG_name}_subbasins.nc'   )
-
-        if domain.cfg_name in ['eorca1.2', 'eorca1.4.0'] :
-            f_g = os.path.join ( # pyright: ignore[reportCallIssue]
+        # Grille
+        f_g = [
+            os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
-               'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS',
-               'eORCA1.2_coordinates_mask.nc' )
-            f_e = os.path.join (# pyright: ignore[reportCallIssue]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_domcfg.nc'            ),
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_domain_cfg.nc'        ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_coordinates_mask.nc'  ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name,
+                f'{domain.CFG_name}_coordinates_mask.nc'  ),
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.DB, # pyright: ignore[reportArgumentType]
+                'grids', f'{domain.CFG_name}_mesh_mask.nc')
+        ]
+
+        # Masks
+        f_m = [
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_domcfg.nc'            ),
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_domain_cfg.nc'        ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_coordinates_mask.nc'  ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name,
+                f'{domain.CFG_name}_coordinates_mask.nc'  ),
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.DB, # pyright: ignore[reportArgumentType]
+                'grids', f'{domain.CFG_name}_mesh_mask.nc')
+        ]
+
+        # Horizontal scale factors
+        f_eh  = [
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_domcfg.nc'            ),
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_domain_cfg.nc'        ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_coordinates_mask.nc'       ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name,
+                f'{domain.CFG_name}_coordinates_mask.nc'       ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'coordinates_mask.nc'),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                f'{domain.CFG_name}_coordinates.nc'       ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name,
+                f'{domain.CFG_name}_coordinates.nc'       ),
+            os.path.join (  # pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', domain.CFG_name, 'coordinates.nc')
+        ]
+
+        # Vertical scale factors
+        if e3file is not None :
+            f_e3 = [ e3file, ]
+        else :
+            f_e3 = [
+                os.path.join (  # pyright: ignore[reportCallIssue]
+                    mm.R_IN, # pyright: ignore[reportArgumentType]
+                    'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
+                    f'{domain.CFG_name}_coordinates_mask.nc'  ),
+                os.path.join (  # pyright: ignore[reportCallIssue]
+                    mm.R_IN, # pyright: ignore[reportArgumentType]
+                    'OCE', 'NEMO', domain.CFG_name,
+                    f'{domain.CFG_name}_coordinates_mask.nc'  ),
+                os.path.join ( # pyright: ignore[reportCallIssue]
+                    mm.DB, # pyright: ignore[reportArgumentType]
+                    'grids', f'{domain.CFG_name}_mesh_mask.nc')
+            ]
+        
+
+        # Subbassins
+        f_b  = [
+            os.path.join ( # pyright: ignore[reportCallIssue]
+                mm.DB, # pyright: ignore[reportArgumentType]
+                'extras', f'{domain.CFG_name}_subbasins.nc'   )
+            ]
+        
+        if domain.cfg_name in ['eorca1.2', 'eorca1.4.0'] :
+            f_g.append (os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
                 'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS',
-                'eORCA1.2_coordinates.nc'      )
-
-        if domain.cfg_name in ['orca2.3' ] :
-            f_g = os.path.join ( # pyright: ignore[reportCallIssue]
-                mm.DB, # pyright: ignore[reportArgumentType]
-                'grids', 'ORCA2.3_mesh_mask.nc')
-
+                'eORCA1.2_coordinates_mask.nc' ))
+            f_eh.append ( os.path.join (# pyright: ignore[reportCallIssue]
+                mm.R_IN, # pyright: ignore[reportArgumentType]
+                'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS',
+                'eORCA1.2_coordinates.nc'      ))
+                        
         if OPTIONS['Debug'] or Debug :
             print ( f'{f_g=} ' )
-            print ( f'{f_e=} ' )
-            print ( f'{f_d1=}' )
-            print ( f'{f_d2=}' )
+            print ( f'{f_eh=} ' )
             print ( f'{f_b=} ' )
 
         kw_read = {'decode_times':False}
 
-        try :
-            d_g = xr.open_dataset (f_g , **kw_read  # type: ignore
-                                   ).squeeze ()
-        except :
-            d_g = None
 
-        try :
-            d_e = xr.open_dataset (f_e , **kw_read  # type: ignore
-                               ).squeeze ()
-        except :
-            d_e = None
-        try :
-            d_b = xr.open_dataset (f_b , **kw_read  # type: ignore
-                               ).squeeze ()
-        except :
-            d_b = None
-
-        d_d = None
-        if OPTIONS['Debug'] or Debug :
-            print ( f"Reading {f_d1=}" )
-        try :
-            d_d = xr.open_dataset (f_d1, **kw_read).squeeze () # type: ignore
-        except :
-            if OPTIONS['Debug'] or Debug :
-                print ( f"Not readable {f_d1=}" )
-                print ( f"Reading {f_d2=}" )
-            try :
-                d_d = xr.open_dataset (f_d2, **kw_read).squeeze () # type: ignore
-            except :
-                if OPTIONS['Debug'] or Debug :
-                    print ( f"Not readable {f_d2=}" )
-
-        if OPTIONS['Debug'] or Debug :
-            print ( f"{d_d=} {f_d1=} {f_d2=}" )
+        def f_file_var (f_list:List[str], var_list:List[str]) -> [xr.Dataset|None, str|None]:
+            '''
+            Find file in a list of files, containing at leat one variable in var_list
+            '''
+            zf, zd = None, None
+            zfound = False
+            for ff in f_list :
+                if not zfound :
+                    try :
+                        zd = xr.open_dataset (ff , **kw_read  # type: ignore
+                                                  ).squeeze ()
+                    except FileNotFoundError :
+                        zf, zd = None, None
+                        if OPTIONS['Debug'] or Debug :
+                            print ( f"file not found : {ff}" )
+                    else :
+                        if OPTIONS['Debug'] or Debug :
+                            print ( f"file found : {ff}" )
+                        for var in var_list :
+                            if var in zd :
+                                if OPTIONS['Debug'] or Debug :
+                                    print ( f"{var} found in {ff}" )
+                                zf = ff
+                                break
+                            else :
+                                if OPTIONS['Debug'] or Debug :
+                                    print ( f"{var} not found in {ff}" )
+                                
+            return zd, ff
+        
+        d_g , f_g  = f_file_var (f_g , ['glamt', 'nav_lon_grid_T'] )
+        d_m , f_m  = f_file_var (f_m , ['tmask', 'mask_T' ] )
+        d_eh, f_eh = f_file_var (f_eh, ['e1t',] )
+        d_b , f_b  = f_file_var (f_b , ['atlmsk',] )
+        d_e3, f_e3 = f_file_var (f_e3, ['e3t',] )
 
         d_e3 = None
         if e3dataset is not None :
             d_e3 = e3dataset
         else :
-            if e3file is not None :
-                d_e3 = xr.open_dataset (e3file , **kw_read  # type: ignore
-                                        ).squeeze () \
-                    if os.path.isfile (e3file)  else None # type: ignore
-
-        if d_e3 is None and d_d is not None :
-            if 'e3t_1d' in d_d :
-                d_e3 = d_d
-        if OPTIONS['Debug'] or Debug :
-                    print ( f"{d_e3}" )
-
+            for ff in f_e3 :
+                try :
+                    d_e3 = xr.open_dataset (e3file , **kw_read  # type: ignore
+                                            ).squeeze ()
+                    var = d_e3.e3t
+                except :
+                    d_e3 = None
+            
         if d_g is not None :
             d_g   = unify_dims (d_g , **kw_uni)
-        if d_e is not None :
-            d_e   = unify_dims (d_e , **kw_uni)
-        if d_d is not None :
-            d_d   = unify_dims (d_d , **kw_uni)
+        if d_m is not None :
+            d_m   = unify_dims (d_m , **kw_uni)
+        if d_eh is not None :
+            d_eh   = unify_dims (d_eh , **kw_uni)
         if d_b is not None :
             d_b   = unify_dims (d_b , **kw_uni)
         if d_e3 is not None :
@@ -1368,7 +1446,7 @@ class GridMask :
 
         if lat_T is not None :
             if Debug or OPTIONS['Debug'] :
-                print ( f"{lat_T.shape=} {lat_T.min()=} {lat_T.max()=} " )
+                print ( f"{lat_T.shape=} {lat_T.min().values=} {lat_T.max().values=} " )
             je = jeq (lat_T)
         else :
             je = None
@@ -1377,9 +1455,9 @@ class GridMask :
 
         if lat_T is not None and lon_T is not None :
             if Debug or OPTIONS['Debug'] :
-                print ( f"{lat_T.shape=} {lat_T.min()=} {lat_T.max()=} ",\
-                        f"{lon_T.shape=} {lon_T.min()=} {lon_T.max()=}" )
-            lat1D, lon1D = latlon1d (lat_T, lon_T, dims=('y_c', 'x_c'), Debug=Debug)
+                print ( f"{lat_T.shape=} {lat_T.min().values=} {lat_T.max().values=} ",\
+                        f"{lon_T.shape=} {lon_T.min().values=} {lon_T.max().values=}" )
+            lat1D, lon1D = latlon1d (lat_T, lon_T, dims=('y_c', 'x_c'))
             lat_T.values = np.where ( lat_T.values==0., lat1D.values[:,np.newaxis], lat_T.values)
             lon_T.values = np.where ( lon_T.values==0., lon1D.values[np.newaxis,:], lon_T.values)
         else :
@@ -1388,44 +1466,45 @@ class GridMask :
                 print ( 'lat_T/lon_T are None' )
 
         if lat_U is not None and lon_U is not None :
-            lat1D_U, lon1D_U = latlon1d (lat_U, lon_U, dims=('y_c', 'x_f'), Debug=Debug)
+            lat1D_U, lon1D_U = latlon1d (lat_U, lon_U, dims=('y_c', 'x_f'))
             lat_U.values = np.where ( lat_U.values==0., lat1D_U.values[:,np.newaxis], lat_U.values)
             lon_U.values = np.where ( lon_U.values==0., lon1D_U.values[np.newaxis,:], lon_U.values)
         if lat_V is not None and lon_V is not None :
-            lat1D_V, lon1D_V = latlon1d (lat_V, lon_V, dims=('y_c', 'x_f'), Debug=Debug)
+            lat1D_V, lon1D_V = latlon1d (lat_V, lon_V, dims=('y_c', 'x_f'))
             lat_V.values = np.where ( lat_V.values==0., lat1D_V.values[:,np.newaxis], lat_V.values)
             lon_V.values = np.where ( lon_V.values==0., lon1D_V.values[np.newaxis,:], lon_V.values)
         if lat_F is not None and lon_F is not None :
-            lat1D_F, lon1D_F = latlon1d (lat_F, lon_F, dims=('y_c', 'x_f'), Debug=Debug)
+            lat1D_F, lon1D_F = latlon1d (lat_F, lon_F, dims=('y_c', 'x_f'))
             lat_F.values = np.where ( lat_F.values==0., lat1D_F.values[:,np.newaxis], lat_F.values)
             lon_F.values = np.where ( lon_F.values==0., lon1D_F.values[np.newaxis,:], lon_F.values)
 
         mask_T , mask_U , mask_V , mask_F , mask_W  = None, None, None, None, None
         mask_3T, mask_3U, mask_3V, mask_3F, mask_3W = None, None, None, None, None
+        mask_ZT, mask_ZU, mask_ZV, mask_ZF, mask_ZW = None, None, None, None, None
+        
+        if d_m is not None and 'tmask' in d_m.variables :
+            mask_T  = xr.where (d_m.tmask[0]>0.5, 1., pval) # pyright: ignore
+            mask_3T = xr.where (d_m.tmask   >0.5, 1., pval) # pyright: ignore
+        elif d_m is not None and 'mask_T' in d_m.variables :
+            mask_T = xr.where (d_m.mask_T>0.5, 1, pval)
 
-        if d_g is not None and 'tmask' in d_g.variables :
-            mask_T  = xr.where (d_g.tmask[0]>0.5, 1, pval) # pyright: ignore
-            mask_3T = xr.where (d_g.tmask   >0.5, 1, pval) # pyright: ignore
-        elif d_g is not None and 'mask_T' in d_g.variables :
-            mask_T = xr.where (d_g.mask_T>0.5, 1, pval)
-
-        if d_g is not None and 'umask' in d_g.variables :
-            mask_U = xr.where (d_g.umask[0]>0.5, 1, pval)
-        elif d_g is not None and 'mask_U' in d_g.variables :
-            mask_U = xr.where (d_g.mask_U>0.5, 1, pval)
+        if d_m is not None and 'umask' in d_m.variables :
+            mask_U = xr.where (d_m.umask[0]>0.5, 1, pval)
+        elif d_m is not None and 'mask_U' in d_g.variables :
+            mask_U = xr.where (d_m.mask_U>0.5, 1, pval)
         else :
             mask_U = t2u (mask_T, action='mult', domain=domain)
             mask_U = lbcu (mask_T, **kw_uni, domain=domain, cd_type='U', psgn=1, btype='lbc')
 
-        if d_g is not None and 'vmask' in d_g.variables :
-            mask_V = xr.where (d_g.vmask>0.5, 1, pval)
-        elif d_g is not None and 'mask_V' in d_g.variables :
-            mask_V = xr.where (d_g.mask_V>0.5, 1, pval)
+        if d_m is not None and 'vmask' in d_m.variables :
+            mask_V = xr.where (d_m.vmask>0.5, 1, pval)
+        elif d_m is not None and 'mask_V' in d_m.variables :
+            mask_V = xr.where (d_m.mask_V>0.5, 1, pval)
         else :
             mask_V = t2v (mask_T, action='mult', domain=domain)
             mask_V = lbcu (mask_V, **kw_uni, domain=domain, cd_type='V', psgn=1, btype='lbc')
-        if d_g is not None and 'fmask' in d_g.variables :
-            mask_F = xr.where (d_g.fmask>0.5, 1, pval)
+        if d_m is not None and 'fmask' in d_m.variables :
+            mask_F = xr.where (d_m.fmask>0.5, 1, pval)
         else :
             mask_F = u2f (mask_U, action='mult', domain=domain)
             mask_F = lbcu (mask_F, **kw_uni, domain=domain, cd_type='F', psgn=1, btype='lbc')
@@ -1434,7 +1513,13 @@ class GridMask :
         mask_U     = unify_dims (mask_U, **kw_uni, xgrid='U')
         mask_V     = unify_dims (mask_V, **kw_uni, xgrid='V')
         mask_F     = unify_dims (mask_F, **kw_uni, xgrid='F')
-        mask_W     = unify_dims (mask_W, **kw_uni, xgrid='T')
+        mask_W     = unify_dims (mask_W, **kw_uni, xgrid='W')
+
+        mask_3T    = unify_dims (mask_3T, **kw_uni, xgrid='T')
+        mask_3U    = unify_dims (mask_3U, **kw_uni, xgrid='U')
+        mask_3V    = unify_dims (mask_3V, **kw_uni, xgrid='V')
+        mask_3F    = unify_dims (mask_3F, **kw_uni, xgrid='F')
+        mask_3W    = unify_dims (mask_3W, **kw_uni, xgrid='W')
 
         maskdraw_T = lbc_plot (mask_T, cd_type='T', domain=domain)
         maskdraw_U = lbc_plot (mask_U, cd_type='U', domain=domain)
@@ -1447,6 +1532,37 @@ class GridMask :
         maskutil_V = lbc_mask (mask_V, cd_type='V', domain=domain)
         maskutil_F = lbc_mask (mask_F, cd_type='F', domain=domain)
         maskutil_W = lbc_mask (mask_W, cd_type='T', domain=domain)
+
+        if mask_3T is not None :
+            ax, _ = find_axis (mask_3T, 'x')
+            ay, _ = find_axis (mask_3T, 'y')
+            mask_ZT = xr.where ( mask_3T.sum(dim=ax, min_count=1, keep_attrs=True)>0, 1, np.nan)
+            mask_ZT = mask_ZT.rename ({ay:'lat'})
+            mask_ZT = mask_ZT.assign_coords ({'lat':lat1D.values})
+        if mask_3U is not None :
+            ax, _ = find_axis (mask_3U, 'x')
+            ay, _ = find_axis (mask_3U, 'y')
+            mask_ZU = xr.where ( mask_3U.sum(dim=ax, min_count=1, keep_attrs=True)>0, 1, np.nan)
+            mask_ZU = mask_ZU.rename ({ay:'lat'})
+            mask_ZU = mask_ZU.assign_coords ({'lat':lat1D.values})
+        if mask_3V is not None :
+            ax, _ = find_axis (mask_3V, 'x')
+            ay, _ = find_axis (mask_3V, 'y')
+            mask_ZV = xr.where ( mask_3V.sum(dim=ax, min_count=1, keep_attrs=True)>0, 1, np.nan)
+            mask_ZV = mask_ZV.rename ({ay:'lat'})
+            mask_ZV = mask_ZV.assign_coords ({'lat':lat1D.values})
+        if mask_3F is not None :
+            ax, _ = find_axis (mask_3F, 'x')
+            ay, _ = find_axis (mask_3F, 'y')
+            mask_ZF = xr.where ( mask_3F.sum(dim=ax, min_count=1, keep_attrs=True)>0, 1, np.nan)
+            mask_ZF = mask_ZF.rename ({ay:'lat'})
+            mask_ZF = mask_ZF.assign_coords ({'lat':lat1D.values})
+        if mask_3W is not None :
+            ax, _ = find_axis (mask_3W, 'x')
+            ay, _ = find_axis (mask_3W, 'y')
+            mask_ZW = xr.where ( mask_3W.sum(dim=ax, min_count=1, keep_attrs=True)>0, 1, np.nan)
+            mask_ZW = mask_ZW.rename ({ay:'lat'})
+            mask_ZW = mask_ZW.assign_coords ({'lat':lat1D.values})
 
         gsinT, gcosT, gsinU, gcosU, gsinV, gcosV, gsinF, gcosF = \
             None, None, None, None, None, None, None, None
@@ -1463,48 +1579,40 @@ class GridMask :
 
         if d_b is not None :
             kw = {'domain':domain, 'psgn':1, 'cd_type':'T', 'btype':'lbc'}
-            if atlmsk in d_b :
+            if 'atlmsk' in d_b :
                 atlmsk = lbcu (d_b.atlmsk, **kw_uni, **kw)
-            if indmsk is not None and ipcmsk is not None :
+            if 'indmsk' in d_b :
                 ipcmsk = lbcu (d_b.indmsk, **kw_uni, **kw)
-            if pacmsk in d_b :
+            if 'pacmsk' in d_b :
                 pacmsk = lbcu (d_b.pacmsk, **kw_uni, **kw)
-            if atlmsk is not None and ipcmsk is not None :
+            if pacmsk is not None and indmsk is not None :
                 # pyright: ignore[reportOptionalOperand]
                 ipcmsk = np.clip (pacmsk + indmsk, 0, 1) # pyright: ignore[reportOptionalOperand]
-            if atlmsk_nomed in d_b :
+            if 'atlmsk_nomed' in d_b :
                 atlmsk_nomed = lbcu (d_b.atlmsk_nomed, **kw_uni, **kw)
-
-        if   d_g is not None and 'e1t' in d_g.variables :
-            zd = d_g
-        elif d_e is not None and 'e1t' in d_e.variables :
-            zd = d_e
-        elif d_d is not None and 'e1t' in d_d.variables :
-            zd = d_d
-        else :
-            zd = None
 
         e1t, e1u, e1v, e1f, e1w = None, None, None, None, None
         e2t, e2u, e2v, e2f, e2w = None, None, None, None, None
 
         kw = {'domain':domain, 'btype':'lbc', 'psgn':1}
 
-        e1t  = lbcu (zd.e1t, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='T')
-        e2t  = lbcu (zd.e2t, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='T')
-        e1u  = lbcu (zd.e1u, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='U')
-        e1v  = lbcu (zd.e1v, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='V')
-        e2u  = lbcu (zd.e2u, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='U')
-        e2v  = lbcu (zd.e2v, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='V')
-        e1f  = lbcu (zd.e1f, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='F')
-        e2f  = lbcu (zd.e2f, # pyright: ignore[reportOptionalMemberAccess]
-                     **kw_uni, **kw, cd_type='F')
+        if d_eh is not None : 
+            e1t  = lbcu (d_eh.e1t, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='T')
+            e2t  = lbcu (d_eh.e2t, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='T')
+            e1u  = lbcu (d_eh.e1u, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='U')
+            e1v  = lbcu (d_eh.e1v, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='V')
+            e2u  = lbcu (d_eh.e2u, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='U')
+            e2v  = lbcu (d_eh.e2v, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='V')
+            e1f  = lbcu (d_eh.e1f, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='F')
+            e2f  = lbcu (d_eh.e2f, # pyright: ignore[reportOptionalMemberAccess]
+                         **kw_uni, **kw, cd_type='F')
 
         if e1u is None and e1t is not None :
             e1u = t2u (e1t)
@@ -1550,7 +1658,7 @@ class GridMask :
             d_g.e3w_ps, # pyright: ignore[reportOptionalMemberAccess]
             **kw_uni, xgrid='W') if 'e3w_ps' \
             in d_g.variables else None # pyright: ignore[reportOptionalMemberAccess]
-
+          
         if d_e3 is not None and 'e3t' in d_e3.variables :
             e3t = d_e3.e3t
         else :
@@ -1683,9 +1791,16 @@ class GridMask :
         self.Halo     = domain.Halo
         self.Cyclic   = domain.Cyclic
 
+        self.f_g      = f_g
+        self.f_m      = f_m
+        self.f_eh     = f_eh
+        self.f_e3     = f_e3
+        self.f_b      = f_b
+        
         self.d_g      = d_g
-        self.d_e      = d_e
-        self.d_d      = d_d
+        self.d_m      = d_m
+        self.d_eh     = d_eh
+        self.d_e3     = d_e3
         self.d_b      = d_b
 
         self.lon      = lon_T
@@ -1716,6 +1831,12 @@ class GridMask :
         self.mask_3V  = mask_3V
         self.mask_3F  = mask_3F
         self.mask_3W  = mask_3W
+
+        self.mask_ZT = mask_ZT
+        self.mask_ZU = mask_ZU
+        self.mask_ZV = mask_ZV
+        self.mask_ZF = mask_ZF
+        self.mask_ZW = mask_ZW
 
         self.gcosT    = gcosT
         self.gsinT    = gsinT
@@ -2391,59 +2512,64 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
     '''
     push_stack ( f'unify_dims (dd, {x=}, {y=}, {z=}, {t=} {xgrid=} {use_xgcm=})' )
 
-    if dd is not None :
-        if xgrid is not None :
-            if OPTIONS['Debug'] or Debug :
-                print ( f'using {xgrid=} information' )
-            if xgrid.upper () ==  'T' :
-                x, y, z = 'x_c', 'y_c', 'z_c'
-            if xgrid.upper () ==  'U' :
-                x, y, z = 'x_f', 'y_c', 'z_c'
-            if xgrid.upper () ==  'V' :
-                x, y, z = 'x_c', 'y_f', 'z_c'
-            if xgrid.upper () ==  'F' :
-                x, y, z = 'x_f', 'y_f', 'z_c'
-            if xgrid.upper () ==  'W' :
-                x, y, z = 'x_c', 'y_c', 'z_f'
+    if dd is None :
+        return dd
 
+    if xgrid is not None :
         if OPTIONS['Debug'] or Debug :
-            print ( f'{x=} {y=} {z=}' )
+            print ( f'using {xgrid=} information' )
+        if xgrid.upper () ==  'T' :
+            x, y, z = 'x_c', 'y_c', 'z_c'
+        if xgrid.upper () ==  'U' :
+            x, y, z = 'x_f', 'y_c', 'z_c'
+        if xgrid.upper () ==  'V' :
+            x, y, z = 'x_c', 'y_f', 'z_c'
+        if xgrid.upper () ==  'F' :
+            x, y, z = 'x_f', 'y_f', 'z_c'
+        if xgrid.upper () ==  'W' :
+            x, y, z = 'x_c', 'y_c', 'z_f'
 
-        if use_xgcm :
-            if 'x_grid_T' in dd.dims :
-                if OPTIONS['Debug'] or Debug :
-                    print ( 'rename x_grid_T -> x_c' )
-                if 'x_c' in dd.dims :
-                    dd = dd.rename ({'x_grid_T':'x_c'})
+    if OPTIONS['Debug'] or Debug :
+        print ( f'{x=} {y=} {z=}' )
+
+    if use_xgcm :
+        if 'x_grid_T' in dd.dims :
+            if OPTIONS['Debug'] or Debug :
+                print ( 'rename x_grid_T -> x_c' )
+            if 'x_c' in dd.dims :
+                dd = dd.rename ({'x_grid_T':'x_c'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'x_grid_T':'x_c'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'x_grid_T':'x_c'})
-                    else :
                         dd = dd.rename ({'x_grid_T':'x_c'})
                 if 'x_c' not in dd.coords :
-                    dd['x_c'] = np.arange (len(dd['x_c'])) + 1
+                    dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
                     x = None
-            if 'x_grid_U' in dd.dims :
-                if 'x_f' in dd.dims :
-                    dd = dd.rename ({'x_grid_U':'x_f'})
-                else:
-                    dd = dd.rename_dims ({'x_grid_U':'x_f'})
-                if 'x_f' not in dd.coords :
-                    dd['x_f']  = np.arange (len(dd['x_f'])) + 0.5
-                    dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
-                    x = None
-            if 'x_grid_V' in dd.dims :
-                if 'x_c' in dd.dims :
-                    dd = dd.rename ({'x_grid_V':'x_c'})
+                    
+        if 'x_grid_U' in dd.dims :
+            if 'x_f' in dd.dims :
+                dd = dd.rename ({'x_grid_U':'x_f'})
+            else:
+                dd = dd.rename_dims ({'x_grid_U':'x_f'})
+            if 'x_f' not in dd.coords :
+                dd['x_f']  = np.arange (len(dd['x_f'])).astype(float) + 0.5
+                dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
+                x = None
+                
+        if 'x_grid_V' in dd.dims :
+            if 'x_c' in dd.dims :
+                dd = dd.rename ({'x_grid_V':'x_c'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'x_grid_V':'x_c'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'x_grid_V':'x_c'})
-                    else :
-                        dd = dd.rename ({'x_grid_V':'x_c'})
-                if 'x_c' not in dd.coords :
-                    dd['x_c'] = np.arange (len(dd['x_c'])) + 1
-                    x = None
-            if 'x_grid_F' in dd.dims :
+                    dd = dd.rename ({'x_grid_V':'x_c'})
+            if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
+                x = None
+                
+        if 'x_grid_F' in dd.dims :
                 if 'x_f' in dd.dims :
                     dd = dd.rename ({'x_grid_F':'x_f'})
                 else :
@@ -2452,122 +2578,151 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     else :
                         dd = dd.rename ({'x_grid_F':'x_f'})
                 if 'x_f' not in dd.coords :
-                    dd['x_f'] = np.arange (len(dd['x_f'])) + 0.5
+                    dd['x_f'] = np.arange (len(dd['x_f'])).astype(float) + 0.5
                     x = None
-            if 'x_grid_W' in dd.dims :
-                if 'x_c' in dd.dims :
+                    
+        if 'x_grid_W' in dd.dims :
+            if 'x_c' in dd.dims :
+                dd = dd.rename ({'x_grid_W':'x_c'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'x_grid_W':'x_c'})
+                else :
                     dd = dd.rename ({'x_grid_W':'x_c'})
+            if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
+                x = None
+                
+        if 'y_grid_T' in dd.dims :
+            if 'y_c' in dd.dims :
+                dd = dd.rename ({'y_grid_T':'y_c'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'y_grid_T':'y_c'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'x_grid_W':'x_c'})
-                    else :
-                        dd = dd.rename ({'x_grid_W':'x_c'})
-                if 'x_c' not in dd.coords :
-                    dd['x_c'] = np.arange (len(dd['x_c'])) + 1
-                    x = None
-            if 'y_grid_T' in dd.dims :
-                if 'y_c' in dd.dims :
                     dd = dd.rename ({'y_grid_T':'y_c'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
+                y = None
+                
+        if 'y_grid_U' in dd.dims :
+            if  'y_f' in dd.dims :
+                dd = dd.rename ({'y_grid_U':'y_f'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'y_grid_U':'y_f'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'y_grid_T':'y_c'})
-                    else :
-                        dd = dd.rename ({'y_grid_T':'y_c'})
-                if 'y_c' not in dd.coords :
-                    dd['y_c'] = np.arange (len(dd['y_c'])) + 1
-                    y = None
-            if 'y_grid_U' in dd.dims :
-                if  'y_f' in dd.dims :
                     dd = dd.rename ({'y_grid_U':'y_f'})
+            if 'y_f' not in dd.coords :
+                dd['y_f'] = np.arange (len(dd['y_f'])).astype(float) + 0.5
+                dd.y_f.attrs.update({'c_grid_axis_shift':0.5})
+                y = None
+                    
+        if 'y_grid_V' in dd.dims :
+            if 'y_c' in dd.dims :
+                dd = dd.rename ({'y_grid_V':'y_c'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'y_grid_V':'y_c'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'y_grid_U':'y_f'})
-                    else :
-                        dd = dd.rename ({'y_grid_U':'y_f'})
-                if 'y_f' not in dd.coords :
-                    dd['y_f'] = np.arange (len(dd['y_f'])) + 0.5
-                    dd.y_f.attrs.update({'c_grid_axis_shift':0.5})
-                    y = None
-            if 'y_grid_V' in dd.dims :
-                if 'y_c' in dd.dims :
                     dd = dd.rename ({'y_grid_V':'y_c'})
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
+                y = None
+                    
+        if 'y_grid_F' in dd.dims :
+            if 'y_f' in dd.dims :
+                dd = dd.rename ({'y_grid_F':'y_f'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'y_grid_F':'y_f'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'y_grid_V':'y_c'})
-                    else :
-                        dd = dd.rename ({'y_grid_V':'y_c'})
-                if 'y_c' not in dd.coords :
-                    dd['y_c'] = np.arange (len(dd['y_c'])) + 1
-                    y = None
-            if 'y_grid_F' in dd.dims :
-                if 'y_f' in dd.dims :
                     dd = dd.rename ({'y_grid_F':'y_f'})
+            if 'y_f' not in dd.coords :
+                dd['y_f'] = np.arange (len(dd['y_f'])).astype(float) + 0.5
+                y = None
+                
+        if 'y_grid_W' in dd.dims :
+            if 'y_c' in dd.dims :
+                dd = dd.rename ({'y_grid_W':'y_c'})
+            else :
+                if isinstance (dd, xr.Dataset) :
+                    dd = dd.rename_dims ({'y_grid_W':'y_c'})
                 else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'y_grid_F':'y_f'})
-                    else :
-                        dd = dd.rename ({'y_grid_F':'y_f'})
-                if 'y_f' not in dd.coords :
-                    dd['y_f'] = np.arange (len(dd['y_f'])) + 0.5
-                    y = None
-            if 'y_grid_W' in dd.dims :
-                if 'y_c' in dd.dims :
                     dd = dd.rename ({'y_grid_W':'y_c'})
-                else :
-                    if isinstance (dd, xr.Dataset) :
-                        dd = dd.rename_dims ({'y_grid_W':'y_c'})
-                    else :
-                        dd = dd.rename ({'y_grid_W':'y_c'})
-                if 'y_c' not in dd.coords :
-                    dd['y_c'] = np.arange (len(dd['y_c'])) + 1
-                    y = None
+            if 'y_c' not in dd.coords :
+                dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
+                y = None
 
-        if x is not None:
+    if x is not None:
+        if OPTIONS['Debug'] or Debug :
+            print ( f"unify_dims : working on {x=}" )
+
+        xx, _ = find_axis (dd, 'x')
+        if xx and xx != x :
             if OPTIONS['Debug'] or Debug :
-                print ( f"unify_dims : working on {x=}" )
-
-            xx, _ = find_axis (dd, 'x')
-            if xx and xx != x :
-                if OPTIONS['Debug'] or Debug :
-                    print ( f"unify_dims : {xx} renamed to {x}" )
+                print ( f"unify_dims : {xx} renamed to {x}" )
+            if isinstance (dd, xr.Dataset ):
+                dd = dd.rename_dims ({xx:x})
+                if xx in dd.coords :
+                    dd = dd.rename ({xx:x  })
+            else :
                 dd = dd.rename ({xx:x})
-                dd[x].attrs.update ({'axis':'X', 'name':x})
-                if x == 'x_f' :
-                    dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
-            if xgrid :
-                if x == 'x_c' and 'x_c' in dd.dims  :
-                    dd['x_c'] = np.arange (len(dd[x])) + 1
-                if x == 'x_f' and 'x_f' in dd.dims  :
-                    dd['x_f'] = np.arange (len(dd[x])) + 0.5
+            dd[x].attrs.update ({'axis':'X', 'name':x})
+            if x == 'x_f' :
+                dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
+        if xgrid :
+            if x == 'x_c' and 'x_c' in dd.dims  :
+                dd['x_c'] = np.arange (len(dd[x])).astype(float) + 1
+            if x == 'x_f' and 'x_f' in dd.dims  :
+                dd['x_f'] = np.arange (len(dd[x])).astype(float) + 0.5
 
-        if y is not None:
+    if y is not None:
+        if OPTIONS['Debug'] or Debug :
+            print ( f"unify_dims : working on {y=}" )
+        yy, _ = find_axis (dd, 'y')
+        if yy and yy != y  :
             if OPTIONS['Debug'] or Debug :
-                print ( f"unify_dims : working on {y=}" )
-            yy, _ = find_axis (dd, 'y')
-            if yy and yy != y  :
-                if OPTIONS['Debug'] or Debug :
-                    print ( f"unify_dims : {yy} renamed to {y}" )
+                print ( f"unify_dims : {yy} renamed to {y}" )
+            if isinstance (dd, xr.Dataset ):
+                dd = dd.rename_dims ({yy:y})
+                if yy in dd.coords :
+                    dd = dd.rename ({yy:y  })
+            else :
                 dd = dd.rename ({yy:y})
-                dd[y].attrs.update ({'axis':'Y', 'name':y})
-                if y == 'y_f' :
-                    dd.y_f.attrs.update ({'c_grid_axis_shift':0.5})
-            if xgrid :
-                if y == 'y_c' and 'y_c' in dd.dims  :
-                    dd['y_c'] = np.arange (len(dd[y])) + 1
-                if y == 'y_f' and 'y_f' in dd.dims  :
-                    dd['y_f'] = np.arange (len(dd[y])) + 0.5
+            dd[y].attrs.update ({'axis':'Y', 'name':y})
+            if y == 'y_f' :
+                dd.y_f.attrs.update ({'c_grid_axis_shift':0.5})
+        if xgrid :
+            if y == 'y_c' and 'y_c' in dd.dims  :
+                dd['y_c'] = np.arange (len(dd[y])).astype(float) + 1
+            if y == 'y_f' and 'y_f' in dd.dims  :
+                dd['y_f'] = np.arange (len(dd[y])).astype(float) + 0.5
 
-        if z is not None:
+    if z is not None:
+        if OPTIONS['Debug'] or Debug :
+            print ( f"unify_dims : working on {z=}" )
+        zz, _ = find_axis (dd, 'z')
+        if zz and zz != z :
             if OPTIONS['Debug'] or Debug :
-                print ( f"unify_dims : working on {z=}" )
-            zz, _ = find_axis (dd, 'z')
-            if zz and zz != z :
-                if OPTIONS['Debug'] or Debug :
-                    print ( f"unify_dims : {zz} renamed to {z}" )
+                print ( f"0 unify_dims : {zz} renamed to {z}" )
+            if isinstance (dd, xr.Dataset ) :
                 dd = dd.rename_dims ({zz:z  })
+                if zz in dd.coords :
+                    dd = dd.rename ({zz:z  })
+                    dd[z].attrs.update ({'axis':'Z', 'name':z})
+            else :
+                dd = dd.rename ({zz:z  })
                 dd[z].attrs.update ({'axis':'Z', 'name':z})
-                if z == 'z_f' :
-                    dd.z_f.attrs.update ({'c_grid_axis_shift':0.5})
+                                        
+            if z == 'z_f' :
+                dd.z_f.attrs.update ({'c_grid_axis_shift':0.5})
+            #if xgrid :
+            #    if z == 'z_c' and 'z_c' in dd.dims  :
+            #        dd['z_c'] = np.arange (len(dd[z])).astype(float) + 1
+            #    if z == 'z_f' and 'z_f' in dd.dims  :
+            #        dd['z_f'] = np.arange (len(dd[z])).astype(float) + 0.5
+                    
             if isinstance (dd, xr.Dataset) and z in dd.variables and 'bounds' in dd[z].attrs :
                 bound_var =  dd[z].attrs['bounds']
                 if bound_var in dd.variables :
@@ -2576,50 +2731,61 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                         dd = dd.rename ({bound_var:new_bv})
                         dd[z].attrs['bounds'] = new_bv
 
-        if t is not None :
+    if t is not None :
+        if OPTIONS['Debug'] or Debug :
+            print ( f"unify_dims : working on {t=}" )
+        tt, _ = find_axis (dd, 't')
+        if tt and tt != t :
             if OPTIONS['Debug'] or Debug :
-                print ( f"unify_dims : working on {t=}" )
-            tt, _ = find_axis (dd, 't')
-            if tt and tt != t :
-                if OPTIONS['Debug'] or Debug :
-                    print ( f"unify_dims : {tt} renamed to {t}" )
+                print ( f"unify_dims : {tt} renamed to {t}" )
+            if isinstance (dd, xr.Dataset) :
                 dd = dd.rename_dims ({tt:t})
-                dd[t].attrs.update ({'axis':'T', 'name':t})
+                if tt in dd.coords :
+                    dd = dd.rename ({tt:t  })
+                else :
+                    dd = dd.rename ({tt:t})
+                    dd[t].attrs.update ({'axis':'T', 'name':t})
+                    
             if isinstance (dd, xr.Dataset) and t in dd.variables and 'bounds' in dd[t].attrs :
                 bound_var =  dd[t].attrs['bounds']
                 if bound_var in dd.variables :
                     new_bv = bound_var.replace (tt, t)
                     if new_bv != bound_var :
-                        dd = dd.rename_dims ({bound_var:new_bv})
+                        if isinstance (dd, xr.Dataset):
+                            dd = dd.rename_dims ({bound_var:new_bv})
+                        else :
+                            dd = dd.rename ({bound_var:new_bv})
                         dd[t].attrs['bounds'] = new_bv
 
-        if use_xgcm :
-            fg = None
-            if OPTIONS['Debug'] or Debug :
-                print ( f'{dd.dims=} {("x_c" in list(dd.dims))=} {"y_c" in dd.dims=}')
-                print ( f'{dd.coords=}')
-            if 'x_c' in dd.dims and 'y_c' in dd.dims :
-                fg = 'T'
-            if 'x_f' in dd.dims and 'y_c' in dd.dims :
-                fg = 'U'
-            if 'x_c' in dd.dims and 'y_f' in dd.dims :
-                fg = 'V'
-            if 'x_f' in dd.dims and 'y_f' in dd.dims :
-                fg = 'F'
-            if OPTIONS['Debug'] or Debug :
-                print ( f'{fg=}')
-            if fg :
-                for xg in '', '_T', '_U', '_V', '_F' :
+    if use_xgcm :
+        fg = None
+        if OPTIONS['Debug'] or Debug :
+            print ( 'use_xgcm case' )
+            print ( f'{dd.dims=} {("x_c" in list(dd.dims))=} {"y_c" in dd.dims=}')
+            print ( f'{dd.coords=}')
+        if 'x_c' in dd.dims and 'y_c' in dd.dims :
+            fg = 'T'
+        if 'x_f' in dd.dims and 'y_c' in dd.dims :
+            fg = 'U'
+        if 'x_c' in dd.dims and 'y_f' in dd.dims :
+            fg = 'V'
+        if 'x_f' in dd.dims and 'y_f' in dd.dims :
+            fg = 'F'
+        if OPTIONS['Debug'] or Debug :
+            print ( f'{fg=}')
+        if fg :
+            for xg in '', '_T', '_U', '_V', '_F' :
+                if OPTIONS['Debug'] or Debug :
+                    print ( f'1 {fg=} {xg=}')
+                for cc in ['lat', 'nav_lat', 'lon', 'nav_lon', 'olevel' ] :
                     if OPTIONS['Debug'] or Debug :
-                        print ( f'1 {fg=} {xg=}')
-                    for cc in ['lat', 'nav_lat', 'lon', 'nav_lon' ] :
+                        print ( f'2 {fg=} {cc=}', f'{cc}{xg}', f'{cc}_{fg}' )
+                    if f'{cc}{xg}' in dd.coords and f'{cc}{xg}' != f'{cc}_{fg}' :
                         if OPTIONS['Debug'] or Debug :
-                            print ( f'2 {fg=} {cc=}', f'{cc}{xg}', f'{cc}_{fg}' )
-                        if f'{cc}{xg}' in dd.coords and f'{cc}{xg}' != f'{cc}_{fg}' :
-                            if OPTIONS['Debug'] or Debug :
-                                print ( f'{cc}{xg}', '->', f'{cc}_{fg}' )
-                            dd = dd.rename ( {f'{cc}{xg}':f'{cc}_{fg}'})
+                            print ( f'{cc}{xg}', '->', f'{cc}_{fg}' )
+                        dd = dd.rename ( {f'{cc}{xg}':f'{cc}_{fg}'})
 
+                            
     pop_stack ( 'unify_dims : dd' )
     return dd
 
@@ -4957,7 +5123,7 @@ def rot_ij2en ( u_i:xr.DataArray, v_j:xr.DataArray, gsin:xr.DataArray, gcos:xr.D
     return u_e, v_n
 
 @validate_types
-def rot_uv2en (uo:xr.DataArray, vo:xr.DataArray, gsint:xr.DataArray, gcost:xr.DataArray,
+def rot_uv2en (uu:xr.DataArray, vv:xr.DataArray, gsint:xr.DataArray, gcost:xr.DataArray,
                 Iperio:bool|None=None, Jperio:bool|None=None, NFold:bool|None=None,
                 NFtype:NFTYPE_LITERAL|str|None=None, Halo:bool|None=None, Cyclic:bool|None=None,
                 aperio:int|float|None=None, nperio:int|None=None, domain:Domain|None=None,
@@ -4966,21 +5132,21 @@ def rot_uv2en (uo:xr.DataArray, vo:xr.DataArray, gsint:xr.DataArray, gcost:xr.Da
     Rotate the Repere: Change vector componantes from
     stretched coordinates grid --> geographic grid
 
-    uo : velocity along i at the U grid point
-    vo : valocity along j at the V grid point
+    ux : velocity along i at the U grid point
+    vx : valocity along j at the V grid point
 
     Returns east-north components on the T grid point
     '''
     push_stack ( f'rot_uv2en ( uo, vo, gsint, gcost, {aperio=})' )
-    zdom   = Domain (ptab=uo, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype,
+    zdom   = Domain (ptab=uu, Iperio=Iperio, Jperio=Jperio, NFold=NFold, NFtype=NFtype,
                       Halo=Halo, Cyclic=Cyclic,
                      aperio=aperio, nperio=nperio, domain=domain)
 
     if OPTIONS['Debug'] or Debug :
         print (f'{uo.dims=} {vo.dims=}')
 
-    ut = u2t (uo, domain=zdom, psgn=-1.0)
-    vt = v2t (vo, domain=zdom, psgn=-1.0)
+    ut = u2t (uu, domain=zdom, psgn=-1.0)
+    vt = v2t (vv, domain=zdom, psgn=-1.0)
 
     if OPTIONS['Debug'] or Debug :
         print (f'{ut.dims=} {vt.dims=}')
@@ -5069,7 +5235,7 @@ def u2t (utab:xr.DataArray, psgn:int|float=-1, zdim:str|None=None, action:str='a
         ttab = lbc_todom (utab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='T', psgn=psgn)
 
     if ax :
-        ttab = ttab.assign_coords({ax:np.arange (ttab.shape[ix])+1.})
+        ttab = ttab.assign_coords({ax:np.arange (ttab.shape[ix]).astype(float)+1.})
         if 'x_f' in ttab.dims :
             ttab = ttab.rename ({'x_f':'x_c'})
     if zdim and az :
@@ -5113,7 +5279,7 @@ def v2t (vtab:xr.DataArray, psgn:int|float=-1, zdim:str|None=None, action:str='a
         ttab = lbc_todom (vtab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='T', psgn=psgn)
 
     if ay :
-        ttab = ttab.assign_coords({ay:np.arange(ttab.shape[jy])+1.})
+        ttab = ttab.assign_coords({ay:np.arange(ttab.shape[jy]).astype(float)+1.})
         if 'y_f' in ttab.dims :
             ttab = ttab.rename ({'y_f':'y_c'})
     if zdim and az :
@@ -5180,7 +5346,7 @@ def t2u (ttab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str|Non
         utab = lbc_todom (ttab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='U', psgn=psgn)
 
     if ax :
-        utab = utab.assign_coords({ax:np.arange(utab.shape[ix])+1.})
+        utab = utab.assign_coords({ax:np.arange(utab.shape[ix]).astype(float)+1.})
         if 'x_c' in utab.dims :
             utab = utab.rename ({'x_c':'x_f'})
     if zdim and az :
@@ -5224,7 +5390,7 @@ def t2v (ttab:xr.DataArray, psgn:int|float=1, zdim=None, action='ave',
         vtab = lbc_todom (ttab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='V', psgn=psgn)
 
     if ay :
-        vtab = vtab.assign_coords({ay:np.arange(vtab.shape[jy])+1.})
+        vtab = vtab.assign_coords({ay:np.arange(vtab.shape[jy]).astype(float)+1.})
         if 'y_c' in vtab.dims :
             vtab = vtab.rename ({'y_c':'y_f'})
     if zdim and az :
@@ -5268,7 +5434,7 @@ def v2f (vtab:xr.DataArray, psgn:int|float=-1, zdim:str|None=None, action:str='a
         ftab = lbc_todom (vtab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='F', psgn=psgn)
 
     if ax :
-        ftab = ftab.assign_coords({ax:np.arange(ftab.shape[ix])+1.})
+        ftab = ftab.assign_coords({ax:np.arange(ftab.shape[ix]).astype(float)+1.})
         if 'y_c' in ftab.dims :
             ftab = ftab.rename ({'x_c':'x_f'})
     if zdim and az :
@@ -5312,7 +5478,7 @@ def u2f (utab:xr.DataArray, psgn:int|float=-1, zdim:str|None=None, action:str='a
         ftab = lbc_todom (utab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='F', psgn=psgn)
 
     if ay :
-        ftab = ftab.assign_coords({ay:np.arange(ftab.shape[jy])+1.})
+        ftab = ftab.assign_coords({ay:np.arange(ftab.shape[jy]).astype(float)+1.})
         if 'y_c' in ftab.dims :
             utab = utab.rename ({'y_c':'y_f'})
     if zdim and az :
@@ -5377,7 +5543,7 @@ def f2u (ftab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='av
     else :
         utab = lbc_todom (ftab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='U', psgn=psgn)
 
-    utab = utab.assign_coords({ay:np.arange(ftab.shape[jy])+1.})
+    utab = utab.assign_coords({ay:np.arange(ftab.shape[jy]).astype(float)+1.})
     if 'y_f' in utab.dims :
         utab = utab.rename ({'y_f':'y_c'})
     if zdim and az and az != zdim :
@@ -5420,7 +5586,7 @@ def f2v (ftab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='av
         vtab = lbc_todom (ftab_0, src_dom=zdom_ext, dst_dom=zdom, cd_type='V', psgn=psgn)
 
     lax = ftab.shape[ix]
-    zax = np.arange(lax)+1.
+    zax = np.arange(lax).astype(float)+1.
     vtab = vtab.assign_coords({ax:zax})
     if 'x_f' in ftab.dims :
         vtab = vtab.rename ({'x_f':'x_c'})
@@ -5461,7 +5627,10 @@ def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
         ttab = ttab.rename ({'z_f':'z_c'})
         az = 'z_c'
     if zcoord is not None :
-        ttab = ttab.assign_coords ( {az:zcoord} )
+        if isinstance (zcoord, xr.DataArray) :
+            ttab = ttab.assign_coords ( {az:zcoord.values} )
+        else :
+            ttab = ttab.assign_coords ( {az:zcoord} )
 
     pop_stack ( 'w2t' )
     return ttab
@@ -5490,9 +5659,12 @@ def t2w (ttab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
             wtab = wtab.rename ({'z_c':'z_f'})
             az='z_f'
         if zcoord is not None :
-            wtab = wtab.assign_coords ( {az:zcoord})
+            if isinstance (zcoord, xr.DataArray ):
+                wtab = wtab.assign_coords ( {az:zcoord.values})
+            else :
+                wtab = wtab.assign_coords ( {az:zcoord})
         else :
-            wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz])+1.} )
+            wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz]).astype(float)+1.} )
     else :
         wtab = ttab_0
         if 'z_c' in wtab.dims :
@@ -5624,8 +5796,8 @@ def normalize_uv (u:xr.DataArray, v:xr.DataArray) -> tuple[xr.DataArray, xr.Data
     return uu, vv
 
 @validate_types
-def zonmean (var:xr.DataArray, bb:xr.DataArray, plat1d:xr.DataArray,
-             Debug:bool=False) -> xr.DataArray :
+def zonmean (var:xr.DataArray, bb:xr.DataArray, plat1d:xr.DataArray, return_aux:bool=False,
+             Debug:bool=False) -> xr.DataArray|tuple[xr.DataArray, xr.DataArray] :
     '''
     Computes the meridonal stream function
 
@@ -5653,21 +5825,33 @@ def zonmean (var:xr.DataArray, bb:xr.DataArray, plat1d:xr.DataArray,
     if OPTIONS['Debug'] or Debug :
         print ( f'zonmean : {ldims=}' )
 
+    zbb       = unify_dims (bb, **ldims)
+    zvar, zbb = xr.align (var, zbb, join="override")
+    zbb       = zbb.where (~np.isnan(zvar), np.nan)
     if OPTIONS['Debug'] or Debug :
         print ('zonmean : zonal mean of volume')
-    zon_bb  = unify_dims (bb, **ldims).sum(dim=ldims['x'], min_count=1, keep_attrs=True)
+    zon_bb  = zbb.sum (dim=ldims['x'], min_count=1, keep_attrs=True)
     zon_bb  = zon_bb.where (zon_bb>0., np.nan)
-
+    
     if OPTIONS['Debug'] or Debug :
-        print ( f'zonmean : {zon_bb.dims = }' )
+        print ( f'zonmean : {zon_bb.dims = } {zon_bb.shape}' )
+        print ( f'zonmean : {zon_bb.min().values = } - {zon_bb.max().values = }' )
+
     if OPTIONS['Debug'] or Debug :
         print ('zonmean : zonal mean of variable')
-    zon_var = (var * unify_dims (bb, **ldims)).sum(dim=ldims['x'],
-                                                   min_count=1, keep_attrs=True) / zon_bb
-    zon_var = zon_var.where ( np.logical_not(np.isnan(zon_bb)), np.nan)
-    zon_var = zon_var.where ( zon_bb>0, np.nan)
-
+    zon_var = (zvar * zbb).sum(dim=ldims['x'], min_count=1, keep_attrs=True)
     if OPTIONS['Debug'] or Debug :
+        print ( f'zonmean : {zon_var.dims = } {zon_var.shape}' )
+        print ( f'zonmean : {zon_var.min().values = } - {zon_var.max().values = }' )
+    zon_var = zon_var.where ( zon_bb>0, np.nan)
+    zon_var = zon_var.where ( np.logical_not(np.isnan(zon_bb)), np.nan)
+    zon_var = zon_var / zon_bb
+    if OPTIONS['Debug'] or Debug :
+        print ( f'zonmean : {zon_var.dims = } {zon_var.shape}' )
+        print ( f'zonmean : {zon_var.min().values = } - {zon_var.max().values = }' )
+        
+    if OPTIONS['Debug'] or Debug :
+        print ( f'zonmean : {zon_bb.dims = }' )
         print ( f'zonmean : {zon_var.dims = }' )
 
     if OPTIONS['Debug'] or Debug :
@@ -5681,7 +5865,10 @@ def zonmean (var:xr.DataArray, bb:xr.DataArray, plat1d:xr.DataArray,
     zon_var.lat.attrs = plat1d.attrs
 
     pop_stack ( 'zon' )
-    return zon_var
+    if return_aux :
+        return zon_var, zon_bb
+    else :
+        return zon_var
 
 @validate_types
 def msf (vv:xr.DataArray, e1v_e3v:xr.DataArray, plat1d:xr.DataArray,
@@ -5701,7 +5888,9 @@ def msf (vv:xr.DataArray, e1v_e3v:xr.DataArray, plat1d:xr.DataArray,
     ldims = UDIMS.copy()
     ldims.update ({'x':ax, 'y':ay, 'z':az})
 
+    vv, e1v_e3v = xr.align (vv, e1v_e3v, join="override")
     v_e1v_e3v = vv * unify_dims (e1v_e3v, **ldims)
+    e1v_e3v = e1v_e3v.where (~np.isnan(vv), np.nan)
     v_e1v_e3v.attrs = vv.attrs
 
     mm = e1v_e3v.sum (dim=ax, keep_attrs=True, min_count=1)
@@ -5711,7 +5900,6 @@ def msf (vv:xr.DataArray, e1v_e3v:xr.DataArray, plat1d:xr.DataArray,
     zomsf = zomsf.where (mm>0, np.nan)
 
     ay = find_axis (zomsf, 'y' )[0]
-    #zomsf = zomsf.assign_coords ({az:depthw.values, ay:plat1d.values})
     zomsf = zomsf.assign_coords ({ay:plat1d.values})
     zomsf = zomsf.rename ({ay:'lat'})
 
@@ -6019,7 +6207,7 @@ EOS103 = -1.8507636718e-02
 EOS013 =  3.7969820455e-01
 
 @validate_types
-def rhop (ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
+def rhopot (ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
     '''
     Returns potential density referenced to surface
 
@@ -6042,7 +6230,7 @@ def rhop (ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
     return prhop
 
 @validate_types
-def rho (pdep:xr.DataArray, ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
+def rhositu (pdep:xr.DataArray, ptemp:xr.DataArray, psal:xr.DataArray) -> xr.DataArray :
     '''
     Returns in situ density
 

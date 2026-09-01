@@ -53,6 +53,7 @@ def zgr_z (config:str='orca2') -> tuple[xr.DataArray,xr.DataArray,xr.DataArray,x
     namdom = orca.nam_config[config]['namdom']
 
     pp_to_be_computed = 0
+    
     #
     # Set variables from parameters
     # ------------------------------
@@ -125,9 +126,18 @@ def zgr_z (config:str='orca2') -> tuple[xr.DataArray,xr.DataArray,xr.DataArray,x
 
     gdepw [0] = 0.                    # force first w-level to be exactly at zero
 
-    gdept = xr.DataArray (gdept, dims=('z_c',), coords=(gdept,))
+    gdept = xr.DataArray (gdept, dims=('z_c',), coords=(gdept,),
+                          attrs={'long_name':'Vertical T levels',
+                                 'units':'m',
+                                 'positive':'down',
+                                 'axis':'Z'})
+    gdepw = xr.DataArray (gdepw, dims=('z_f',), coords=(gdepw,),
+                          attrs={'long_name':'Vertical W levels',
+                                 'units':'m',
+                                 'positive':'down',
+                                 'axis':'Z'})
+
     e3t   = xr.DataArray (e3t  , dims=('z_c',), coords=(gdept,))
-    gdepw = xr.DataArray (gdepw, dims=('z_f',), coords=(gdepw,))
     e3w   = xr.DataArray (e3w  , dims=('z_f',), coords=(gdepw,))
 
     return gdept, gdepw, e3t, e3w
