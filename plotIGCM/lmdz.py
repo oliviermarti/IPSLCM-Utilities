@@ -103,6 +103,15 @@ CLENGTH :list[int] = [ 16002, ]
 ZLENGTH :list[int] = [ 39, 59, 79, ]
 
 
+Regions = {
+    'AMSouth': {'long_name': 'South American Monsoon'   , 'desc':'75W-43W, 15S-5S'   , 'lons':slice(-75, -42.5), 'lats':slice( -5, -15) },
+    'AMNorth': {'long_name': 'North American Monsoon'   , 'desc':'75W-55W, 5S-5N'    , 'lons':slice(-75, -55  ), 'lats':slice(  5,  -5) },
+    'WAM'    : {'long_name': 'West African Monsoon'     , 'desc':'20W-25E, 5N-20N'   , 'lons':slice(-20,  25  ), 'lats':slice( 20,   5) },
+    'ISM'    : {'long_name': 'Indian Summer Monsoon'    , 'desc':'70E-85E, 5N-25N'   , 'lons':slice( 70,  85  ), 'lats':slice( 25,   5) },
+    'EASM'   : {'long_name': 'East Asian Summer Monsoon', 'desc':'110E-140E, 10N-40N', 'lons':slice(110, 140  ), 'lats':slice( 40,  10) },
+      }
+
+
 ## ============================================================================
 @validate_types
 def __find_axis__ (ptab:xr.DataArray|xr.Dataset, axis:Literal['x', 'y', 'z', 't', 'b', 'c']='z',

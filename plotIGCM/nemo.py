@@ -235,6 +235,12 @@ Regions:dict = \
         'CircumPolar'      : {
             'Basin': "Circum Polar"           , 'ColorLine':np.array ([0  , 255,   0])/255,
             'Marker':'p'},
+        'NH'               : {
+            'Basin': "Northern Hemisphere"    , 'ColorLine':np.array ([112, 160, 205])/255,
+            'Marker':'n'},
+        'SH'               : {
+        'Basin': "Southern Hemisphere"        , 'ColorLine':np.array ([196, 121,   0])/255,
+            'Marker':'s'},
       },
       'eORCA1': {
         'NorthAtlantic'    : {'idyx': {'x':slice(226,299), 'y':slice(259,313)}},
@@ -249,6 +255,9 @@ Regions:dict = \
         'Wedell'           : {'idyx': {'x':slice(228,300), 'y':slice( 10, 93)}},
         'Davis'            : {'idyx': {'x':slice(  1, 20), 'y':slice( 60, 93)}},
         'CircumPolar'      : {'idyx': {'x':slice(  2,360), 'y':slice( 50, 93)}},
+        'NH'               : {'idyx': {'x':slice(  2,361), 'y':slice( 10, 185)}},
+        'SH'               : {'idyx': {'x':slice(  2,361), 'y':slice(187, 330)}},
+
       },
       'ORCA2': {
         'NorthAtlantic'    : {'idyx': {'x':slice(111,146), 'y':slice(109,135)}},
@@ -267,6 +276,7 @@ Regions:dict = \
    }
 Regions['eORCA1.2']   = Regions['eORCA1']
 Regions['eORCA1.4']   = Regions['eORCA1']
+Regions['eORCA1.4.0'] = Regions['eORCA1']
 Regions['eORCA1.4.2'] = Regions['eORCA1']
 
 Regions['ORCA2.3']    = Regions['ORCA2']
@@ -1182,7 +1192,7 @@ class GridMask :
             pval=np.nan, Debug=False) -> None :
 
         # Grille
-        f_g = [
+        f_g_liste = [
             os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
                 'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
@@ -1205,7 +1215,7 @@ class GridMask :
         ]
 
         # Masks
-        f_m = [
+        f_m_liste = [
             os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
                 'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
@@ -1228,7 +1238,7 @@ class GridMask :
         ]
 
         # Horizontal scale factors
-        f_eh  = [
+        f_eh_liste = [
             os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
                 'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
@@ -1263,9 +1273,9 @@ class GridMask :
 
         # Vertical scale factors
         if e3file is not None :
-            f_e3 = [ e3file, ]
+            f_e3_liste = [ e3file, ]
         else :
-            f_e3 = [
+            f_e3_liste = [
                 os.path.join (  # pyright: ignore[reportCallIssue]
                     mm.R_IN, # pyright: ignore[reportArgumentType]
                     'OCE', 'NEMO', domain.CFG_name, 'GRIDS',
@@ -1281,26 +1291,26 @@ class GridMask :
         
 
         # Subbassins
-        f_b  = [
+        f_b_liste = [
             os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.DB, # pyright: ignore[reportArgumentType]
                 'extras', f'{domain.CFG_name}_subbasins.nc'   )
             ]
         
         if domain.cfg_name in ['eorca1.2', 'eorca1.4.0'] :
-            f_g.append (os.path.join ( # pyright: ignore[reportCallIssue]
+            f_g_liste.append (os.path.join ( # pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
                 'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS',
                 'eORCA1.2_coordinates_mask.nc' ))
-            f_eh.append ( os.path.join (# pyright: ignore[reportCallIssue]
+            f_eh_liste.append ( os.path.join (# pyright: ignore[reportCallIssue]
                 mm.R_IN, # pyright: ignore[reportArgumentType]
                 'OCE', 'NEMO', 'eORCA1.4.0', 'GRIDS',
                 'eORCA1.2_coordinates.nc'      ))
                         
         if OPTIONS['Debug'] or Debug :
-            print ( f'{f_g=} ' )
-            print ( f'{f_eh=} ' )
-            print ( f'{f_b=} ' )
+            print ( f'{f_g_liste=} ' )
+            print ( f'{f_eh_liste=} ' )
+            print ( f'{f_b_liste=} ' )
 
         kw_read = {'decode_times':False}
 
@@ -1309,49 +1319,78 @@ class GridMask :
             '''
             Find file in a list of files, containing at leat one variable in var_list
             '''
-            zf, zd = None, None
+            zfile, zdata = None, None
             zfound = False
+
             for ff in f_list :
                 if not zfound :
                     try :
                         zd = xr.open_dataset (ff , **kw_read  # type: ignore
                                                   ).squeeze ()
                     except FileNotFoundError :
-                        zf, zd = None, None
+                        zfile, zdata = None, None
                         if OPTIONS['Debug'] or Debug :
-                            print ( f"file not found : {ff}" )
+                            print ( f"  file not found : {ff}" )
                     else :
                         if OPTIONS['Debug'] or Debug :
-                            print ( f"file found : {ff}" )
+                            print ( f"  file found : {ff}" )
                         for var in var_list :
                             if var in zd :
                                 if OPTIONS['Debug'] or Debug :
-                                    print ( f"{var} found in {ff}" )
-                                zf = ff
+                                    print ( f"    {var} found in {ff}" )
+                                zfile = ff
+                                zdata = zd
+                                zfound =  True
                                 break
                             else :
                                 if OPTIONS['Debug'] or Debug :
-                                    print ( f"{var} not found in {ff}" )
+                                    print ( f"    {var} not found in {ff}" )
                                 
-            return zd, ff
-        
-        d_g , f_g  = f_file_var (f_g , ['glamt', 'nav_lon_grid_T'] )
-        d_m , f_m  = f_file_var (f_m , ['tmask', 'mask_T' ] )
-        d_eh, f_eh = f_file_var (f_eh, ['e1t',] )
-        d_b , f_b  = f_file_var (f_b , ['atlmsk',] )
-        d_e3, f_e3 = f_file_var (f_e3, ['e3t',] )
+            return zdata, zfile
 
-        d_e3 = None
+        if OPTIONS['Debug'] or Debug :
+            print (f"f_file_var for d_g, f_g" )
+        d_g , f_g  = f_file_var (f_g_liste , ['glamt', 'nav_lon_grid_T'] )
+        if OPTIONS['Debug'] or Debug :
+            print ( f"{f_g  = }" )
+            
+        if OPTIONS['Debug'] or Debug :
+            print (f"f_file_var for d_m, f_m" )
+        d_m , f_m  = f_file_var (f_m_liste , ['tmask', 'mask_T' ] )
+        if OPTIONS['Debug'] or Debug :
+            print ( f"{f_m  = }" )
+            
+        if OPTIONS['Debug'] or Debug :
+            print (f"f_file_var for d_eh, f_eh" )
+        d_eh, f_eh = f_file_var (f_eh_liste, ['e1t',] )
+        if OPTIONS['Debug'] or Debug :
+            print ( f"{f_eh = }" )
+            
+        if OPTIONS['Debug'] or Debug :
+            print (f"f_file_var for d_b, f_b" )
+        d_b , f_b  = f_file_var (f_b_liste , ['atlmsk',] )
+        if OPTIONS['Debug'] or Debug :
+            print ( f"{f_b = }" )
+        
         if e3dataset is not None :
             d_e3 = e3dataset
         else :
-            for ff in f_e3 :
-                try :
-                    d_e3 = xr.open_dataset (e3file , **kw_read  # type: ignore
-                                            ).squeeze ()
-                    var = d_e3.e3t
-                except :
-                    d_e3 = None
+            if OPTIONS['Debug'] or Debug :
+                print (f"f_file_var for d_e3, f_e3" )
+            d_e3, f_e3 = f_file_var (f_e3_liste, ['e3t',] )
+            if OPTIONS['Debug'] or Debug :
+                print ( f"{f_e3  = }" )
+
+        #if e3dataset is not None :
+        #    d_e3 = e3dataset
+        #else :
+        #    for ff in f_e3 :
+        #        try :
+        #            d_e3 = xr.open_dataset (e3file , **kw_read  # type: ignore
+        #                                    ).squeeze ()
+        #            var = d_e3.e3t
+        #        except :
+        #            d_e3 = None
             
         if d_g is not None :
             d_g   = unify_dims (d_g , **kw_uni)
@@ -1370,6 +1409,8 @@ class GridMask :
 
         if d_g is not None :
             if 'glamt' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
+                if OPTIONS['Debug'] or Debug :
+                    print (f"Reading lon/lat as glam/gphi in {f_g=}" ) 
                 lon_T   = lbcu (d_g.glamt, # pyright: ignore[reportOptionalMemberAccess]
                                 cd_type='T', domain=domain, btype='lbc',
                                 **kw_uni)
@@ -1395,6 +1436,9 @@ class GridMask :
                                 cd_type='F', domain=domain, btype='lbc',
                                 **kw_uni)
             elif 'nav_lon_grid_T' in d_g.variables : # pyright: ignore[reportOptionalMemberAccess]
+                if OPTIONS['Debug'] or Debug :
+                     print (f"Reading lon/lat as nav_lat/lon_grid in {f_g=}" ) 
+
                 lon_T   = lbcu (d_g.nav_lon_grid_T, # pyright: ignore[reportOptionalMemberAccess]
                                 cd_type='T', domain=domain,
                                 btype='lbc', **kw_uni)
@@ -1446,7 +1490,7 @@ class GridMask :
 
         if lat_T is not None :
             if Debug or OPTIONS['Debug'] :
-                print ( f"{lat_T.shape=} {lat_T.min().values=} {lat_T.max().values=} " )
+                print ( f"{lat_T.shape=} {lat_T.min().item()=:.1f} {lat_T.max().item()=:.1f} " )
             je = jeq (lat_T)
         else :
             je = None
@@ -1455,8 +1499,8 @@ class GridMask :
 
         if lat_T is not None and lon_T is not None :
             if Debug or OPTIONS['Debug'] :
-                print ( f"{lat_T.shape=} {lat_T.min().values=} {lat_T.max().values=} ",\
-                        f"{lon_T.shape=} {lon_T.min().values=} {lon_T.max().values=}" )
+                print ( f"{lat_T.shape=} {lat_T.min().item()=:.1f} {lat_T.max().item()=:.1f} ",\
+                        f"{lon_T.shape=} {lon_T.min().item()=:.1f} {lon_T.max().item()=:.1f}" )
             lat1D, lon1D = latlon1d (lat_T, lon_T, dims=('y_c', 'x_c'))
             lat_T.values = np.where ( lat_T.values==0., lat1D.values[:,np.newaxis], lat_T.values)
             lon_T.values = np.where ( lon_T.values==0., lon1D.values[np.newaxis,:], lon_T.values)
@@ -1483,9 +1527,13 @@ class GridMask :
         mask_ZT, mask_ZU, mask_ZV, mask_ZF, mask_ZW = None, None, None, None, None
         
         if d_m is not None and 'tmask' in d_m.variables :
+            if OPTIONS['Debug'] or Debug :
+                print (f"Reading mask_T as tmask in {f_m=}" ) 
             mask_T  = xr.where (d_m.tmask[0]>0.5, 1., pval) # pyright: ignore
             mask_3T = xr.where (d_m.tmask   >0.5, 1., pval) # pyright: ignore
         elif d_m is not None and 'mask_T' in d_m.variables :
+            if OPTIONS['Debug'] or Debug :
+                print (f"Reading mask_T as mask_T in {f_m=}" )
             mask_T = xr.where (d_m.mask_T>0.5, 1, pval)
 
         if d_m is not None and 'umask' in d_m.variables :
@@ -2736,13 +2784,21 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
             print ( f"unify_dims : working on {t=}" )
         tt, _ = find_axis (dd, 't')
         if tt and tt != t :
-            if OPTIONS['Debug'] or Debug :
-                print ( f"unify_dims : {tt} renamed to {t}" )
             if isinstance (dd, xr.Dataset) :
+                if OPTIONS['Debug'] or Debug :
+                    print ( f"unify_dims : Dataset {tt} renamed to {t}" )
                 dd = dd.rename_dims ({tt:t})
                 if tt in dd.coords :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f"unify_dims : Renaming coord {tt} to {t}" )
+                    #idd = dd.indexes[tt]
                     dd = dd.rename ({tt:t  })
+                    #if OPTIONS['Debug'] or Debug :
+                    #    print ( f"unify_dims : set_index of {t}" )
+                    #dd = dd.set_index ( {f"{t}":idd} )
                 else :
+                    if OPTIONS['Debug'] or Debug :
+                        print ( f"unify_dims : DataArray {tt} renamed to {t}" )
                     dd = dd.rename ({tt:t})
                     dd[t].attrs.update ({'axis':'T', 'name':t})
                     
@@ -2752,10 +2808,15 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     new_bv = bound_var.replace (tt, t)
                     if new_bv != bound_var :
                         if isinstance (dd, xr.Dataset):
-                            dd = dd.rename_dims ({bound_var:new_bv})
+                            if bound_var in dd.dims :
+                                dd = dd.rename_dims ({bound_var:new_bv})
+                            else :
+                                dd = dd.rename ({bound_var:new_bv})
                         else :
                             dd = dd.rename ({bound_var:new_bv})
                         dd[t].attrs['bounds'] = new_bv
+            if OPTIONS['Debug'] or Debug :
+                print ( f"unify_dims : end of work {t=}" )
 
     if use_xgcm :
         fg = None
@@ -2785,7 +2846,8 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                             print ( f'{cc}{xg}', '->', f'{cc}_{fg}' )
                         dd = dd.rename ( {f'{cc}{xg}':f'{cc}_{fg}'})
 
-                            
+    if OPTIONS['Debug'] or Debug :
+        print ( f"unify_dims : end" )                     
     pop_stack ( 'unify_dims : dd' )
     return dd
 

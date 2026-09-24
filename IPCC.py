@@ -48,8 +48,8 @@ Color.Line = [
     np.array ([178, 178, 178])/255,
     np.array ([  0,  52, 102])/255,
     np.array ([  0,  79,   0])/255, ]
-Style.Line = ['-',]*len(Color.Line)
-Style.Line.extend( ['-.']*len(Color.Line))
+Style.Line = ['solid',]*len(Color.Line)
+Style.Line.extend( ['dotted']*len(Color.Line))
 
 Color.Line.extend(Color.Line)
 Color.LineHexa = list ( map ( lambda x: color2hex (*x), Color.Line ) )
@@ -92,16 +92,19 @@ RCP.ColorShading = {
 RCP.ColorShadingHexa = dict (zip (RCP.ColorShading.keys(),
                          list(map(lambda x: color2hex (*x), RCP.ColorShading.values()))))
 
-def c2c (tab) :
+def hex_to_rgb (rgb) :
     """
     Convert a list of RGB colors to a list of hex colors
     """
-    ztab = tab
+    ztab = rgb
     if not isinstance (ztab, np.ndarray):
         ztab = np.array (ztab, dtype='float')
     if len (ztab.shape) == 1 :
         ztab = np.reshape (ztab, (ztab.shape[0]//3, 3))
     return ztab
+
+def hex_to_rgb (hex):
+  return tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
 
 def create_colormap (colors, position=None, bit=True, reverse=False,
                      name='custom_colormap', liste=False, continuous=False,

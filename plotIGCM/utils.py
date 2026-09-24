@@ -525,7 +525,8 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
     '''
     Return a full long_name of a Monitoring variable
     '''
-    match RegexEqual (varName) :
+    #match RegexEqual (varName) :
+    match varName :
         case 'icevol_north_MAR'         :
             zname = 'Sea ice volume, northern hemisphere, March'
         case 'icevol_north_SEP'         :
@@ -574,6 +575,9 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
         case 'snowvol_south'            :
             zname = 'Snow volume on sea ice, southern hemisphere'
 
+        case 't2m_global_prio' | 't2m_global' :
+            zname = 'Temperature @2m, global mean'
+
         case 'area_neg_scritd_Barents'          :
             zname = 'Area with Salinity < Scrit, Barents Sea'
         case 'area_neg_scritd_Irminger'         :
@@ -602,13 +606,15 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
 
         case 'precip_global'            :
             zname = 'Global precipitation'
+        case 'precip'            :
+            zname = 'Precipitation'
         case 'sosaline_north'           :
             zname = 'Salinity, northern hemisphere'
         case 't2m_global.*'             :
             zname = 'Global air surface temperature'
 
-        case 'nadw_ocean.*'             :
-            zname = 'AMOC index'
+        case 'nadw_ocean_prio' | 'nadw_ocean' :
+           zname = 'AMOC index'
             
         case 'somxl010_Irminger'        :
             zname = 'Mixed layer depth, Irminger Sea'
@@ -625,6 +631,13 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
         case 'sosaline_atl_50N_70N'     :
             zname = 'Salinity, Atlantic, 50N-70N'
 
+        case 'nettop_global' :
+            zname = 'TOA net heat flux'
+        case 'bils_global' :
+            zname = 'Surface net heat flux'
+        case 'hc300' :
+            zname = 'Ocean heat content 0-300m'
+
         case _ :
             if long_name is not None :
                 zname = long_name
@@ -634,25 +647,78 @@ def set_long_name (varName:str, long_name:str|None=None, Debug:bool=False,
     if short :
         zname = zname.replace ( 'northern hemisphere', 'NH'   )
         zname = zname.replace ( 'southern hemisphere', 'SH'   )
+        zname = zname.replace ( 'Northern hemisphere', 'NH'   )
+        zname = zname.replace ( 'Southern hemisphere', 'SH'   )
+        zname = zname.replace ( 'Northern Hemisphere', 'NH'   )
+        zname = zname.replace ( 'Southern Hemisphere', 'SH'   )
+
+        zname = zname.replace ( 'Salinity'           , 'Sal.'    )
+        zname = zname.replace ( 'salinity'           , 'sal.'    )
+        zname = zname.replace ( 'Temperature'        , 'Temp.'   )
+        zname = zname.replace ( 'temperature'        , 'temp.'   )
+        zname = zname.replace ( 'Surface'            , 'Surf.'   )
+        zname = zname.replace ( 'surface'            , 'surf.'   )
+        zname = zname.replace ( 'Precipitation'      , 'Precip.' )
+        zname = zname.replace ( 'precipitation'      , 'precip.' )
+
+        zname = zname.replace ( 'Mixed Layer Depth'  , 'MLD' )
+        zname = zname.replace ( 'Mixed layer depth'  , 'MLD' )
+
+        zname = zname.replace ( 'Volume'             , 'vol.'   )
+        zname = zname.replace ( 'volume'             , 'vol.'   )
+        zname = zname.replace ( 'Concentration'      , 'conc.'  )
+        zname = zname.replace ( 'concentration'      , 'conc.'  )
+        zname = zname.replace ( 'Thickness'          , 'Thick.' )
+        zname = zname.replace ( 'thickness'          , 'thick.' )
+        zname = zname.replace ( 'Concentration'      , 'Conc.'  )
+        zname = zname.replace ( 'concentration'      , 'conc.'  )
+        zname = zname.replace ( 'Fraction'           , 'Frac.'  )
+        zname = zname.replace ( 'fraction'           , 'Frac.'  )
+        
+        zname = zname.replace ( 'Atlantic'           , 'Atl.'     )
+        zname = zname.replace ( 'Pacific'            , 'Pac.'     )
+        zname = zname.replace ( 'Indian'             , 'Ind.'     )
+        zname = zname.replace ( 'Barents Sea'        , 'Barents'  )
+        zname = zname.replace ( 'Labrador Sea'       , 'Labrador' )
+        zname = zname.replace ( 'Irminger Sea'       , 'Irminger' )
+        
+        zname = zname.replace ( 'West African Monsoon Region'     , 'WAMR'     )
+        zname = zname.replace ( 'West African Monsoon'            , 'WAM'      )
+        zname = zname.replace ( 'East Asian Summer Monsoon Region', 'EASM'     )
+        zname = zname.replace ( 'East Asian Summer Monsoon'       , 'EASM'     )
+        zname = zname.replace ( 'Indian Summer Monsoon Region'    , 'ISMR'     )
+        zname = zname.replace ( 'Indian Summer Monsoon'           , 'ISM'      )
+        zname = zname.replace ( 'North American Monsoon Region'   , 'AM North' )
+        zname = zname.replace ( 'North American Monsoon'          , 'AM North' )
+        zname = zname.replace ( 'South American Monsoon Region'   , 'AM South' )
+        zname = zname.replace ( 'South American Monsoon'          , 'AM South' )
+
         zname = zname.replace ( 'March'              , 'Mar.' )
         zname = zname.replace ( 'September'          , 'Sep.' )
-        zname = zname.replace ( 'volume'  , 'vol.' )
-        zname = zname.replace ( 'concentration'  , 'conc.' )
-        zname = zname.replace ( 'fraction'  , 'frac.' )
-        zname = zname.replace ( 'thickness'  , 'thick.' )
-        zname = zname.replace ( 'Concentration'  , 'Conc.' )
-        zname = zname.replace ( 'Fraction'  , 'Frac.' )
-        zname = zname.replace ( 'Salinity', 'Sal.' )
-        zname = zname.replace ( 'salinity', 'sal.' )
-        zname = zname.replace ( 'Temperature', 'Temp.' )
-        zname = zname.replace ( 'temperature', 'temp.' )
-        zname = zname.replace ( 'Surface', 'surf.' )
-        zname = zname.replace ( 'surface', 'surf.' )
-        zname = zname.replace ( 'Precipitation', 'Precip.' )
-        zname = zname.replace ( 'precipitation', 'precip.' )
-        zname = zname.replace ( 'Barents Sea', 'Barents' )
-        zname = zname.replace ( 'Labrador Sea', 'Labrador' )
-        zname = zname.replace ( 'Irminger Sea', 'Irminger' )
+
+        zname = zname.replace ( 'January'  , 'Jan' )
+        zname = zname.replace ( 'February' , 'Feb' )
+        zname = zname.replace ( 'March'    , 'Mar' )
+        zname = zname.replace ( 'April'    , 'Apr' )
+        zname = zname.replace ( 'May'      , 'May' )
+        zname = zname.replace ( 'June'     , 'Jun' )
+        zname = zname.replace ( 'July'     , 'Jul' )
+        zname = zname.replace ( 'August'   , 'Aug' )
+        zname = zname.replace ( 'September', 'Sep' )
+        zname = zname.replace ( 'October'  , 'Oct' )
+        zname = zname.replace ( 'November' , 'Nov' )
+        zname = zname.replace ( 'December' , 'Dec' )
+
+        zname = zname.replace ( 'Jul-Aug'        , 'JA'  )
+        zname = zname.replace ( 'Jun-Jul-Aug'    , 'JJA' )
+        zname = zname.replace ( 'Jun-Jul-Aug-Sep', 'JJAS' )
+
+        zname = zname.replace ( 'Jan-Feb'        , 'JF'  )
+        zname = zname.replace ( 'Dec-Jan-Feb'    , 'DJF' )
+        zname = zname.replace ( 'Dec-Jan-Feb-Mar', 'DJFM' )
+        
+        zname = zname.replace ( 'Sep-Oct-Nov'    , 'SON' )
+        zname = zname.replace ( 'Mar-Apr-May'    , 'MAM' )
 
     if Debug or OPTIONS['Debug'] :
         print ( f"{varName=} : {zname=}")
