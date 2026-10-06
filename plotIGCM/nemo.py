@@ -63,6 +63,9 @@ from plotIGCM.sphere import clo_lon
 #from plotIGCM import orca
 from plotIGCM import domzgr
 
+#
+xr.set_options (arithmetic_join='left')
+
 # Type xr.DataArray|xr.Dataset
 xrData = TypeVar ('xrData', xr.DataArray, xr.Dataset)
 
@@ -1070,7 +1073,7 @@ class GridMask :
         match cd_type :
             case ( 'T' | 't' ) :
                 if self.e1t is not None and self.e2t is not None and self.e3t is not None :
-                    zvol = self.e3t*self.mask_3T * self.e1t*self.e2t
+                    zvol = self.e3t * self.e1t*self.e2t * self.mask_3T.values
         return zvol
 
     @validate_types
@@ -1528,7 +1531,7 @@ class GridMask :
         
         if d_m is not None and 'tmask' in d_m.variables :
             if OPTIONS['Debug'] or Debug :
-                print (f"Reading mask_T as tmask in {f_m=}" ) 
+                print (f"Reading mask_T and mask_3T as tmask in {f_m=}" ) 
             mask_T  = xr.where (d_m.tmask[0]>0.5, 1., pval) # pyright: ignore
             mask_3T = xr.where (d_m.tmask   >0.5, 1., pval) # pyright: ignore
         elif d_m is not None and 'mask_T' in d_m.variables :
@@ -2304,7 +2307,10 @@ def build_bounds2d (glont:xr.DataArray|None=None, glatt:xr.DataArray|None=None,
             bounds_latt.attrs.update (glatt.attrs)
         else :
             bounds_latt.attrs.update (glatf.attrs)
-
+        if 'x_f' in bounds_lont.dims and 'y_f' in bounds_lont.dims :
+            bounds_lont = unify_dims ( bounds_lont, xgrid='T', use_xgcm=True )           
+        if 'x_f' in bounds_latt.dims and 'y_f' in bounds_latt.dims :
+            bounds_latt = unify_dims ( bounds_latt, xgrid='T', use_xgcm=True )
     else :
         bounds_lont = None
         bounds_latt = None
@@ -2343,6 +2349,10 @@ def build_bounds2d (glont:xr.DataArray|None=None, glatt:xr.DataArray|None=None,
             bounds_latu.attrs.update (glatu.attrs)
         else :
             bounds_latu.attrs.update (glatv.attrs)
+        if 'x_c' in bounds_lont.dims and 'y_f' in bounds_lont.dims :
+            bounds_lonu = unify_dims ( bounds_lonu, xgrid='U', use_xgcm=True )           
+        if 'x_c' in bounds_latt.dims and 'y_f' in bounds_latt.dims :
+            bounds_latu = unify_dims ( bounds_latu, xgrid='U', use_xgcm=True )
     else :
         bounds_lonu = None
         bounds_latu = None
@@ -2381,6 +2391,10 @@ def build_bounds2d (glont:xr.DataArray|None=None, glatt:xr.DataArray|None=None,
             bounds_latv.attrs.update (glatv.attrs)
         else :
             bounds_latv.attrs.update (glatu.attrs)
+        if 'x_f' in bounds_lont.dims and 'y_c' in bounds_lont.dims :
+            bounds_lonv = unify_dims ( bounds_lonv, xgrid='V', use_xgcm=True )           
+        if 'x_f' in bounds_latt.dims and 'y_c' in bounds_latt.dims :
+            bounds_latv = unify_dims ( bounds_latv, xgrid='V', use_xgcm=True )
     else :
         bounds_lonv = None
         bounds_latv = None
@@ -2419,6 +2433,10 @@ def build_bounds2d (glont:xr.DataArray|None=None, glatt:xr.DataArray|None=None,
             bounds_latf.attrs.update (glatf.attrs)
         else :
             bounds_latf.attrs.update (glatt.attrs)
+        if 'x_c' in bounds_lont.dims and 'y_c' in bounds_lont.dims :
+            bounds_lonf = unify_dims ( bounds_lonf, xgrid='F', use_xgcm=True )           
+        if 'x_c' in bounds_latt.dims and 'y_c' in bounds_latt.dims :
+            bounds_latf = unify_dims ( bounds_latf, xgrid='F', use_xgcm=True )
     else :
         bounds_lonf = None
         bounds_latf = None
@@ -2590,20 +2608,20 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                 if isinstance (dd, xr.Dataset) :
                     dd = dd.rename_dims ({'x_grid_T':'x_c'})
                 else :
-                        dd = dd.rename ({'x_grid_T':'x_c'})
-                if 'x_c' not in dd.coords :
-                    dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
-                    x = None
+                    dd = dd.rename ({'x_grid_T':'x_c'})
+                #if 'x_c' not in dd.coords :
+                dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
+                x = None
                     
         if 'x_grid_U' in dd.dims :
             if 'x_f' in dd.dims :
                 dd = dd.rename ({'x_grid_U':'x_f'})
             else:
                 dd = dd.rename_dims ({'x_grid_U':'x_f'})
-            if 'x_f' not in dd.coords :
-                dd['x_f']  = np.arange (len(dd['x_f'])).astype(float) + 0.5
-                dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
-                x = None
+            #if 'x_f' not in dd.coords :
+            dd['x_f']  = np.arange (len(dd['x_f'])).astype(float) + 0.5
+            dd.x_f.attrs.update({'c_grid_axis_shift':0.5})
+            x = None
                 
         if 'x_grid_V' in dd.dims :
             if 'x_c' in dd.dims :
@@ -2625,9 +2643,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                         dd = dd.rename_dims ({'x_grid_F':'x_f'})
                     else :
                         dd = dd.rename ({'x_grid_F':'x_f'})
-                if 'x_f' not in dd.coords :
-                    dd['x_f'] = np.arange (len(dd['x_f'])).astype(float) + 0.5
-                    x = None
+                #if 'x_f' not in dd.coords :
+                dd['x_f'] = np.arange (len(dd['x_f'])).astype(float) + 0.5
+                x = None
                     
         if 'x_grid_W' in dd.dims :
             if 'x_c' in dd.dims :
@@ -2637,9 +2655,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     dd = dd.rename_dims ({'x_grid_W':'x_c'})
                 else :
                     dd = dd.rename ({'x_grid_W':'x_c'})
-            if 'x_c' not in dd.coords :
-                dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
-                x = None
+            #if 'x_c' not in dd.coords :
+            dd['x_c'] = np.arange (len(dd['x_c'])).astype(float) + 1
+            x = None
                 
         if 'y_grid_T' in dd.dims :
             if 'y_c' in dd.dims :
@@ -2649,9 +2667,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     dd = dd.rename_dims ({'y_grid_T':'y_c'})
                 else :
                     dd = dd.rename ({'y_grid_T':'y_c'})
-            if 'y_c' not in dd.coords :
-                dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
-                y = None
+            #if 'y_c' not in dd.coords :
+            dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
+            y = None
                 
         if 'y_grid_U' in dd.dims :
             if  'y_f' in dd.dims :
@@ -2661,10 +2679,10 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     dd = dd.rename_dims ({'y_grid_U':'y_f'})
                 else :
                     dd = dd.rename ({'y_grid_U':'y_f'})
-            if 'y_f' not in dd.coords :
-                dd['y_f'] = np.arange (len(dd['y_f'])).astype(float) + 0.5
-                dd.y_f.attrs.update({'c_grid_axis_shift':0.5})
-                y = None
+            #if 'y_f' not in dd.coords :
+            dd['y_f'] = np.arange (len(dd['y_f'])).astype(float) + 0.5
+            dd.y_f.attrs.update({'c_grid_axis_shift':0.5})
+            y = None
                     
         if 'y_grid_V' in dd.dims :
             if 'y_c' in dd.dims :
@@ -2674,9 +2692,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     dd = dd.rename_dims ({'y_grid_V':'y_c'})
                 else :
                     dd = dd.rename ({'y_grid_V':'y_c'})
-            if 'y_c' not in dd.coords :
-                dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
-                y = None
+            #if 'y_c' not in dd.coords :
+            dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
+            y = None
                     
         if 'y_grid_F' in dd.dims :
             if 'y_f' in dd.dims :
@@ -2686,9 +2704,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     dd = dd.rename_dims ({'y_grid_F':'y_f'})
                 else :
                     dd = dd.rename ({'y_grid_F':'y_f'})
-            if 'y_f' not in dd.coords :
-                dd['y_f'] = np.arange (len(dd['y_f'])).astype(float) + 0.5
-                y = None
+            #if 'y_f' not in dd.coords :
+            dd['y_f'] = np.arange (len(dd['y_f'])).astype(float) + 0.5
+            y = None
                 
         if 'y_grid_W' in dd.dims :
             if 'y_c' in dd.dims :
@@ -2698,9 +2716,9 @@ def unify_dims (dd:xr.DataArray|xr.Dataset|None=None,
                     dd = dd.rename_dims ({'y_grid_W':'y_c'})
                 else :
                     dd = dd.rename ({'y_grid_W':'y_c'})
-            if 'y_c' not in dd.coords :
-                dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
-                y = None
+            #if 'y_c' not in dd.coords :
+            dd['y_c'] = np.arange (len(dd['y_c'])).astype(float) + 1
+            y = None
 
     if x is not None:
         if OPTIONS['Debug'] or Debug :
@@ -5660,7 +5678,7 @@ def f2v (ftab:xr.DataArray, psgn:int|float=1, zdim:str|None=None, action:str='av
     return vtab
 
 @validate_types
-def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
+def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None, action:str='ave',
          sval:float=np.nan, Debug:bool=False) -> xr.DataArray :
     '''
     Interpolates an array on W grid to T grid (k-mean)
@@ -5675,7 +5693,16 @@ def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
         print ( f"{az=} {kz=}" )
 
     if kz :
-        ttab = 0.5 * (wtab_0 + wtab_0.roll ({az:-1}))
+        if action == 'ave' :
+            ttab = 0.5 * (wtab_0 + wtab_0.roll ({az:-1}))
+        elif action == 'min'  :
+            ttab = np.minimum (wtab_0 , wtab_0.roll ({az:-1}))
+        elif action == 'max'  :
+            ttab = np.maximum (wtab_0 , wtab_0.roll ({az:-1}))
+        elif action == 'mult' :
+            ttab =             wtab_0 * wtab_0.roll ({az:-1})
+        else :
+            raise ValueError ( f'Unknown action {action} in w2t' )
     else :
         ttab = wtab_0
 
@@ -5693,12 +5720,14 @@ def w2t (wtab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
             ttab = ttab.assign_coords ( {az:zcoord.values} )
         else :
             ttab = ttab.assign_coords ( {az:zcoord} )
-
+    else :
+            ttab = ttab.assign_coords ( {az: np.arange(ttab.shape[kz]).astype(float)+0.5} )
+            
     pop_stack ( 'w2t' )
     return ttab
 
 @validate_types
-def t2w (ttab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
+def t2w (ttab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None, action:str='ave', 
          sval:float=np.nan, extrap_surf:bool=False) -> xr.DataArray :
     '''
     Interpolates an array from T grid to W grid (k-mean)
@@ -5710,8 +5739,18 @@ def t2w (ttab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
     ttab_0 = xr.where ( np.isnan(ttab), 0., ttab)
     az, kz = find_axis (ttab_0, 'z')
 
-    if kz is not None :
-        wtab = 0.5 * ( ttab_0 + ttab_0.roll ({kz:1}) )
+    if az :
+        if action == 'ave'  :
+            wtab = 0.5 *      (ttab_0 + ttab_0.roll ({az:1}))
+        elif action == 'min'  :
+            wtab = np.minimum (ttab_0 , ttab_0.roll ({az:1}))
+        elif action == 'max'  :
+            wtab = np.maximum (ttab_0 , ttab_0.roll ({az:1}))
+        elif action == 'mult' :
+            wtab =             ttab_0 * ttab_0.roll ({az:1})
+        else :
+            raise ValueError ( f'Unknown action {action} in t2w' )
+
         if extrap_surf :
             wtab[{az:0}] = ttab[{az:0}]
         if zdim and az and az != zdim :
@@ -5726,7 +5765,7 @@ def t2w (ttab:xr.DataArray, zcoord:xr.DataArray|None=None, zdim:str|None=None,
             else :
                 wtab = wtab.assign_coords ( {az:zcoord})
         else :
-            wtab = wtab.assign_coords ( {zdim:np.arange(ttab.shape[kz]).astype(float)+1.} )
+            wtab = wtab.assign_coords ( {az: np.arange(ttab.shape[kz]).astype(float)+1.} )
     else :
         wtab = ttab_0
         if 'z_c' in wtab.dims :

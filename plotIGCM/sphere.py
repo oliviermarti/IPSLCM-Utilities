@@ -47,16 +47,19 @@ def clo_lon (lon:xr.DataArray, lon0:float|xr.DataArray=0., rad:bool=False,
     '''
     push_stack ( f'clo_lon (lon, {lon0=}, {rad=}, {deg=} )' )
     if rad and deg :
-        raise RuntimeError ('Error in nemo.en2geo: rad and deg can not be both True')
+        raise RuntimeError ('Error in sphere.clo_lon: rad and deg can not be both True')
     if rad :
         lon_range = 2.*np.pi
     else :
         lon_range = 360.
-    c_lon = lon
-    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
-    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
-    c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
-    c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    #c_lon = lon
+    #c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    #c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+    #c_lon = xr.where (c_lon > lon0 + lon_range*0.5, c_lon-lon_range, c_lon)
+    #c_lon = xr.where (c_lon < lon0 - lon_range*0.5, c_lon+lon_range, c_lon)
+
+    c_lon = (lon-(lon0.values-lon_range/2))%lon_range + (lon0.values-lon_range/2)
+    
     if c_lon.shape == () :
         c_lon = c_lon.item ()
     if 'attrs' in dir(lon) and 'attrs' in dir(c_lon) :
